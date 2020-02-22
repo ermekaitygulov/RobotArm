@@ -8,8 +8,8 @@ from vrep.robots import Rozum
 class RozumEnv:
 
     def __init__(self):
-        # fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        # self.out = cv2.VideoWriter('output.mp4', fourcc, 15.0, (1024, 1024))
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        self.out = cv2.VideoWriter('output.mp4', fourcc, 15.0, (1024, 1024))
         self.rozum = Rozum()
         self.action_range = [-5, 5]
         self.action_dim = self.rozum.DoF
@@ -34,7 +34,7 @@ class RozumEnv:
         r = 0.0
         done = False
         target = self.rozum.cube.value
-        s = self.rozum.get_image()
+        s = self.rozum.side_cam.value
         d = np.linalg.norm(pose - target)
         r += (-d - 0.01 * np.square(action).sum())
         if d < 0.02:
@@ -48,16 +48,21 @@ class RozumEnv:
         self.rozum.cube.value = self.init_cube_pose
         self.rozum.goal.value = self.init_goal_pose
         time.sleep(2)
-        s, _ = self.rozum.get_image()
+        s = self.rozum.side_cam.value
         return s
 
     def render(self):
-        img = self.rozum.get_image()
+        img = self.rozum.side_cam.value
         self.out.write(img)
+
+    def close(self):
+        self.rozum.stop_simulation()
+        self.rozum.disconnect()
 
 
 if __name__ == '__main__':
     env = RozumEnv()
     a = env.sample_action()
     env.step(a)
-    env.reset()
+    a = env.reset()
+    env.close()
