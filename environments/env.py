@@ -8,8 +8,6 @@ from vrep.robots import Rozum
 class RozumEnv:
 
     def __init__(self):
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        self.out = cv2.VideoWriter('output.mp4', fourcc, 15.0, (1024, 1024))
         self.rozum = Rozum()
         self.action_range = [-5, 5]
         self.action_dim = self.rozum.DoF
@@ -53,7 +51,7 @@ class RozumEnv:
 
     def render(self):
         img = self.rozum.side_cam.value
-        self.out.write(img)
+        return img
 
     def close(self):
         self.rozum.stop_simulation()
