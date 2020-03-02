@@ -7,8 +7,8 @@ from vrep.robots import Rozum
 
 class RozumEnv:
 
-    def __init__(self):
-        self.rozum = Rozum()
+    def __init__(self, robot_run_file='coppeliaSim.sh', robot_port=19999):
+        self.rozum = Rozum(robot_run_file, robot_port)
         self.action_range = [-5, 5]
         self.action_dim = self.rozum.DoF
 
