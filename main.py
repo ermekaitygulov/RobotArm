@@ -1,6 +1,11 @@
+from agent.algorithms import DQN
+from agent.replay_buffers import PrioritizedBuffer
+from agent.model import DuelingModel
 from environments.env import RozumEnv
 from utils.wrappers import *
 import argparse
+import tensorflow as tf
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="run_file and port parser")
@@ -10,9 +15,14 @@ if __name__ == '__main__':
 
     env = RozumEnv(**params)
     env = FrameSkip(env)
-    env = FrameStack(env)
-    a = env.sample_action()
-    env.step(a)
-    a = env.reset()
-    print(a.shape)
-    env.close()
+    env = FrameStack(env, 2)
+    with tf.InteractiveSession() as sess:
+        replay_buffer = PrioritizedBuffer(1e6)
+        conv_base = None
+        def make_model(name):
+            return DuelingModel(conv_base, [1024, 512], env.action_dim, env.obs_dim, sess, name)
+        config = 123
+        agent = DQN(config, env.action_dim, env.obs_dim, replay_buffer, make_model('Q_network'), make_model('Q_target'),
+                    sess)
+        agent.train(env)
+        env.close()

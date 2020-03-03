@@ -10,12 +10,11 @@ class RozumEnv:
     def __init__(self, robot_run_file='coppeliaSim.sh', robot_port=19999):
         self.rozum = Rozum(robot_run_file, robot_port)
         self.action_range = [-5, 5]
-        self.action_dim = self.rozum.DoF
 
-        self.action_space = gym.spaces.Box(shape=(self.action_dim,), low=-5, high=5)
+        self.action_space = gym.spaces.Box(shape=(self.rozum.DoF,), low=-5, high=5)
         self.observation_space = gym.spaces.Box(shape=(3 + self.action_dim * 2,), low=-180, high=180)
         self.action_dim = self.action_space.shape[0]
-        self.state_dim = self.observation_space.shape[0]
+        self.obs_dim = self.observation_space.shape[0]
 
         self.init_angles = [joint.value for joint in self.rozum.joints]
         self.init_cube_pose = self.rozum.cube.value
