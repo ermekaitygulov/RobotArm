@@ -10,7 +10,7 @@ class DuelingModel(tf.keras.Model):
         self.a_head1, self.v_head1 = tf.keras.layers.Dense(action_dim), tf.keras.layers.Dense(1)
 
     @tf.function
-    def call(self, input, training):
+    def call(self, inputs, training=False, mask=None):
         features = self.base(input)
         features = self.h_layers(features)
         advantage, value = self.a_head(features), self.v_head(features)
