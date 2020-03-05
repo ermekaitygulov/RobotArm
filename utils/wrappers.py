@@ -56,3 +56,17 @@ class FrameStack(gym.Wrapper):
     def _get_ob(self):
         assert len(self.observations) == self.k
         return LazyFrames(list(self.observations), stack_axis=self.stack_axis)
+
+
+class DiscreteWrapper(gym.Wrapper):
+    def __init__(self, env, discrete_dict):
+        gym.Wrapper.__init__(self, env)
+        self.action_space = gym.spaces.Discrete(len(discrete_dict))
+        self.discrete_dict = discrete_dict
+
+    def step(self, action):
+        s, r, done, info = self.env.step(self.discrete_dict[action])
+        return s, r, done, info
+
+    def sample_action(self):
+        return self.action_space.sample()

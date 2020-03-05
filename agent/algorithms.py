@@ -9,9 +9,9 @@ from utils.util import take_vector_elements
 
 
 class DQN:
-    def __init__(self,action_dim, obs_dim,  replay_buffer, online_model, target_model,
-                 frames_to_update=200, update_quantity=600, update_target_net_mod=2000,
-                 batch_size=32, replay_start_size=20, gamma=0.99, learning_rate=1e-4,
+    def __init__(self, action_dim, replay_buffer, online_model, target_model,
+                 frames_to_update=5, update_quantity=60, update_target_net_mod=2000,
+                 batch_size=32, replay_start_size=4, gamma=0.99, learning_rate=1e-4,
                  n_step=10, custom_loss=None):
         # global
         self.frames_to_update = frames_to_update
@@ -28,11 +28,12 @@ class DQN:
         self.target_model = target_model
         self.custom_loss = custom_loss
         self.action_dim = action_dim
-        self.obs_dim = obs_dim
-
 
         self.optimizer = tf.keras.optimizers.Adam(1e-4)
+
         self.avg_metrics = dict()
+        for key in ['TD', 'nTD', 'l2', 'all_losses']:
+            self.avg_metrics[key] = tf.keras.metrics.Mean(name=key, dtype=tf.float32)
 
     def train(self, env, episodes=200, name="max_model.ckpt", epsilon=0.1, final_epsilon=0.01, eps_decay=0.99):
         max_reward = 0
@@ -97,26 +98,27 @@ class DQN:
         env.reset()
         return total_reward
 
-    def update(self, steps, log_freq=100):
+    def update(self, steps, log_freq=10):
         for i in range(1, steps + 1):
             tree_idxes, minibatch, is_weights = self.replay_buff.sample(self.batch_size)
 
-            pov_batch = [np.array(data[0]) / 256 for data in minibatch]
-            action_batch = [data[1] for data in minibatch]
-            reward_batch = [data[2] for data in minibatch]
-            next_pov_batch = [np.array(data[3]) / 256 for data in minibatch]
-            done_batch = [float(data[4]) for data in minibatch]
-            n_pov_batch = [np.array(data[6]) / 256 for data in minibatch]
-            n_reward = [data[7] for data in minibatch]
-            n_done = [float(data[8]) for data in minibatch]
-            actual_n = [data[9] for data in minibatch]
+            pov_batch = tf.constant([np.array(data[0]) / 255 for data in minibatch])
+            action_batch = tf.constant([data[1] for data in minibatch])
+            reward_batch = tf.constant([data[2] for data in minibatch], dtype='float32')
+            next_pov_batch = tf.constant([np.array(data[3]) / 255 for data in minibatch])
+            done_batch = tf.constant([data[4] for data in minibatch])
+            n_pov_batch = tf.constant([np.array(data[6]) / 255 for data in minibatch])
+            n_reward = tf.constant([data[7] for data in minibatch], dtype='float32')
+            n_done = tf.constant([data[8] for data in minibatch])
+            actual_n = tf.constant([data[9] for data in minibatch], dtype='float32')
+            gamma = tf.constant(self.gamma)
 
             abs_loss = self.q_network_update(pov_batch, action_batch, reward_batch,
                                              next_pov_batch, done_batch, n_pov_batch,
-                                             n_reward, n_done, actual_n, is_weights)
+                                             n_reward, n_done, actual_n, is_weights, gamma)
 
             if tf.equal(self.optimizer.iterations % log_freq, 0):
-                print("Epoch: ", self.optimizer.iterations)
+                print("Epoch: ", self.optimizer.iterations.numpy())
                 for key, metric in self.avg_metrics.items():
                     tf.summary.scalar(key, metric.result(), step=self.optimizer.iterations)
                     print('  {}:     {:.3f}'.format(key, metric.result()))
@@ -127,48 +129,46 @@ class DQN:
     @tf.function
     def q_network_update(self, pov_batch, action_batch, reward_batch,
                          next_pov_batch, done_batch, n_pov_batch,
-                         n_reward, n_done, actual_n, is_weights):
+                         n_reward, n_done, actual_n, is_weights, gamma):
         online_variables = self.online_model.trainable_variables
-        with tf.GradientTape as tape:
+        with tf.GradientTape() as tape:
             tape.watch(online_variables)
             huber = tf.keras.losses.Huber()
             q_value = self.online_model(pov_batch, training=True)
             q_value = take_vector_elements(q_value, action_batch)
-            target = self.compute_target(next_pov_batch, done_batch, reward_batch, 1)
+            target = self.compute_target(next_pov_batch, done_batch, reward_batch, 1, gamma)
             td_loss = huber(target, q_value, is_weights)
-            self.avg_metrics['TD'] = tf.keras.metrics.Mean(name='TD', dtype=tf.float32)
+            print('----------------- creating metrics ---------------')
             self.avg_metrics['TD'].update_state(td_loss)
 
             abs_loss = tf.abs(target - q_value)
 
-            n_target = self.compute_target(n_pov_batch, n_done, n_reward, actual_n)
+            n_target = self.compute_target(n_pov_batch, n_done, n_reward, actual_n, gamma)
             ntd_loss = huber(n_target, q_value, is_weights)
-            self.avg_metrics['nTD'] = tf.keras.metrics.Mean(name='nTD', dtype=tf.float32)
             self.avg_metrics['nTD'].update_state(ntd_loss)
 
             l2 = tf.add_n(self.online_model.losses)
-            self.avg_metrics['l2'] = tf.keras.metrics.Mean(name='l2', dtype=tf.float32)
             self.avg_metrics['l2'].update_state(l2)
 
             all_losses = td_loss + ntd_loss + l2
-            self.avg_metrics['all_losses'] = tf.keras.metrics.Mean(name='all_losses', dtype=tf.float32)
             self.avg_metrics['all_losses'].update_state(all_losses)
 
         gradients = tape.gradient(all_losses, online_variables)
         self.optimizer.apply_gradients(zip(gradients, online_variables))
         return abs_loss
 
-    def compute_target(self, next_pov, done, reward, actual_n):
+    def compute_target(self, next_pov, done, reward, actual_n, gamma):
         q_network = self.online_model(next_pov, training=True)
-        argmax_actions = tf.argmax(q_network, axis=1)
+        argmax_actions = tf.argmax(q_network, axis=1, output_type='int32')
         q_target = self.target_model(next_pov, training=True)
         target = take_vector_elements(q_target, argmax_actions)
-        target = self.gamma ** actual_n * (1 - done) * target + reward
+        target = tf.where(done, tf.zeros_like(target), target)
+        target = target * gamma ** actual_n
+        target = target + reward
         return target
 
-    @tf.function
     def target_update(self):
-        self.target_model.set_weights(self.online_model.get_weights)
+        self.target_model.set_weights(self.online_model.get_weights())
 
     def perceive(self, transition):
         self.n_deque.append(transition)
@@ -186,10 +186,11 @@ class DQN:
                     break
 
     def choose_act(self, state, epsilon=0.01):
-        q_values = self.online_model(state, training=False)[0]
+        inputs = np.array(state)/255
+        q_values = self.online_model(inputs[None], training=False)[0]
         if random.random() <= epsilon:
             return random.randint(0, self.action_dim - 1)
-        return np.argmax(q_values)
+        return np.argmax(q_values).astype('int8')
 
     def save(self, out_dir=None):
         self.online_model.save_weights(out_dir)

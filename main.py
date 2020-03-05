@@ -1,27 +1,55 @@
 from agent.algorithms import DQN
 from agent.replay_buffers import PrioritizedBuffer
-from agent.model import classic_cnn, DuelingModel
+from agent.model import ClassicCnn, DuelingModel
 from environments.env import RozumEnv
 from utils.wrappers import *
 import argparse
 import tensorflow as tf
+import os
 
 
 if __name__ == '__main__':
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
     parser = argparse.ArgumentParser(description="run_file and port parser")
-    parser.add_argument('-port', action='store', type=int, default=19999, required=False)
+    parser.add_argument('-robot_port', action='store', type=int, default=19999, required=False)
     parser.add_argument('-robot_run_file', action='store', type=str, default='coppeliaSim.sh', required=False)
     params = parser.parse_args().__dict__
+
+    tf.debugging.set_log_device_placement(True)
+
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    if gpus:
+        try:
+            # Currently, memory growth needs to be the same across GPUs
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+        except RuntimeError as e:
+            # Memory growth must be set before GPUs have been initialized
+            print(e)
 
     env = RozumEnv(**params)
     env = FrameSkip(env)
     env = FrameStack(env, 2)
-    replay_buffer = PrioritizedBuffer(1e6)
-    def make_model():
-        conv_base = classic_cnn([8, 16, 32], [3, 3, 3], [2, 2, 2])
-        return DuelingModel(conv_base, [1024, 512], env.action_dim)
-    agent = DQN(env.action_dim, env.obs_dim, replay_buffer, make_model(), make_model())
-    summary_writer = tf.summary.create_file_writer('/train')
+    discrete_dict = dict()
+    robot_dof = env.action_space.shape[0]
+    for i in range(robot_dof):
+        discrete_dict[i] = [5 if j == i else 0 for j in range(robot_dof)]
+        discrete_dict[i + robot_dof] = [-5 if j == i else 0 for j in range(robot_dof)]
+    env = DiscreteWrapper(env, discrete_dict)
+    replay_buffer = PrioritizedBuffer(int(1e6))
+
+    def make_model(name):
+        base = ClassicCnn([8, 16, 32], [3, 3, 3], [2, 2, 2])
+        head = DuelingModel([1024, 512], env.action_space.n)
+        model = tf.keras.Sequential([base, head], name)
+        model.build((None, ) + env.observation_space.shape)
+        return model
+    agent = DQN(env.action_space.n, replay_buffer, make_model('Online_model'), make_model('Target_model'))
+    summary_writer = tf.summary.create_file_writer('train/')
     with summary_writer.as_default():
         agent.train(env)
     env.close()
