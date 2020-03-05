@@ -27,7 +27,7 @@ class Handler:
 
 
 class Rozum:
-    def __init__(self):
+    def __init__(self, run_file='coppeliaSim.sh', port=19999):
 
         p = subprocess.Popen(['ps', '-A'], stdout=subprocess.PIPE)
         out, err = p.communicate()
@@ -39,13 +39,13 @@ class Rozum:
         self.vrep_root = os.getenv('VREP_PATH')
         self.scene_file = os.getenv('ROZUM_MODEL_PATH')
         os.chdir(self.vrep_root)
-        os.system("./coppeliaSim.sh -s " + self.scene_file + " &")
+        os.system("./{} -s {} &".format(run_file, self.scene_file))
 
         vrep.simxFinish(-1)
         time.sleep(1)
 
         self.DoF = 6
-        self.ID = vrep.simxStart('127.0.0.1', 19999, True, False, 5000, 5)
+        self.ID = vrep.simxStart('127.0.0.1', port, True, False, 5000, 5)
         self.opM_get = Const_v.simx_opmode_blocking
         self.opM_set = Const_v.simx_opmode_oneshot
         # check the connection
