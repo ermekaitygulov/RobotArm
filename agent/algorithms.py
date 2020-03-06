@@ -194,7 +194,7 @@ class DQN:
         q_values = self.online_model(inputs[None], training=False)[0]
         if random.random() <= epsilon:
             return random.randint(0, self.action_dim - 1)
-        return np.argmax(q_values).astype('int8')
+        return np.argmax(q_values)
 
     def save(self, out_dir=None):
         self.online_model.save_weights(out_dir)
