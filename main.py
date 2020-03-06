@@ -43,8 +43,8 @@ if __name__ == '__main__':
     replay_buffer = PrioritizedBuffer(int(1e6))
 
     def make_model(name):
-        base = ClassicCnn([8, 16, 32], [3, 3, 3], [2, 2, 2])
-        head = DuelingModel([1024, 512], env.action_space.n)
+        base = ClassicCnn([32, 64, 64], [8, 4, 3], [4, 2, 1])
+        head = DuelingModel([1024], env.action_space.n)
         model = tf.keras.Sequential([base, head], name)
         model.build((None, ) + env.observation_space.shape)
         return model
