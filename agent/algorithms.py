@@ -114,7 +114,7 @@ class DQN:
             n_reward = np.array([data[7] for data in minibatch], dtype='float32')
             n_done = np.array([data[8] for data in minibatch])
             actual_n = np.array([data[9] for data in minibatch], dtype='float32')
-            gamma = np.array(self.gamma)
+            gamma = np.array(self.gamma, dtype='int32')
 
             abs_loss = self.q_network_update(pov_batch, action_batch, reward_batch,
                                              next_pov_batch, done_batch, n_pov_batch,
@@ -194,7 +194,7 @@ class DQN:
         q_values = self.online_model(inputs[None], training=False)[0]
         if random.random() <= epsilon:
             return random.randint(0, self.action_dim - 1)
-        return np.argmax(q_values)
+        return np.argmax(q_values).astype('int32')
 
     def save(self, out_dir=None):
         self.online_model.save_weights(out_dir)
