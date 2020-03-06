@@ -39,7 +39,7 @@ class Rozum:
         self.vrep_root = os.getenv('VREP_PATH')
         self.scene_file = os.getenv('ROZUM_MODEL_PATH')
         os.chdir(self.vrep_root)
-        os.system("./{} -s {} &".format(run_file, self.scene_file))
+        os.system("./{} -h -s {} &".format(run_file, self.scene_file))
 
         vrep.simxFinish(-1)
         time.sleep(1)

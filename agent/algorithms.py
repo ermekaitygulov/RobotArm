@@ -4,15 +4,16 @@ from collections import deque
 
 import numpy as np
 import tensorflow as tf
+from tqdm import tqdm
 
 from utils.util import take_vector_elements
 
 
 class DQN:
     def __init__(self, action_dim, replay_buffer, online_model, target_model,
-                 frames_to_update=5, update_quantity=60, update_target_net_mod=2000,
+                 frames_to_update=5, update_quantity=100, update_target_net_mod=2000,
                  batch_size=32, replay_start_size=4, gamma=0.99, learning_rate=1e-4,
-                 n_step=10, custom_loss=None):
+                 n_step=5, custom_loss=None):
         # global
         self.frames_to_update = frames_to_update
         self.update_quantity = update_quantity
@@ -99,7 +100,9 @@ class DQN:
         return total_reward
 
     def update(self, steps, log_freq=10):
+        progress = tqdm(total=steps)
         for i in range(1, steps + 1):
+            progress.update(1)
             tree_idxes, minibatch, is_weights = self.replay_buff.sample(self.batch_size)
 
             pov_batch = tf.constant([np.array(data[0]) / 255 for data in minibatch])
@@ -124,6 +127,7 @@ class DQN:
                     print('  {}:     {:.3f}'.format(key, metric.result()))
                     metric.reset_states()
             self.replay_buff.batch_update(tree_idxes, abs_loss)
+        progress.close()
 
 
     @tf.function
