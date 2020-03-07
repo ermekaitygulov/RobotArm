@@ -5,15 +5,16 @@ from collections import deque
 import numpy as np
 import tensorflow as tf
 from tqdm import tqdm
+import timeit
 
 from utils.util import take_vector_elements
 
 
 class DQN:
     def __init__(self, action_dim, replay_buffer, online_model, target_model,
-                 frames_to_update=5, update_quantity=100, update_target_net_mod=2000,
-                 batch_size=32, replay_start_size=4, gamma=0.99, learning_rate=1e-4,
-                 n_step=5, custom_loss=None):
+                 frames_to_update=300, update_quantity=100, update_target_net_mod=3000,
+                 batch_size=32, replay_start_size=1500, gamma=0.99, learning_rate=1e-4,
+                 n_step=10, custom_loss=None):
         # global
         self.frames_to_update = frames_to_update
         self.update_quantity = update_quantity
@@ -36,20 +37,25 @@ class DQN:
         for key in ['TD', 'nTD', 'l2', 'all_losses']:
             self.avg_metrics[key] = tf.keras.metrics.Mean(name=key, dtype=tf.float32)
 
-    def train(self, env, episodes=200, name="max_model.ckpt", epsilon=0.1, final_epsilon=0.01, eps_decay=0.99):
-        max_reward = 0
-        rewards_deque = deque([], maxlen=25)
+    def train(self, env, episodes=200, name="train/max_model.ckpt", epsilon=0.1, final_epsilon=0.01, eps_decay=0.99,
+              writter=None):
+        max_reward = - np.inf
         counter = 0
         for e in range(episodes):
+            start_time = timeit.default_timer()
             score, counter = self._train_episode(env, counter, epsilon)
             if len(self.replay_buff) > self.replay_start_size:
                 epsilon = max(final_epsilon, epsilon * eps_decay)
-            rewards_deque.append(score)
+            if score >= max_reward:
+                max_reward = score
+                self.save(name)
+            stop_time = timeit.default_timer()
             print("episode: {}  score: {}  counter: {}  epsilon: {}  max: {}"
                   .format(e, score, counter, epsilon, max_reward))
+            print("RunTime: ", stop_time - start_time)
             tf.summary.scalar("reward", score, step=e)
-            if sum(filter(lambda x: x > 0, rewards_deque)):
-                self.save(name)
+            if writter:
+                writter.flush()
 
     def _train_episode(self, env, current_step=0, epsilon=0.0):
         counter = current_step

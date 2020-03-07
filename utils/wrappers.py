@@ -1,5 +1,7 @@
+import os
 from collections import deque
 
+import cv2
 import gym
 import numpy as np
 
@@ -70,3 +72,83 @@ class DiscreteWrapper(gym.Wrapper):
 
     def sample_action(self):
         return self.action_space.sample()
+
+
+class SaveVideoWrapper(gym.Wrapper):
+    current_episode = 0
+
+    def __init__(self, env, path='train/', resize=1):
+        """
+        :param env: wrapped environment
+        :param path: path to save videos
+        :param resize: resize factor
+        """
+        super().__init__(env)
+        self.path = path
+        self.recording = []
+        self.rewards = [0]
+        self.resize = resize
+
+    def step(self, action):
+        """
+        make a step in environment
+        :param action: agent's action
+        :return: observation, reward, done, info
+        """
+        observation, reward, done, info = self.env.step(action)
+        self.rewards.append(reward)
+        self.recording.append(self.bgr_to_rgb(observation['pov']))
+        return observation, reward, done, info
+
+    def reset(self, **kwargs):
+        """
+        reset environment and save game video if its not empty
+        :param kwargs:
+        :return: current observation
+        """
+        if self.current_episode > 0:
+            name = str(self.current_episode).zfill(4) + "r" + str(sum(map(int, self.rewards))).zfill(4) + ".mp4"
+            full_path = os.path.join(self.path, name)
+            upscaled_video = [self.upscale_image(image, self.resize) for image in self.recording]
+            self.save_video(full_path, video=upscaled_video)
+        self.current_episode += 1
+        self.rewards = [0]
+        self.recording = []
+        observation = self.env.reset(**kwargs)
+        self.recording.append(self.bgr_to_rgb(observation['pov']))
+        return observation
+
+    @staticmethod
+    def upscale_image(image, resize):
+        """
+        increase image size (for better video quality)
+        :param image: original image
+        :param resize:
+        :return:
+        """
+        size_x, size_y, size_z = image.shape
+        return cv2.resize(image, dsize=(size_x * resize, size_y * resize))
+
+    @staticmethod
+    def save_video(filename, video):
+        """
+        saves video from list of np.array images
+        :param filename: filename or path to file
+        :param video: [image, ..., image]
+        :return:
+        """
+        size_x, size_y, size_z = video[0].shape
+        out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), 60.0, (size_x, size_y))
+        for image in video:
+            out.write(image)
+        out.release()
+        cv2.destroyAllWindows()
+
+    @staticmethod
+    def bgr_to_rgb(image):
+        """
+        converts BGR image to RGB
+        :param image: bgr image
+        :return: rgb image
+        """
+        return image[..., ::-1]

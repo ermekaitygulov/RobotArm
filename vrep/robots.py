@@ -108,7 +108,7 @@ class Rozum:
         img = np.array(im, dtype=np.uint8)
         img.resize([res[0], res[1], 3])
         img = cv2.flip(img, 0)
-        img = cv2.resize(img, dsize=(64, 64), interpolation=cv2.INTER_CUBIC)
+        # img = cv2.resize(img, dsize=(64, 64), interpolation=cv2.INTER_CUBIC)
         return img
 
     def set_joint_angle(self, handle, value):
