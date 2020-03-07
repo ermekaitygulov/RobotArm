@@ -36,11 +36,9 @@ class Rozum:
                 pid = int(line.split(None, -1)[0])
                 os.kill(pid, signal.SIGKILL)
 
-        self.vrep_root = os.getenv('VREP_PATH')
-        self.scene_file = os.getenv('ROZUM_MODEL_PATH')
-        os.chdir(self.vrep_root)
-        os.system("./{} -h -s {} &".format(run_file, self.scene_file))
-
+        os.chdir(os.environ['VREP_PATH'])
+        os.system("./{} -h -s {} &".format(run_file, os.environ['ROZUM_MODEL_PATH']))
+        os.chdir(os.environ['HOME'])
         vrep.simxFinish(-1)
         time.sleep(1)
 
