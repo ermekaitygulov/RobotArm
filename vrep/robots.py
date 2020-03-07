@@ -38,7 +38,7 @@ class Rozum:
 
         os.chdir(os.environ['VREP_PATH'])
         os.system("./{} -h -s {} &".format(run_file, os.environ['ROZUM_MODEL_PATH']))
-        os.chdir(os.environ['HOME'])
+        os.chdir('..')
         vrep.simxFinish(-1)
         time.sleep(1)
 
