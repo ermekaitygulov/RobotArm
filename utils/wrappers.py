@@ -97,7 +97,7 @@ class SaveVideoWrapper(gym.Wrapper):
         """
         observation, reward, done, info = self.env.step(action)
         self.rewards.append(reward)
-        self.recording.append(self.bgr_to_rgb(observation['pov']))
+        self.recording.append(self.bgr_to_rgb(observation))
         return observation, reward, done, info
 
     def reset(self, **kwargs):
@@ -115,7 +115,7 @@ class SaveVideoWrapper(gym.Wrapper):
         self.rewards = [0]
         self.recording = []
         observation = self.env.reset(**kwargs)
-        self.recording.append(self.bgr_to_rgb(observation['pov']))
+        self.recording.append(self.bgr_to_rgb(observation))
         return observation
 
     @staticmethod
