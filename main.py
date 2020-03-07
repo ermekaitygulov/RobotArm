@@ -41,7 +41,7 @@ if __name__ == '__main__':
         discrete_dict[i] = [5 if j == i else 0 for j in range(robot_dof)]
         discrete_dict[i + robot_dof] = [-5 if j == i else 0 for j in range(robot_dof)]
     env = DiscreteWrapper(env, discrete_dict)
-    replay_buffer = PrioritizedBuffer(int(1e6))
+    replay_buffer = PrioritizedBuffer(int(1e5))
 
     def make_model(name):
         base = ClassicCnn([16, 32, 64], [8, 4, 3], [4, 2, 2])
