@@ -13,7 +13,7 @@ from utils.util import take_vector_elements
 class DQN:
     def __init__(self, action_dim, replay_buffer, online_model, target_model,
                  frames_to_update=300, update_quantity=100, update_target_net_mod=3000,
-                 batch_size=32, replay_start_size=1500, gamma=0.99, learning_rate=1e-4,
+                 batch_size=32, replay_start_size=500, gamma=0.99, learning_rate=1e-4,
                  n_step=10, custom_loss=None):
         # global
         self.frames_to_update = frames_to_update
