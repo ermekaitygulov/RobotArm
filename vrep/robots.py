@@ -57,9 +57,9 @@ class Rozum:
 
         self.joints = [Handler(self.get_handle("joint{}".format(i)), self.get_joint_angle, self.set_joint_angle)
                        for i in range(self.DoF)]
-        self.side_cam = Handler(self.get_handle('Vision_sensor'), self.get_image)
+        self.side_cam = Handler(self.get_handle('render'), self.get_image)
         self.side_cam_dim = self.side_cam.value.shape
-        self.on_arm_cam = Handler(self.get_handle('render'), self.get_image)
+        self.on_arm_cam = Handler(self.get_handle('Vision_sensor'), self.get_image)
         self.tip = Handler(self.get_handle("Tip"), self.get_position)
         self.cube = Handler(self.get_handle("Cube"), self.get_position, self.set_position)
         self.goal = Handler(self.get_handle("Goal"), self.get_position, self.set_position)
