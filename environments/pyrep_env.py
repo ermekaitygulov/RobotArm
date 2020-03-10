@@ -32,7 +32,7 @@ class RozumEnv(gym.Env):
 
     def __init__(self):
         self.pr = PyRep()
-        self.pr.launch('rozum_pyrep.ttt')
+        self.pr.launch('rozum_pyrep.ttt', headless=True)
         self.pr.start()
         self.action_range = [-5, 5]
         self.rozum = Rozum()
