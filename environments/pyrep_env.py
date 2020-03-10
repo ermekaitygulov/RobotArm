@@ -61,7 +61,7 @@ class RozumEnv(gym.Env):
         x, y, z = self.rozum_tip.get_position()
         done = False
         tx, ty, tz = self.cube.get_position()
-        state = self.camera.capture_rgb()
+        state = self.render()
         reward = -np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
         self.current_step += 1
         if reward < 0.02 or self.current_step >= self.step_limit:
@@ -71,13 +71,14 @@ class RozumEnv(gym.Env):
     def reset(self):
         self.rozum.set_joint_positions_degrees(self.init_angles)
         self.cube.set_position(self.init_cube_pose)
-        state = self.camera.capture_rgb()
+        state = self.render()
         self.current_step = 0
         return state
 
     def render(self, mode='human'):
         img = self.camera.capture_rgb()
-        return img
+        img *= 255
+        return img.astype('uint8')
 
     def close(self):
         self.pr.stop()
