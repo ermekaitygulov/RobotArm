@@ -1,9 +1,9 @@
 from environments.pyrep_env import RozumEnv
 import timeit
-from utils.wrappers import DiscreteWrapper, SaveVideoWrapper
+from utils.wrappers import DiscreteWrapper, SaveVideoWrapper, FrameSkip
 
 env = RozumEnv()
-env = SaveVideoWrapper(env)
+env = FrameSkip(env)
 done = False
 start_time = timeit.default_timer()
 discrete_dict = dict()
@@ -13,7 +13,7 @@ for i in range(robot_dof):
     discrete_dict[i + robot_dof] = [-5 if j == i else 0 for j in range(robot_dof)]
 env = DiscreteWrapper(env, discrete_dict)
 
-for i in range(100):
+for i in range(300):
     action = env.sample_action()
     state, reward, done, _ = env.step(action)
     print("State shape: ", state.shape)

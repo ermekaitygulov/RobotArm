@@ -29,7 +29,6 @@ class RozumEnv(gym.Env):
         self.pr = PyRep()
         self.pr.launch('rozum_pyrep.ttt', headless=True)
         self.pr.start()
-        self.action_range = [-5, 5]
         self.rozum = Rozum()
         self.gripper = BaxterGripper()
         self.cube = Shape("Cube")
@@ -45,6 +44,7 @@ class RozumEnv(gym.Env):
         self.step_limit = 4000
         self.init_angles = self.rozum.get_joint_positions_degrees()
         self.init_cube_pose = self.cube.get_position()
+        self.always_render = False
 
     def sample_action(self):
         return self.action_space.sample()
@@ -56,7 +56,10 @@ class RozumEnv(gym.Env):
         x, y, z = self.rozum_tip.get_position()
         done = False
         tx, ty, tz = self.cube.get_position()
-        state = self.render()
+        if self.always_render:
+            state = self.render()
+        else:
+            state = None
         reward = -np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
         self.current_step += 1
         if reward < 0.02 or self.current_step >= self.step_limit:

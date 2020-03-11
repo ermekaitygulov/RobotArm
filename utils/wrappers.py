@@ -21,10 +21,11 @@ class FrameSkip(gym.Wrapper):
         total_reward = 0.0
         obs, done, info = None, None, None
         for _ in range(self._skip):
-            obs, reward, done, info = self.env.step(action)
+            _, reward, done, info = self.env.step(action)
             total_reward += reward
             if done:
                 break
+        obs = self.env.render()
         return obs, total_reward, done, info
 
 
@@ -88,6 +89,7 @@ class SaveVideoWrapper(gym.Wrapper):
         self.recording = []
         self.rewards = [0]
         self.resize = resize
+        self.always_render = True
 
     def step(self, action):
         """
