@@ -24,7 +24,11 @@ class Rozum(Arm):
 class RG2(Gripper):
     def __init__(self, count: int = 0):
         super().__init__(count, 'RG2',
-                         ['RG2_rightJoint0', 'RG2_leftJoint0'])
+                         ['RG2_rightJoint0', 'RG2_leftJoint0',
+                          'RG2_rightJoint1', 'RG2_leftJoint1',
+                          'RG2_rightJoint2', 'RG2_leftJoint2',
+                          'RG2_rightJoint3', 'RG2_leftJoint3',
+                          'RG2_rightJoint4', 'RG2_leftJoint4'])
 
 
 class RozumEnv(gym.Env):
