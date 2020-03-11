@@ -1,7 +1,7 @@
 from agent.algorithms import DQN
 from agent.replay_buffers import PrioritizedBuffer
 from agent.model import ClassicCnn, DuelingModel
-from environments.env import RozumEnv
+from environments.pyrep_env import RozumEnv
 from utils.wrappers import *
 import argparse
 import tensorflow as tf
@@ -12,12 +12,7 @@ if __name__ == '__main__':
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-    parser = argparse.ArgumentParser(description="run_file and port parser")
-    parser.add_argument('-robot_port', action='store', type=int, default=19999, required=False)
-    parser.add_argument('-robot_run_file', action='store', type=str, default='coppeliaSim.sh', required=False)
-    params = parser.parse_args().__dict__
-
-    tf.debugging.set_log_device_placement(True)
+    tf.debugging.set_log_device_placement(False)
 
     gpus = tf.config.experimental.list_physical_devices('GPU')
     if gpus:
@@ -31,8 +26,8 @@ if __name__ == '__main__':
             # Memory growth must be set before GPUs have been initialized
             print(e)
 
-    env = RozumEnv(**params)
-    env = SaveVideoWrapper(env)
+    env = RozumEnv()
+    # env = SaveVideoWrapper(env)
     env = FrameSkip(env)
     env = FrameStack(env, 2)
     discrete_dict = dict()

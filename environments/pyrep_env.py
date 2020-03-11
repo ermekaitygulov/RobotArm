@@ -41,7 +41,7 @@ class RozumEnv(gym.Env):
         self.observation_space = gym.spaces.Box(shape=self.camera.resolution, low=0, high=255)
         self.reward_range = None
         self.current_step = 0
-        self.step_limit = 4000
+        self.step_limit = 2000
         self.init_angles = self.rozum.get_joint_positions_degrees()
         self.init_cube_pose = self.cube.get_position()
         self.always_render = False

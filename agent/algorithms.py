@@ -12,8 +12,8 @@ from utils.util import take_vector_elements
 
 class DQN:
     def __init__(self, action_dim, replay_buffer, online_model, target_model,
-                 frames_to_update=1000, update_quantity=300, update_target_net_mod=5000,
-                 batch_size=32, replay_start_size=5000, gamma=0.99, learning_rate=1e-4,
+                 frames_to_update=500, update_quantity=150, update_target_net_mod=2500,
+                 batch_size=32, replay_start_size=2500, gamma=0.99, learning_rate=1e-4,
                  n_step=10, custom_loss=None):
         # global
         self.frames_to_update = frames_to_update
