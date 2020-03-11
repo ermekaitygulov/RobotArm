@@ -14,7 +14,7 @@ class RozumEnv(gym.Env):
         self.action_space = gym.spaces.Box(shape=(self.rozum.DoF,),
                                            low=self.rozum.action_bound[0],
                                            high=self.rozum.action_bound[1])
-        self.observation_space = gym.spaces.Box(shape=self.rozum.side_cam_dim, low=0, high=255)
+        self.observation_space = gym.spaces.Box(shape=self.rozum.side_cam_dim+[3], low=0, high=255)
         self.reward_range = None
         self.current_step = 0
         self.step_limit = 300
