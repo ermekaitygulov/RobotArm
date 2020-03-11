@@ -1,7 +1,7 @@
 import gym
 from pyrep import PyRep
 from pyrep.robots.arms.arm import Arm
-from pyrep.robots.end_effectors.gripper import Gripper
+from pyrep.robots.end_effectors.baxter_gripper import BaxterGripper
 from pyrep.objects.vision_sensor import VisionSensor
 from pyrep.objects import Shape
 import numpy as np
@@ -21,15 +21,6 @@ class Rozum(Arm):
         self.set_joint_positions(angles)
 
 
-class RG2(Gripper):
-    def __init__(self, count: int = 0):
-        super().__init__(count, 'RG2',
-                         ['RG2_rightJoint0', 'RG2_leftJoint0',
-                          'RG2_rightJoint1', 'RG2_leftJoint1',
-                          'RG2_rightJoint2', 'RG2_leftJoint2',
-                          'RG2_rightJoint3', 'RG2_leftJoint3',
-                          'RG2_rightJoint4', 'RG2_leftJoint4'])
-
 
 class RozumEnv(gym.Env):
     metadata = {'render.modes': ['human']}
@@ -40,7 +31,7 @@ class RozumEnv(gym.Env):
         self.pr.start()
         self.action_range = [-5, 5]
         self.rozum = Rozum()
-        self.gripper = RG2()
+        self.gripper = BaxterGripper()
         self.cube = Shape("Cube")
         self.camera = VisionSensor("render")
         self.rozum_tip = self.rozum.get_tip()
