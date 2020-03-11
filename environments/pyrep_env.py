@@ -38,7 +38,7 @@ class RozumEnv(gym.Env):
         self.action_space = gym.spaces.Box(shape=(self.rozum.num_joints,),
                                            low=-180,
                                            high=180)
-        self.observation_space = gym.spaces.Box(shape=self.camera.resolution, low=0, high=255)
+        self.observation_space = gym.spaces.Box(shape=self.camera.resolution + [3], low=0, high=255)
         self.reward_range = None
         self.current_step = 0
         self.step_limit = 2000
