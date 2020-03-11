@@ -62,7 +62,7 @@ class RozumEnv(gym.Env):
             state = None
         reward = -np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
         self.current_step += 1
-        if reward < 0.02 or self.current_step >= self.step_limit:
+        if abs(reward) < 0.02 or self.current_step >= self.step_limit:
             done = True
         return state, reward, done, None
 
