@@ -3,7 +3,7 @@ import timeit
 from utils.wrappers import DiscreteWrapper, SaveVideoWrapper
 
 env = RozumEnv()
-env = SaveVideoWrapper(RozumEnv)
+env = SaveVideoWrapper(env)
 done = False
 start_time = timeit.default_timer()
 discrete_dict = dict()
