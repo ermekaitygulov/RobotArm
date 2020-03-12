@@ -21,13 +21,12 @@ class Rozum(Arm):
         self.set_joint_positions(angles)
 
 
-
 class RozumEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self):
+    def __init__(self, scene_file='rozum_pyrep.ttt', headless=True):
         self.pr = PyRep()
-        self.pr.launch('rozum_pyrep.ttt', headless=True)
+        self.pr.launch(scene_file, headless=headless)
         self.pr.start()
         self.rozum = Rozum()
         self.gripper = BaxterGripper()
@@ -41,7 +40,7 @@ class RozumEnv(gym.Env):
         self.observation_space = gym.spaces.Box(shape=self.camera.resolution + [3], low=0, high=255)
         self.reward_range = None
         self.current_step = 0
-        self.step_limit = 2000
+        self.step_limit = 400
         self.init_angles = self.rozum.get_joint_positions_degrees()
         self.init_cube_pose = self.cube.get_position()
         self.always_render = False
@@ -67,8 +66,10 @@ class RozumEnv(gym.Env):
         return state, reward, done, None
 
     def reset(self):
-        self.rozum.set_joint_positions_degrees(self.init_angles)
-        self.cube.set_position(self.init_cube_pose)
+        # self.rozum.set_joint_positions_degrees(self.init_angles)
+        # self.cube.set_position(self.init_cube_pose)
+        self.pr.stop()
+        self.pr.start()
         state = self.render()
         self.current_step = 0
         return state

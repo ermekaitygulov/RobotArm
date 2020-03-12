@@ -12,8 +12,8 @@ from utils.util import take_vector_elements
 
 class DQN:
     def __init__(self, action_dim, replay_buffer, online_model, target_model,
-                 frames_to_update=500, update_quantity=150, update_target_net_mod=2500,
-                 batch_size=32, replay_start_size=2500, gamma=0.99, learning_rate=1e-4,
+                 frames_to_update=100, update_quantity=30, update_target_net_mod=1000,
+                 batch_size=32, replay_start_size=500, gamma=0.99, learning_rate=1e-4,
                  n_step=10, custom_loss=None):
         # global
         self.frames_to_update = frames_to_update
@@ -135,7 +135,6 @@ class DQN:
             self.replay_buff.batch_update(tree_idxes, abs_loss)
         progress.close()
 
-
     @tf.function
     def q_network_update(self, pov_batch, action_batch, reward_batch,
                          next_pov_batch, done_batch, n_pov_batch,
@@ -143,10 +142,11 @@ class DQN:
         online_variables = self.online_model.trainable_variables
         with tf.GradientTape() as tape:
             tape.watch(online_variables)
-            huber = tf.keras.losses.Huber()
+            huber = tf.keras.losses.Huber(0.4)
             q_value = self.online_model(pov_batch, training=True)
             q_value = take_vector_elements(q_value, action_batch)
             target = self.compute_target(next_pov_batch, done_batch, reward_batch, 1, gamma)
+            target = tf.stop_gradient(target)
             td_loss = huber(target, q_value, is_weights)
             print('----------------- creating metrics ---------------')
             self.avg_metrics['TD'].update_state(td_loss)

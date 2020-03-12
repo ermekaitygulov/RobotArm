@@ -59,8 +59,8 @@ class SumTree:
             self.n_entries += 1
 
     def update(self, idx, p):
-        change = min(p, 1) - self.tree[idx]
-        self.tree[idx] = min(p, 1)
+        change = p - self.tree[idx]
+        self.tree[idx] = p
         self.propagate(idx, change)
 
     def get(self, s):

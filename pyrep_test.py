@@ -13,7 +13,7 @@ for i in range(robot_dof):
     discrete_dict[i + robot_dof] = [-5 if j == i else 0 for j in range(robot_dof)]
 env = DiscreteWrapper(env, discrete_dict)
 
-for i in range(300):
+for i in range(75):
     action = env.sample_action()
     state, reward, done, _ = env.step(action)
     print("State shape: ", state.shape)
