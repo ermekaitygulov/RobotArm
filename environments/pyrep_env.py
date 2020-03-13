@@ -64,7 +64,7 @@ class RozumEnv(gym.Env):
             reward = self.previous_distance - curent_distance
             self.previous_distance = curent_distance
             self.current_step += 1
-            if abs(reward) < 0.02 or self.current_step >= self.step_limit:
+            if curent_distance < 0.02 or self.current_step >= self.step_limit:
                 done = True
         if self.always_render:
             state = self.render()
