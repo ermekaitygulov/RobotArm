@@ -53,16 +53,20 @@ class RozumEnv(gym.Env):
         self.rozum.set_joint_positions_degrees(position)
         self.pr.step()
         x, y, z = self.rozum_tip.get_position()
-        done = False
-        tx, ty, tz = self.cube.get_position()
+        if z < 0.005:
+            done = True
+            reward = -100
+        else:
+            done = False
+            tx, ty, tz = self.cube.get_position()
+            reward = -np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
+            self.current_step += 1
+            if abs(reward) < 0.02 or self.current_step >= self.step_limit:
+                done = True
         if self.always_render:
             state = self.render()
         else:
             state = None
-        reward = -np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
-        self.current_step += 1
-        if abs(reward) < 0.02 or self.current_step >= self.step_limit:
-            done = True
         return state, reward, done, None
 
     def reset(self):
