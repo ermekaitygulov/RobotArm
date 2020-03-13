@@ -89,7 +89,7 @@ class SaveVideoWrapper(gym.Wrapper):
         self.recording = []
         self.rewards = [0]
         self.resize = resize
-        self.always_render = True
+        self.env.always_render = True
 
     def step(self, action):
         """

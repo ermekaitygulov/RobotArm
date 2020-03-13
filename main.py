@@ -47,5 +47,5 @@ if __name__ == '__main__':
     agent = DQN(env.action_space.n, replay_buffer, make_model('Online_model'), make_model('Target_model'))
     summary_writer = tf.summary.create_file_writer('train/')
     with summary_writer.as_default():
-        agent.train(env)
+        agent.train(env, 1000)
     env.close()

@@ -37,8 +37,7 @@ class DQN:
         for key in ['TD', 'nTD', 'l2', 'all_losses']:
             self.avg_metrics[key] = tf.keras.metrics.Mean(name=key, dtype=tf.float32)
 
-    def train(self, env, episodes=200, name="train/max_model.ckpt", epsilon=0.1, final_epsilon=0.01, eps_decay=0.99,
-              writter=None):
+    def train(self, env, episodes=200, name="train/max_model.ckpt", epsilon=0.1, final_epsilon=0.01, eps_decay=0.99):
         max_reward = - np.inf
         counter = 0
         for e in range(episodes):
@@ -54,8 +53,7 @@ class DQN:
                   .format(e, score, counter, epsilon, max_reward))
             print("RunTime: ", stop_time - start_time)
             tf.summary.scalar("reward", score, step=e)
-            if writter:
-                writter.flush()
+            tf.summary.flush()
 
     def _train_episode(self, env, current_step=0, epsilon=0.0):
         counter = current_step
@@ -132,6 +130,7 @@ class DQN:
                     tf.summary.scalar(key, metric.result(), step=self.optimizer.iterations)
                     print('  {}:     {:.3f}'.format(key, metric.result()))
                     metric.reset_states()
+                tf.summary.flush()
             self.replay_buff.batch_update(tree_idxes, abs_loss)
         progress.close()
 

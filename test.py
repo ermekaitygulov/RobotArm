@@ -44,7 +44,5 @@ if __name__ == '__main__':
         model.build((None, ) + env.observation_space.shape)
         return model
     agent = DQN(env.action_space.n, replay_buffer, make_model('Online_model'), make_model('Target_model'))
-    summary_writer = tf.summary.create_file_writer('train/')
-    with summary_writer.as_default():
-        agent.test(env)
+    agent.test(env)
     env.close()
