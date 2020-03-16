@@ -50,24 +50,32 @@ class RozumEnv(gym.Env):
         return self.action_space.sample()
 
     def step(self, action: list):
+        done = False
+        info = None
+
         position = np.array([j + a for j, a in zip(self.rozum.get_joint_positions_degrees(), action)])
         if all(self.action_space.low < position) and all(position < self.action_space.high):
             self.rozum.set_joint_positions_degrees(position)
             self.pr.step()
         x, y, z = self.rozum_tip.get_position()
-        done = False
+
         tx, ty, tz = self.cube.get_position()
         curent_distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
         reward = self.previous_distance - curent_distance
         self.previous_distance = curent_distance
         self.current_step += 1
-        if curent_distance < 0.02 or self.current_step >= self.step_limit:
-            done = True
         if self.always_render:
             state = self.render()
         else:
             state = None
-        return state, reward, done, None
+
+        if curent_distance < 0.02:
+            done = True
+            info = 'SUCCESS'
+        elif self.current_step >= self.step_limit:
+            done = True
+            info = 'FAIL'
+        return state, reward, done, info
 
     def reset(self):
         # self.rozum.set_joint_positions_degrees(self.init_angles)
