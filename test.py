@@ -1,6 +1,6 @@
-from agent.algorithms import DQN
-from agent.replay_buffers import PrioritizedBuffer
-from agent.model import ClassicCnn, DuelingModel
+from algorithms.dqn import DQN
+from replay_buffers.replay_buffers import PrioritizedBuffer
+from algorithms.model import ClassicCnn, DuelingModel
 from environments.pyrep_env import RozumEnv
 from utils.wrappers import *
 import tensorflow as tf

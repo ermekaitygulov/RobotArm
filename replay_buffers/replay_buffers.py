@@ -1,7 +1,7 @@
 from collections import deque
 
 import numpy as np
-from agent.sum_tree import SumTree
+from replay_buffers.sum_tree import SumTree
 
 
 class PrioritizedBuffer(object):
