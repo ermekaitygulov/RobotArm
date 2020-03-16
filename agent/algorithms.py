@@ -60,9 +60,11 @@ class DQN:
         if current_step == 0:
             self.target_update()
         done, score, state = False, 0, env.reset()
-        while done is False:
+        while not done:
             action = self.choose_act(state, epsilon)
-            next_state, reward, done, _ = env.step(action)
+            next_state, reward, done, info = env.step(action)
+            if info:
+                print(info)
             score += reward
             self.perceive([state, action, reward, next_state, done, False])
             counter += 1
