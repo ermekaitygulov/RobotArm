@@ -108,12 +108,12 @@ class DQN:
             progress.update(1)
             tree_idxes, minibatch, is_weights = self.replay_buff.sample(self.batch_size)
 
-            pov_batch = np.array([np.array(data[0]) / 255 for data in minibatch])
+            pov_batch = np.array([(np.array(data[0])/255).as_type('float32') for data in minibatch])
             action_batch = np.array([data[1] for data in minibatch], dtype='int32')
             reward_batch = np.array([data[2] for data in minibatch], dtype='float32')
-            next_pov_batch = np.array([np.array(data[3]) / 255 for data in minibatch])
+            next_pov_batch = np.array([(np.array(data[3])/255).as_type('float32') for data in minibatch])
             done_batch = np.array([data[4] for data in minibatch])
-            n_pov_batch = np.array([np.array(data[6]) / 255 for data in minibatch])
+            n_pov_batch = np.array([(np.array(data[6])/255).as_type('float32') for data in minibatch])
             n_reward = np.array([data[7] for data in minibatch], dtype='float32')
             n_done = np.array([data[8] for data in minibatch])
             actual_n = np.array([data[9] for data in minibatch], dtype='float32')
@@ -203,7 +203,7 @@ class DQN:
                     break
 
     def choose_act(self, state, epsilon=0.01):
-        inputs = np.array(state)/255
+        inputs = (np.array(state)/255).as_type('float32')
         q_values = self.online_model(inputs[None], training=False)[0]
         if random.random() <= epsilon:
             return random.randint(0, self.action_dim - 1)
