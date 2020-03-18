@@ -83,6 +83,7 @@ class Learner:
             abs_loss = tf.abs(target - q_value)
 
             n_target = self.compute_target(n_pov_batch, n_done, n_reward, actual_n, gamma)
+            n_target = tf.stop_gradient(n_target)
             ntd_loss = huber(n_target, q_value, is_weights)
             self.avg_metrics['nTD'].update_state(ntd_loss)
 

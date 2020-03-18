@@ -13,6 +13,7 @@ class DuelingModel(tf.keras.Model):
 
     @tf.function
     def call(self, inputs):
+        print('Building model')
         features = self.h_layers(inputs)
         advantage, value = self.a_head(features), self.v_head(features)
         advantage, value = self.a_head1(advantage), self.v_head1(value)
