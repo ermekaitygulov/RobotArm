@@ -117,7 +117,7 @@ class DQN:
             n_reward = np.array([data[7] for data in minibatch], dtype='float32')
             n_done = np.array([data[8] for data in minibatch])
             actual_n = np.array([data[9] for data in minibatch], dtype='float32')
-            gamma = np.array(self.gamma)
+            gamma = np.array(self.gamma, dtype='float32')
 
             abs_loss = self.q_network_update(pov_batch, action_batch, reward_batch,
                                              next_pov_batch, done_batch, n_pov_batch,
