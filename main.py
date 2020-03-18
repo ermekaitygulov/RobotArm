@@ -29,6 +29,7 @@ if __name__ == '__main__':
     # env = SaveVideoWrapper(env)
     env = FrameSkip(env)
     env = FrameStack(env, 2)
+    env = AccuracyLogWrapper(env, 10)
     discrete_dict = dict()
     robot_dof = env.action_space.shape[0]
     for i in range(robot_dof):

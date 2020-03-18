@@ -6,6 +6,7 @@ import gym
 import numpy as np
 
 from chainerrl.wrappers.atari_wrappers import LazyFrames
+import tensorflow as tf
 
 
 class FrameSkip(gym.Wrapper):
@@ -154,3 +155,28 @@ class SaveVideoWrapper(gym.Wrapper):
         :return: rgb image
         """
         return image[..., ::-1]
+
+
+class AccuracyLogWrapper(gym.Wrapper):
+    def __init__(self, env, window: int):
+        super().__init__(env)
+        self.accuracy = deque(maxlen=window)
+        self.episodes_done = 0
+
+    def step(self, action):
+        observation, reward, done, info = self.env.step(action)
+        if info == 'SUCCESS':
+            self.accuracy.append(1)
+        elif info == 'FAIL':
+            self.accuracy.append(0)
+        if done:
+            self.episodes_done += 1
+        return observation, reward, done, info
+
+    def reset(self, **kwargs):
+        observation = self.env.reset(**kwargs)
+        if len(self.accuracy) > 0:
+            mean = sum(self.accuracy)/len(self.accuracy)
+            tf.summary.scalar('Accuracy', mean, step=self.episodes_done)
+            print('Accuracy: {}'.format(mean))
+        return observation
