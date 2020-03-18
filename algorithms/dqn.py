@@ -32,10 +32,7 @@ class DQN:
         self.action_dim = action_dim
 
         self.optimizer = tf.keras.optimizers.Adam(1e-4)
-
         self.avg_metrics = dict()
-        for key in ['TD', 'nTD', 'l2', 'all_losses']:
-            self.avg_metrics[key] = tf.keras.metrics.Mean(name=key, dtype=tf.float32)
 
     def train(self, env, episodes=200, name="train/max_model.ckpt", epsilon=0.1, final_epsilon=0.01, eps_decay=0.99):
         max_reward = - np.inf
@@ -150,18 +147,27 @@ class DQN:
             target = tf.stop_gradient(target)
             td_loss = huber(target, q_value, is_weights)
             print('----------------- creating metrics ---------------')
+            if 'TD' not in self.avg_metrics:
+                self.avg_metrics['TD'] = tf.keras.metrics.Mean(name='TD', dtype=tf.float32)
             self.avg_metrics['TD'].update_state(td_loss)
+
 
             abs_loss = tf.abs(target - q_value)
 
             n_target = self.compute_target(n_pov_batch, n_done, n_reward, actual_n, gamma)
             ntd_loss = huber(n_target, q_value, is_weights)
+            if 'nTD' not in self.avg_metrics:
+                self.avg_metrics['nTD'] = tf.keras.metrics.Mean(name='nTD', dtype=tf.float32)
             self.avg_metrics['nTD'].update_state(ntd_loss)
 
             l2 = tf.add_n(self.online_model.losses)
+            if 'l2' not in self.avg_metrics:
+                self.avg_metrics['l2'] = tf.keras.metrics.Mean(name='l2', dtype=tf.float32)
             self.avg_metrics['l2'].update_state(l2)
 
             all_losses = td_loss + ntd_loss + l2
+            if 'all_losses' not in self.avg_metrics:
+                self.avg_metrics['all_losses'] = tf.keras.metrics.Mean(name='all_losses', dtype=tf.float32)
             self.avg_metrics['all_losses'].update_state(all_losses)
 
         gradients = tape.gradient(all_losses, online_variables)
