@@ -115,7 +115,7 @@ class DQN:
             done_batch = tf.constant([data[4] for data in minibatch])
             n_pov_batch = tf.constant([(np.array(data[6])/255) for data in minibatch], dtype='float32')
             n_reward = tf.constant([data[7] for data in minibatch], dtype='float32')
-            n_done = tf.constant([data[8] for data in minibatch], dtype='float32')
+            n_done = tf.constant([data[8] for data in minibatch])
             actual_n = tf.constant([data[9] for data in minibatch], dtype='float32')
             gamma = tf.constant(self.gamma)
 
