@@ -108,15 +108,15 @@ class DQN:
             progress.update(1)
             tree_idxes, minibatch, is_weights = self.replay_buff.sample(self.batch_size)
 
-            pov_batch = tf.constant([(np.array(data[0])/255) for data in minibatch])
+            pov_batch = tf.constant([(np.array(data[0])/255) for data in minibatch], dtype='float32')
             action_batch = tf.constant([data[1] for data in minibatch], dtype='int32')
-            reward_batch = tf.constant([data[2] for data in minibatch])
-            next_pov_batch = tf.constant([(np.array(data[3])/255) for data in minibatch])
+            reward_batch = tf.constant([data[2] for data in minibatch], dtype='float32')
+            next_pov_batch = tf.constant([(np.array(data[3])/255) for data in minibatch], dtype='float32')
             done_batch = tf.constant([data[4] for data in minibatch])
-            n_pov_batch = tf.constant([(np.array(data[6])/255) for data in minibatch])
-            n_reward = tf.constant([data[7] for data in minibatch])
-            n_done = tf.constant([data[8] for data in minibatch])
-            actual_n = tf.constant([data[9] for data in minibatch])
+            n_pov_batch = tf.constant([(np.array(data[6])/255) for data in minibatch], dtype='float32')
+            n_reward = tf.constant([data[7] for data in minibatch], dtype='float32')
+            n_done = tf.constant([data[8] for data in minibatch], dtype='float32')
+            actual_n = tf.constant([data[9] for data in minibatch], dtype='float32')
             gamma = tf.constant(self.gamma)
 
             abs_loss = self.q_network_update(pov_batch, action_batch, reward_batch,
@@ -203,7 +203,7 @@ class DQN:
                     break
 
     def choose_act(self, state, epsilon=0.01):
-        inputs = tf.constant((np.array(state)/255)[None])
+        inputs = tf.constant((np.array(state)/255).astype('float32')[None])
         q_values = self.online_model(inputs, training=False)[0]
         if random.random() <= epsilon:
             return random.randint(0, self.action_dim - 1)
