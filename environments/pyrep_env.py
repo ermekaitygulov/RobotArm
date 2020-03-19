@@ -61,7 +61,7 @@ class RozumEnv(gym.Env):
 
         tx, ty, tz = self.cube.get_position()
         curent_distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
-        reward = self.previous_distance - curent_distance
+        reward = min(max(self.previous_distance - curent_distance, -1), 1)
         self.previous_distance = curent_distance
         self.current_step += 1
         if self.always_render:
@@ -71,6 +71,7 @@ class RozumEnv(gym.Env):
 
         if curent_distance < 0.02:
             done = True
+            reward += 1
             info = 'SUCCESS'
         elif self.current_step >= self.step_limit:
             done = True
