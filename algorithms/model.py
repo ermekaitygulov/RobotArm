@@ -7,8 +7,8 @@ from tensorflow.keras.layers import Dense, Conv2D, Flatten
 class DuelingModel(tf.keras.Model):
     def __init__(self, units, action_dim):
         super(DuelingModel, self).__init__()
-        self.h_layers = Sequential([Dense(l, activation='relu', kernel_regularizer=l2(1e-5)) for l in units[:-1]])
-        self.a_head, self.v_head = Dense(units[-1]/2, kernel_regularizer=l2(1e-5)), Dense(units[-1]/2, kernel_regularizer=l2(1e-5))
+        self.h_layers = Sequential([Dense(l, 'relu', kernel_regularizer=l2(1e-5)) for l in units[:-1]])
+        self.a_head, self.v_head = Dense(units[-1]/2, 'relu', kernel_regularizer=l2(1e-5)), Dense(units[-1]/2, 'relu', kernel_regularizer=l2(1e-5))
         self.a_head1, self.v_head1 = Dense(action_dim, kernel_regularizer=l2(1e-5)), Dense(1, kernel_regularizer=l2(1e-5))
 
     @tf.function
