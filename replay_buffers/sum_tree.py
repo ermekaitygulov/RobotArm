@@ -14,8 +14,8 @@ class SumTree:
         return self.capacity if self.full else self.data_pointer
 
     @property
-    def transition_len(self):
-        return len(self.data[0])
+    def transition_keys(self):
+        return self.data[0].keys()
 
     def propagate(self, idx, change):
         parent = (idx - 1) >> 1

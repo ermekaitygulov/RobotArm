@@ -56,12 +56,12 @@ class DQN:
             self.target_update()
         done, score, state = False, 0, env.reset()
         while not done:
-            action = self.choose_act(state, epsilon, env.sample_action)
+            action, _ = self.choose_act(state, epsilon, env.sample_action)
             next_state, reward, done, info = env.step(action)
             if info:
                 print(info)
             score += reward
-            self.perceive([state, action, reward, next_state, done])
+            self.perceive(state, action, reward, next_state, done)
             counter += 1
             state = next_state
             if len(self.replay_buff) > self.replay_start_size and counter % self.frames_to_update == 0:
@@ -90,7 +90,7 @@ class DQN:
             done = False
             observation = env.reset()
             while not done:
-                action = self.choose_act(observation, 0, env.sample_action)
+                action, _ = self.choose_act(observation, 0, env.sample_action)
                 observation, r, done, _ = env.step(action)
                 if render:
                     env.render()
@@ -106,15 +106,15 @@ class DQN:
             progress.update(1)
             tree_idxes, minibatch, is_weights = self.replay_buff.sample(self.batch_size)
 
-            pov = (minibatch[0] / 255).astype('float32')
-            action = (minibatch[1]).astype('int32')
-            next_rewards = (minibatch[2]).astype('float32')
-            next_pov = (minibatch[3] / 255).astype('float32')
-            done = minibatch[4]
-            n_pov = (minibatch[5] / 255).astype('float32')
-            n_reward = (minibatch[6]).astype('float32')
-            n_done = (minibatch[7])
-            actual_n = (minibatch[8]).astype('float32')
+            pov = (minibatch['pov'] / 255).astype('float32')
+            action = (minibatch['action']).astype('int32')
+            next_rewards = (minibatch['next_rewards']).astype('float32')
+            next_pov = (minibatch['next_pov'] / 255).astype('float32')
+            done = minibatch['done']
+            n_pov = (minibatch['n_pov'] / 255).astype('float32')
+            n_reward = (minibatch['n_reward']).astype('float32')
+            n_done = (minibatch['n_done'])
+            actual_n = (minibatch['actual_n']).astype('float32')
 
             _, ntd_loss, _, _ = self.q_network_update(pov, action, next_rewards,
                                                       next_pov, done, n_pov,
@@ -131,13 +131,13 @@ class DQN:
         progress.close()
 
     def choose_act(self, state, epsilon, action_sampler):
+        inputs = (np.array(state) / 255).astype('float32')
+        q_value = self.online_model(inputs[None], training=False)[0]
         if random.random() > epsilon:
-            inputs = (np.array(state) / 255).astype('float32')
-            q_values = self.online_model(inputs[None], training=False)[0]
-            action = np.argmax(q_values).astype('int32')
+            action = np.argmax(q_value).astype('int32')
         else:
             action = action_sampler()
-        return action
+        return action, q_value[action]
 
     @tf.function
     def q_network_update(self, pov, action, next_reward, next_pov, done, n_pov,
@@ -165,6 +165,7 @@ class DQN:
         self.optimizer.apply_gradients(zip(gradients, self.online_variables))
         return td_loss, ntd_loss, l2, all_losses
 
+    @tf.function
     def td_loss(self, n_pov, q_values, n_done, n_reward, actual_n, gamma, is_weights):
         n_target = self.compute_target(n_pov, n_done, n_reward, actual_n, gamma)
         n_target = tf.expand_dims(n_target, axis=-1)
@@ -190,17 +191,19 @@ class DQN:
     def target_update(self):
         self.target_model.set_weights(self.online_model.get_weights())
 
-    def perceive(self, transition):
+    def perceive(self, state, action, reward, next_state, done, **kwargs):
+        transition = dict(state=state, action=action, reward=reward,
+                          next_state=next_state, done=done, **kwargs)
         self.n_deque.append(transition)
         if len(self.n_deque) == self.n_deque.maxlen or transition[4]:
             while len(self.n_deque) != 0:
-                n_step_pov = self.n_deque[-1][3]
-                n_step_done = self.n_deque[-1][4]
+                n_step_pov = self.n_deque[-1]['next_pov']
+                n_step_done = self.n_deque[-1]['done']
                 n_step_r = sum([t[2] * self.gamma ** (i + 1) for i, t in enumerate(self.n_deque)])
-                self.n_deque[0].append(n_step_pov)
-                self.n_deque[0].append(n_step_r)
-                self.n_deque[0].append(n_step_done)
-                self.n_deque[0].append(len(self.n_deque) + 1)
+                self.n_deque[0]['n_pov'] = n_step_pov
+                self.n_deque[0]['n_r'] = n_step_r
+                self.n_deque[0]['n_done'] = n_step_done
+                self.n_deque[0]['actual_n'] = len(self.n_deque) + 1
                 self.replay_buff.append(self.n_deque.popleft())
                 if not n_step_done:
                     break

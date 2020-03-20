@@ -1,5 +1,7 @@
-from algorithms.dqn import DQN
-from replay_buffers.replay_buffers import PrioritizedBuffer
+import ray
+
+from algorithms.apex import Learner, ParameterServer, Actor
+from replay_buffers.apex_buffer import PrioritizedBuffer
 from algorithms.model import ClassicCnn, DuelingModel
 from environments.pyrep_env import RozumEnv
 from utils.wrappers import *
@@ -25,27 +27,39 @@ if __name__ == '__main__':
             # Memory growth must be set before GPUs have been initialized
             print(e)
 
-    env = RozumEnv()
-    env = SaveVideoWrapper(env)
-    env = FrameSkip(env)
-    env = FrameStack(env, 2)
-    env = AccuracyLogWrapper(env, 10)
+    n_actors = 3
+
+    env = [RozumEnv() for _ in range(n_actors)]
+    env[-1] = SaveVideoWrapper(env[-1])
+    env = [FrameSkip(e) for e in env]
+    env = [FrameStack(e, 2) for e in env]
+    env = [AccuracyLogWrapper(e, 10) for e in env[:-1]]
     discrete_dict = dict()
-    robot_dof = env.action_space.shape[0]
+    robot_dof = env[0].action_space.shape[0]
     for i in range(robot_dof):
         discrete_dict[i] = [5 if j == i else 0 for j in range(robot_dof)]
         discrete_dict[i + robot_dof] = [-5 if j == i else 0 for j in range(robot_dof)]
-    env = DiscreteWrapper(env, discrete_dict)
-    replay_buffer = PrioritizedBuffer(int(1e5))
+    env = [DiscreteWrapper(e, discrete_dict) for e in env]
 
     def make_model(name):
         base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])
-        head = DuelingModel([1024], env.action_space.n)
+        head = DuelingModel([1024], env[0].action_space.n)
         model = tf.keras.Sequential([base, head], name)
-        model.build((None, ) + env.observation_space.shape)
+        model.build((None, ) + env[0].observation_space.shape)
         return model
-    agent = DQN(replay_buffer, make_model)
+    config = None
+    parameter_server = ParameterServer.remote(config)
+    replay_buffer = PrioritizedBuffer.remote(int(1e5))
+    learner = Learner.remote(replay_buffer, parameter_server, make_model)
+    actors = [Actor.remote(i, 0.99, 10, replay_buffer, make_model, parameter_server) for i in range(n_actors)]
     summary_writer = tf.summary.create_file_writer('train/')
     with summary_writer.as_default():
-        agent.train(env, 1000)
-    env.close()
+        processes = list()
+        processes.append(learner.update.remote())
+        for i, a in enumerate(actors[:-1]):
+            processes.append(a.train.remote(env[i]))
+        processes.append(actors[-1].validate.remote(env[-1]))
+    ray.wait(processes)
+    ray.timeline()
+    for e in env:
+        e.close()

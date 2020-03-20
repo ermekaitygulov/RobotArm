@@ -2,6 +2,7 @@ from collections import deque
 
 import numpy as np
 from replay_buffers.sum_tree import SumTree
+from chainerrl.wrappers.atari_wrappers import LazyFrames
 
 
 class PrioritizedBuffer(object):
@@ -34,7 +35,7 @@ class PrioritizedBuffer(object):
 
     def sample(self, n):
         idxs = []
-        batch = [[] for _ in range(len(self.tree.transition_len))]
+        batch = {key:[] for key in self.tree.transition_keys}
         priorities = []
         self.beta = np.min([1., self.beta + self.beta_increment_per_sampling])
         for i in range(n):
@@ -42,12 +43,12 @@ class PrioritizedBuffer(object):
             idx, p, data = self.tree.get(s)
             priorities.append(p)
             idxs.append(idx)
-            for b, d in zip(batch, data):
-                b.append(d)
+            for key in batch.keys():
+                batch[key].append(np.array(data[key]))
         prob = np.array(priorities) / self.tree.total()
         is_weights = np.power(self.tree.n_entries * prob, -self.beta)
         is_weights /= np.max(is_weights)
-        batch = [np.array(b) for b in batch]
+        batch = {key:np.array(value) for key, value in batch.items()}
         return idxs, batch, is_weights
 
     def batch_update(self, tree_idxes, abs_errors):

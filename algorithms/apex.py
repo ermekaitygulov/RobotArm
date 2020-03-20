@@ -85,7 +85,7 @@ class Actor(DQN):
             action, q = self.choose_act(state, epsilon, env.sample_action)
             next_state, reward, done, _ = env.step(action)
             score += reward
-            self.perceive([q, reward, next_state, done, False])
+            self.perceive(state, action, reward, next_state, done, q_value=q)
             counter += 1
             self.parameter_server.update_step.remote()
             global_step = ray.get(self.parameter_server.get_steps_done())
@@ -112,19 +112,21 @@ class Actor(DQN):
         while global_step < self.max_steps:
             if global_step % self.test_mod:
                 self.sync_with_param_server()
-                self.test(env, None, self.test_eps)
+                total_reward = self.test(env, None, self.test_eps)
+                total_reward /= self.test_eps
+                tf.summary.scalar("validation", total_reward, step=global_step)
+                tf.summary.flush()
             global_step = ray.get(self.parameter_server.get_steps_done.remote())
 
     def priority_err(self, rollout):
-        q_values = np.array([data[0] for data in rollout], dtype='float32')
-        n_pov = np.array([(np.array(data[4]) / 255) for data in rollout], dtype='float32')
-        n_reward = np.array([data[5] for data in rollout], dtype='float32')
-        n_done = np.array([data[6] for data in rollout])
-        actual_n = np.array([data[7] for data in rollout], dtype='float32')
-        gamma = np.array(self.gamma, dtype='float32')
+        q_values = np.array([data['q_value'] for data in rollout], dtype='float32')
+        n_pov = np.array([(np.array(data['n_pov'])/255) for data in rollout], dtype='float32')
+        n_reward = np.array([data['n_reward'] for data in rollout], dtype='float32')
+        n_done = np.array([data['n_done'] for data in rollout])
+        actual_n = np.array([data['actual_n'] for data in rollout], dtype='float32')
         is_weights = np.ones(len(rollout))
 
-        ntd = self.td_loss(n_pov, q_values, n_done, n_reward, actual_n, gamma, is_weights)
+        ntd = self.td_loss(n_pov, q_values, n_done, n_reward, actual_n, self.gamma, is_weights)
         return ntd
 
     def sync_with_param_server(self):
