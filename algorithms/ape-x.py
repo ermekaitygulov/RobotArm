@@ -1,15 +1,13 @@
 import random
 import ray
 
-from collections import deque
 
 import numpy as np
 import tensorflow as tf
 from tqdm import tqdm
 import timeit
 
-from utils.util import take_vector_elements
-from algorithms.dqn import DQNbase
+from algorithms.dqn import DQNbase, DQN
 
 
 @ray.remote
@@ -31,17 +29,18 @@ class Learner(DQNbase):
             progress.update(1)
             tree_idxes, minibatch, is_weights = self.replay_buff.sample(self.batch_size)
 
-            q_values = np.array([data[0] for data in minibatch], dtype='float32')
-            next_rewards = np.array([data[1] for data in minibatch], dtype='float32')
-            next_pov = np.array([(np.array(data[2]) / 255) for data in minibatch], dtype='float32')
-            done = np.array([data[3] for data in minibatch])
-            n_pov = np.array([(np.array(data[4]) / 255) for data in minibatch], dtype='float32')
-            n_reward = np.array([data[5] for data in minibatch], dtype='float32')
-            n_done = np.array([data[6] for data in minibatch])
-            actual_n = np.array([data[7] for data in minibatch], dtype='float32')
+            pov = np.array([(np.array(data[0]) / 255) for data in minibatch], dtype='float32')
+            action = np.array([data[1] for data in minibatch], dtype='int32')
+            next_rewards = np.array([data[2] for data in minibatch], dtype='float32')
+            next_pov = np.array([(np.array(data[3]) / 255) for data in minibatch], dtype='float32')
+            done = np.array([data[4] for data in minibatch])
+            n_pov = np.array([(np.array(data[5]) / 255) for data in minibatch], dtype='float32')
+            n_reward = np.array([data[6] for data in minibatch], dtype='float32')
+            n_done = np.array([data[7] for data in minibatch])
+            actual_n = np.array([data[8] for data in minibatch], dtype='float32')
             gamma = np.array(self.gamma, dtype='float32')
 
-            _, ntd_loss, _, _ = self.q_network_update(q_values, next_rewards,
+            _, ntd_loss, _, _ = self.q_network_update(pov, action, next_rewards,
                                                       next_pov, done, n_pov,
                                                       n_reward, n_done, actual_n, is_weights, gamma)
 
@@ -62,16 +61,15 @@ class Learner(DQNbase):
 
 
 @ray.remote
-class Actor(DQNbase):
-    def __init__(self, thread_id, gamma, remote_replay_buffer, build_model, remote_param_server):
-        super().__init__(build_model, gamma)
+class Actor(DQN):
+    def __init__(self, thread_id, gamma, n_step, remote_replay_buffer, build_model, remote_param_server):
+        super().__init__(list(), build_model, gamma, n_step)
         self.thread_id = thread_id
         self.remote_replay_buff = remote_replay_buffer
         self.parameter_server = remote_param_server
 
         if self.parameter_server:
             self.config = ray.get(self.parameter_server.get_config.remote())
-            self.n_deque = deque([], maxlen=self.config['n_step'])
             self.sync_nn_mod = self.config['sync_nn_mod']
             self.max_steps = self.config['max_steps']
             self.send_rollout_mod = self.config['send_rollout_mod']
@@ -80,7 +78,7 @@ class Actor(DQNbase):
 
         self.rollout = list()
 
-    def train(self, env, epsilon=0.1, final_epsilon=0.01, eps_decay=0.99):
+    def train(self, env, epsilon=0.1, final_epsilon=0.01, eps_decay=0.99, **kwargs):
         max_reward, counter, threads_ep = - np.inf, 0, 0
         self.sync_with_param_server()
         done, score, state, start_time = False, 0, env.reset(), timeit.default_timer()
@@ -99,7 +97,7 @@ class Actor(DQNbase):
             if counter % self.send_rollout_mod == 0:
                 priorities = self.priority_err(self.rollout)
                 self.remote_replay_buff.receive.remote(self.rollout, priorities)
-                self.rollout.clear()
+                self.replay_buff.clear()
             if done:
                 epsilon = max(final_epsilon, epsilon * eps_decay)
                 stop_time = timeit.default_timer()
@@ -130,59 +128,6 @@ class Actor(DQNbase):
 
         ntd = self.td_loss(n_pov, q_values, n_done, n_reward, actual_n, gamma, is_weights)
         return ntd
-
-    def test(self, env, name, number_of_trials=1):
-        """
-        Method for testing model in environment
-        :param env:
-        :param name:
-        :param number_of_trials:
-        :return:
-        """
-        # restore POV agent's graph
-        if name:
-            self.load(name)
-
-        total_reward = 0
-
-        for trial_index in range(number_of_trials):
-            reward = 0
-            done = False
-            observation = env.reset()
-            while not done:
-                action = self.choose_act(observation)
-                observation, r, done, _ = env.step(action)
-                reward += r
-            total_reward += reward
-            print("reward/avg_reward for {} trial: {}; {}".format(trial_index, reward,
-                                                                  total_reward / (trial_index + 1)))
-        env.reset()
-        return total_reward
-
-    def perceive(self, transition):
-        self.n_deque.append(transition)
-        if len(self.n_deque) == self.n_deque.maxlen or transition[4]:
-            while len(self.n_deque) != 0:
-                n_step_pov = self.n_deque[-1][2]
-                n_step_done = self.n_deque[-1][3]
-                n_step_r = sum([t[1] * self.gamma ** (i + 1) for i, t in enumerate(self.n_deque)])
-                self.n_deque[0].append(n_step_pov)
-                self.n_deque[0].append(n_step_r)
-                self.n_deque[0].append(n_step_done)
-                self.n_deque[0].append(len(self.n_deque) + 1)
-                self.replay_buff.store(self.n_deque.popleft())
-                if not n_step_done:
-                    break
-
-    def choose_act(self, state, epsilon, action_sampler):
-        inputs = (np.array(state) / 255).astype('float32')
-        q_values = self.online_model(inputs[None], training=False)[0]
-        if random.random() > epsilon:
-            action = np.argmax(q_values).astype('int32')
-        else:
-            action = action_sampler()
-        q = q_values[action]
-        return action, q
 
     def sync_with_param_server(self):
         online_weights, target_weights = ray.get(self.parameter_server.return_params.remote())

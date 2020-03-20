@@ -24,12 +24,14 @@ class DQNbase:
         self.avg_metrics = dict()
 
     @tf.function
-    def q_network_update(self, q_values, nex_reward, next_pov, done, n_pov,
+    def q_network_update(self, pov, action, next_reward, next_pov, done, n_pov,
                          n_reward, n_done, actual_n, is_weights, gamma):
 
         with tf.GradientTape() as tape:
             tape.watch(self.online_variables)
-            td_loss = self.td_loss(next_pov, q_values, done, nex_reward, 1, gamma, is_weights)
+            q_values = self.online_model(pov, training=True)
+            q_values = take_vector_elements(q_values, action)
+            td_loss = self.td_loss(next_pov, q_values, done, next_reward, 1, gamma, is_weights)
             mean_td = tf.reduce_mean(td_loss)
             self.update_metrics('TD', mean_td)
 
@@ -80,7 +82,7 @@ class DQNbase:
 
 
 class DQN(DQNbase):
-    def __init__(self, action_dim, replay_buffer, build_model,
+    def __init__(self, replay_buffer, build_model,
                  frames_to_update=100, update_quantity=30, update_target_net_mod=1000,
                  batch_size=32, replay_start_size=500, gamma=0.99, learning_rate=1e-4,
                  n_step=10, custom_loss=None):
@@ -93,7 +95,6 @@ class DQN(DQNbase):
         self.replay_start_size = replay_start_size
         self.n_deque = deque([], maxlen=n_step)
         self.replay_buff = replay_buffer
-        self.action_dim = action_dim
 
     def train(self, env, episodes=200, name="train/max_model.ckpt", epsilon=0.1, final_epsilon=0.01, eps_decay=0.99):
         max_reward = - np.inf
@@ -119,12 +120,12 @@ class DQN(DQNbase):
             self.target_update()
         done, score, state = False, 0, env.reset()
         while not done:
-            action, q = self.choose_act(state, epsilon, env.sample_action)
+            action = self.choose_act(state, epsilon, env.sample_action)
             next_state, reward, done, info = env.step(action)
             if info:
                 print(info)
             score += reward
-            self.perceive([q, reward, next_state, done, False])
+            self.perceive([state, action, reward, next_state, done, False])
             counter += 1
             state = next_state
             if len(self.replay_buff) > self.replay_start_size and counter % self.frames_to_update == 0:
@@ -169,17 +170,18 @@ class DQN(DQNbase):
             progress.update(1)
             tree_idxes, minibatch, is_weights = self.replay_buff.sample(self.batch_size)
 
-            q_values = np.array([data[0] for data in minibatch], dtype='float32')
-            next_rewards = np.array([data[1] for data in minibatch], dtype='float32')
-            next_pov = np.array([(np.array(data[2]) / 255) for data in minibatch], dtype='float32')
-            done = np.array([data[3] for data in minibatch])
-            n_pov = np.array([(np.array(data[4]) / 255) for data in minibatch], dtype='float32')
-            n_reward = np.array([data[5] for data in minibatch], dtype='float32')
-            n_done = np.array([data[6] for data in minibatch])
-            actual_n = np.array([data[7] for data in minibatch], dtype='float32')
+            pov = np.array([(np.array(data[0]) / 255) for data in minibatch], dtype='float32')
+            action = np.array([data[1] for data in minibatch], dtype='int32')
+            next_rewards = np.array([data[2] for data in minibatch], dtype='float32')
+            next_pov = np.array([(np.array(data[3]) / 255) for data in minibatch], dtype='float32')
+            done = np.array([data[4] for data in minibatch])
+            n_pov = np.array([(np.array(data[5]) / 255) for data in minibatch], dtype='float32')
+            n_reward = np.array([data[6] for data in minibatch], dtype='float32')
+            n_done = np.array([data[7] for data in minibatch])
+            actual_n = np.array([data[8] for data in minibatch], dtype='float32')
             gamma = np.array(self.gamma, dtype='float32')
 
-            _, ntd_loss, _, _ = self.q_network_update(q_values, next_rewards,
+            _, ntd_loss, _, _ = self.q_network_update(pov, action, next_rewards,
                                                       next_pov, done, n_pov,
                                                       n_reward, n_done, actual_n, is_weights, gamma)
 
@@ -197,23 +199,22 @@ class DQN(DQNbase):
         self.n_deque.append(transition)
         if len(self.n_deque) == self.n_deque.maxlen or transition[4]:
             while len(self.n_deque) != 0:
-                n_step_pov = self.n_deque[-1][2]
-                n_step_done = self.n_deque[-1][3]
-                n_step_r = sum([t[1] * self.gamma ** (i + 1) for i, t in enumerate(self.n_deque)])
+                n_step_pov = self.n_deque[-1][3]
+                n_step_done = self.n_deque[-1][4]
+                n_step_r = sum([t[2] * self.gamma ** (i + 1) for i, t in enumerate(self.n_deque)])
                 self.n_deque[0].append(n_step_pov)
                 self.n_deque[0].append(n_step_r)
                 self.n_deque[0].append(n_step_done)
                 self.n_deque[0].append(len(self.n_deque) + 1)
-                self.replay_buff.store(self.n_deque.popleft())
+                self.replay_buff.append(self.n_deque.popleft())
                 if not n_step_done:
                     break
 
     def choose_act(self, state, epsilon, action_sampler):
-        inputs = (np.array(state) / 255).astype('float32')
-        q_values = self.online_model(inputs[None], training=False)[0]
         if random.random() > epsilon:
+            inputs = (np.array(state) / 255).astype('float32')
+            q_values = self.online_model(inputs[None], training=False)[0]
             action = np.argmax(q_values).astype('int32')
         else:
             action = action_sampler()
-        q = q_values[action]
-        return action, q
+        return action

@@ -26,7 +26,7 @@ class PrioritizedBuffer(object):
     def full(self):
         return self.tree.full
 
-    def store(self, transition):
+    def append(self, transition):
         max_p = np.max(self.tree.tree[-self.tree.capacity:])
         if max_p == 0:
             max_p = 1
