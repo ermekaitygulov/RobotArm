@@ -201,7 +201,7 @@ class DQN:
                 n_step_done = self.n_deque[-1]['done']
                 n_step_r = sum([t['reward'] * self.gamma ** (i + 1) for i, t in enumerate(self.n_deque)])
                 self.n_deque[0]['n_state'] = n_step_state
-                self.n_deque[0]['n_r'] = n_step_r
+                self.n_deque[0]['n_reward'] = n_step_r
                 self.n_deque[0]['n_done'] = n_step_done
                 self.n_deque[0]['actual_n'] = len(self.n_deque) + 1
                 self.replay_buff.append(self.n_deque.popleft())
