@@ -44,7 +44,7 @@ if __name__ == '__main__':
         model = tf.keras.Sequential([base, head], name)
         model.build((None, ) + env.observation_space.shape)
         return model
-    agent = DQN(replay_buffer, make_model, replay_start_size=50)
+    agent = DQN(replay_buffer, make_model)
     summary_writer = tf.summary.create_file_writer('train/')
     with summary_writer.as_default():
         agent.train(env, 1000)
