@@ -108,7 +108,7 @@ class DQN:
 
             state = (minibatch['state'] / 255).astype('float32')
             action = (minibatch['action']).astype('int32')
-            next_rewards = (minibatch['next_rewards']).astype('float32')
+            next_rewards = (minibatch['reward']).astype('float32')
             next_state = (minibatch['next_state'] / 255).astype('float32')
             done = minibatch['done']
             n_state = (minibatch['n_state'] / 255).astype('float32')
