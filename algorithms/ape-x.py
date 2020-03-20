@@ -1,4 +1,3 @@
-import random
 import ray
 
 
@@ -7,11 +6,11 @@ import tensorflow as tf
 from tqdm import tqdm
 import timeit
 
-from algorithms.dqn import DQNbase, DQN
+from algorithms.dqn import DQN
 
 
 @ray.remote
-class Learner(DQNbase):
+class Learner(DQN):
     def __init__(self, remote_replay_buffer, parameter_server, build_model, update_target_net_mod=1000,
                  batch_size=32, replay_start_size=500, gamma=0.99, learning_rate=1e-4,
                  custom_loss=None):
