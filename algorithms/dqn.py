@@ -61,7 +61,7 @@ class DQN:
             if info:
                 print(info)
             score += reward
-            self.perceive([state, action, reward, next_state, done, False])
+            self.perceive([state, action, reward, next_state, done])
             counter += 1
             state = next_state
             if len(self.replay_buff) > self.replay_start_size and counter % self.frames_to_update == 0:
