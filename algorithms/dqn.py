@@ -106,18 +106,18 @@ class DQN:
             progress.update(1)
             tree_idxes, minibatch, is_weights = self.replay_buff.sample(self.batch_size)
 
-            pov = (minibatch['pov'] / 255).astype('float32')
+            state = (minibatch['state'] / 255).astype('float32')
             action = (minibatch['action']).astype('int32')
             next_rewards = (minibatch['next_rewards']).astype('float32')
-            next_pov = (minibatch['next_pov'] / 255).astype('float32')
+            next_state = (minibatch['next_state'] / 255).astype('float32')
             done = minibatch['done']
-            n_pov = (minibatch['n_pov'] / 255).astype('float32')
+            n_state = (minibatch['n_state'] / 255).astype('float32')
             n_reward = (minibatch['n_reward']).astype('float32')
             n_done = (minibatch['n_done'])
             actual_n = (minibatch['actual_n']).astype('float32')
 
-            _, ntd_loss, _, _ = self.q_network_update(pov, action, next_rewards,
-                                                      next_pov, done, n_pov,
+            _, ntd_loss, _, _ = self.q_network_update(state, action, next_rewards,
+                                                      next_state, done, n_state,
                                                       n_reward, n_done, actual_n, is_weights, self.gamma)
 
             if tf.equal(self.optimizer.iterations % log_freq, 0):
@@ -140,18 +140,18 @@ class DQN:
         return action, q_value[action]
 
     @tf.function
-    def q_network_update(self, pov, action, next_reward, next_pov, done, n_pov,
+    def q_network_update(self, state, action, next_reward, next_state, done, n_state,
                          n_reward, n_done, actual_n, is_weights, gamma):
 
         with tf.GradientTape() as tape:
             tape.watch(self.online_variables)
-            q_values = self.online_model(pov, training=True)
+            q_values = self.online_model(state, training=True)
             q_values = take_vector_elements(q_values, action)
-            td_loss = self.td_loss(next_pov, q_values, done, next_reward, 1, gamma, is_weights)
+            td_loss = self.td_loss(next_state, q_values, done, next_reward, 1, gamma, is_weights)
             mean_td = tf.reduce_mean(td_loss)
             self.update_metrics('TD', mean_td)
 
-            ntd_loss = self.td_loss(n_pov, q_values, n_done, n_reward, actual_n, gamma, is_weights)
+            ntd_loss = self.td_loss(n_state, q_values, n_done, n_reward, actual_n, gamma, is_weights)
             mean_ntd = tf.reduce_mean(ntd_loss)
             self.update_metrics('nTD', mean_ntd)
 
@@ -166,17 +166,17 @@ class DQN:
         return td_loss, ntd_loss, l2, all_losses
 
     @tf.function
-    def td_loss(self, n_pov, q_values, n_done, n_reward, actual_n, gamma, is_weights):
-        n_target = self.compute_target(n_pov, n_done, n_reward, actual_n, gamma)
+    def td_loss(self, n_state, q_values, n_done, n_reward, actual_n, gamma, is_weights):
+        n_target = self.compute_target(n_state, n_done, n_reward, actual_n, gamma)
         n_target = tf.expand_dims(n_target, axis=-1)
         ntd_loss = self.huber_loss(n_target, q_values, is_weights)
         return ntd_loss
 
     @tf.function
-    def compute_target(self, next_pov, done, reward, actual_n, gamma):
-        q_network = self.online_model(next_pov, training=True)
+    def compute_target(self, next_state, done, reward, actual_n, gamma):
+        q_network = self.online_model(next_state, training=True)
         argmax_actions = tf.argmax(q_network, axis=1, output_type='int32')
-        q_target = self.target_model(next_pov, training=True)
+        q_target = self.target_model(next_state, training=True)
         target = take_vector_elements(q_target, argmax_actions)
         target = tf.where(done, tf.zeros_like(target), target)
         target = target * gamma ** actual_n
@@ -197,10 +197,10 @@ class DQN:
         self.n_deque.append(transition)
         if len(self.n_deque) == self.n_deque.maxlen or transition['done']:
             while len(self.n_deque) != 0:
-                n_step_pov = self.n_deque[-1]['next_pov']
+                n_step_state = self.n_deque[-1]['next_state']
                 n_step_done = self.n_deque[-1]['done']
                 n_step_r = sum([t[2] * self.gamma ** (i + 1) for i, t in enumerate(self.n_deque)])
-                self.n_deque[0]['n_pov'] = n_step_pov
+                self.n_deque[0]['n_state'] = n_step_state
                 self.n_deque[0]['n_r'] = n_step_r
                 self.n_deque[0]['n_done'] = n_step_done
                 self.n_deque[0]['actual_n'] = len(self.n_deque) + 1
