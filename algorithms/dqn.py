@@ -195,7 +195,7 @@ class DQN:
         transition = dict(state=state, action=action, reward=reward,
                           next_state=next_state, done=done, **kwargs)
         self.n_deque.append(transition)
-        if len(self.n_deque) == self.n_deque.maxlen or transition[4]:
+        if len(self.n_deque) == self.n_deque.maxlen or transition['done']:
             while len(self.n_deque) != 0:
                 n_step_pov = self.n_deque[-1]['next_pov']
                 n_step_done = self.n_deque[-1]['done']
