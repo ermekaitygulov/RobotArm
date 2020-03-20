@@ -186,7 +186,7 @@ class DQN:
     def update_metrics(self, key, value):
         if key not in self.avg_metrics:
             self.avg_metrics[key] = tf.keras.metrics.Mean(name=key, dtype=tf.float32)
-        self.avg_metrics[value].update_state(value)
+        self.avg_metrics[key].update_state(value)
 
     def target_update(self):
         self.target_model.set_weights(self.online_model.get_weights())
