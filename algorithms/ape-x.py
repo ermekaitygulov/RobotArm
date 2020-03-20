@@ -28,20 +28,19 @@ class Learner(DQN):
             progress.update(1)
             tree_idxes, minibatch, is_weights = self.replay_buff.sample(self.batch_size)
 
-            pov = np.array([(np.array(data[0]) / 255) for data in minibatch], dtype='float32')
-            action = np.array([data[1] for data in minibatch], dtype='int32')
-            next_rewards = np.array([data[2] for data in minibatch], dtype='float32')
-            next_pov = np.array([(np.array(data[3]) / 255) for data in minibatch], dtype='float32')
-            done = np.array([data[4] for data in minibatch])
-            n_pov = np.array([(np.array(data[5]) / 255) for data in minibatch], dtype='float32')
-            n_reward = np.array([data[6] for data in minibatch], dtype='float32')
-            n_done = np.array([data[7] for data in minibatch])
-            actual_n = np.array([data[8] for data in minibatch], dtype='float32')
-            gamma = np.array(self.gamma, dtype='float32')
+            pov = (minibatch[0]/255).astype('float32')
+            action = (minibatch[1]).astype('int32')
+            next_rewards = (minibatch[2]).astype('float32')
+            next_pov = (minibatch[3]/255).astype('float32')
+            done = minibatch[4]
+            n_pov = (minibatch[5]/255).astype('float32')
+            n_reward = (minibatch[6]).astype('float32')
+            n_done = (minibatch[7])
+            actual_n = (minibatch[8]).astype('float32')
 
             _, ntd_loss, _, _ = self.q_network_update(pov, action, next_rewards,
                                                       next_pov, done, n_pov,
-                                                      n_reward, n_done, actual_n, is_weights, gamma)
+                                                      n_reward, n_done, actual_n, is_weights, self.gamma)
 
             if tf.equal(self.optimizer.iterations % log_freq, 0):
                 print("Epoch: ", self.optimizer.iterations.numpy())

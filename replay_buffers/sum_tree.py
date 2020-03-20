@@ -13,6 +13,10 @@ class SumTree:
     def __len__(self):
         return self.capacity if self.full else self.data_pointer
 
+    @property
+    def transition_len(self):
+        return len(self.data[0])
+
     def propagate(self, idx, change):
         parent = (idx - 1) >> 1
         self.tree[parent] += change

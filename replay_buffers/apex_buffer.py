@@ -29,15 +29,13 @@ class PrioritizedBuffer(object):
     def full(self):
         return self.tree.full
 
-    def store(self, transition):
-        max_p = np.max(self.tree.tree[-self.tree.capacity:])
-        if max_p == 0:
-            max_p = 1
-        self.tree.add(max_p, transition)  # set the max_p for new transition
+    def receive(self, transitions, priorities):
+        for t, p in zip(transitions, priorities):
+            self.tree.add(p, t)
 
-    def sample(self, n, normalize_is=False):
+    def sample(self, n):
         idxs = []
-        batch = []
+        batch = [[] for _ in range(len(self.tree.transition_len))]
         priorities = []
         self.beta = np.min([1., self.beta + self.beta_increment_per_sampling])
         for i in range(n):
@@ -45,12 +43,12 @@ class PrioritizedBuffer(object):
             idx, p, data = self.tree.get(s)
             priorities.append(p)
             idxs.append(idx)
-            batch.append(data)
+            for b, d in zip(batch, data):
+                b.append(d)
         prob = np.array(priorities) / self.tree.total()
         is_weights = np.power(self.tree.n_entries * prob, -self.beta)
-        if normalize_is:
-            is_weights /= np.max(is_weights)
-        # note: b_idx stores indexes in self.tree.tree, not in self.tree.data !!!
+        is_weights /= np.max(is_weights)
+        batch = [np.array(b) for b in batch]
         return idxs, batch, is_weights
 
     def batch_update(self, tree_idxes, abs_errors):
