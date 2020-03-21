@@ -121,7 +121,7 @@ class Actor(DQN):
             while global_ep < max_eps:
                 if global_ep % test_mod:
                     self.sync_with_param_server()
-                    total_reward = self.test(self.env, None, self.test_eps)
+                    total_reward = self.test(self.env, None, test_eps)
                     total_reward /= test_eps
                     tf.summary.scalar("validation", total_reward, step=global_ep)
                     tf.summary.flush()
