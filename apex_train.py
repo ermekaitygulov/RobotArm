@@ -34,7 +34,7 @@ if __name__ == '__main__':
         env = DiscreteWrapper(env, discrete_dict)
         return env
 
-    test_env = make_env()
+    test_env = make_env('test_name')
     obs_shape = test_env.observation_space.shape
     action_shape = test_env.action_space.n
     test_env.close()
