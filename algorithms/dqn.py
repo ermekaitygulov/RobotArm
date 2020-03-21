@@ -115,6 +115,7 @@ class DQN:
             n_reward = (minibatch['n_reward']).astype('float32')
             n_done = (minibatch['n_done'])
             actual_n = (minibatch['actual_n']).astype('float32')
+            is_weights = is_weights.astype('float32')
 
             _, ntd_loss, _, _ = self.q_network_update(state, action, next_rewards,
                                                       next_state, done, n_state,
