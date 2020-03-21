@@ -77,7 +77,7 @@ class Actor(DQN):
         self.summary_writer = tf.summary.create_file_writer('train/{}_actor/'.format(thread_id))
 
     def train(self, epsilon=0.1, final_epsilon=0.01, eps_decay=0.99,
-              max_eps=1e+6, send_rollout_mod=64, sync_nn_mod=100, **kwargs):
+              max_eps=1e+6, **kwargs):
         import tensorflow as tf
         with self.summary_writer.as_default():
             max_reward, counter = - np.inf, 0
