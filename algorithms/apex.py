@@ -53,6 +53,7 @@ class Learner(DQN):
                     tf.summary.flush()
                 self.replay_buff.batch_update.remote(tree_idxes, ntd_loss)
                 global_eps = ray.get(self.parameter_server.get_eps_done.remote())
+                self.update_parameter_server()
 
     def update_parameter_server(self):
         online_weights = self.online_model.get_weights()
