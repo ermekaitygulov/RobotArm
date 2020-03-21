@@ -21,7 +21,7 @@ class Learner(DQN):
 
     def update(self, max_eps=10000, log_freq=10, **kwargs):
         import tensorflow as tf
-        while self.replay_buff.len.remote() < self.replay_start_size:
+        while ray.get(self.replay_buff.len.remote()) < self.replay_start_size:
             continue
         with self.summary_writer.as_default():
             global_eps = ray.get(self.parameter_server.get_eps_done.remote())
