@@ -135,7 +135,7 @@ class Actor(DQN):
         return ntd
 
     def sync_with_param_server(self):
-        while ray.get(self.parameter_server.return_params.remote()) is None:
+        while ray.get(self.parameter_server.return_params.remote())[0] is None:
             continue
         online_weights, target_weights = ray.get(self.parameter_server.return_params.remote())
         self.online_model.set_weights(online_weights)
