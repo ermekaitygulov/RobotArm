@@ -36,7 +36,7 @@ if __name__ == '__main__':
         env = FrameStack(env, 2)
         env = AccuracyLogWrapper(env, 10)
         discrete_dict = dict()
-        robot_dof = env[0].action_space.shape[0]
+        robot_dof = env.action_space.shape[0]
         for i in range(robot_dof):
             discrete_dict[i] = [5 if j == i else 0 for j in range(robot_dof)]
             discrete_dict[i + robot_dof] = [-5 if j == i else 0 for j in range(robot_dof)]
