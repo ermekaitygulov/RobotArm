@@ -147,12 +147,12 @@ class DQN:
             tape.watch(self.online_variables)
             q_values = self.online_model(state, training=True)
             q_values = take_vector_elements(q_values, action)
-            td_loss = self.td_loss(next_state, q_values, done, next_reward, 1, gamma, is_weights)
-            mean_td = tf.reduce_mean(td_loss)
+            td_loss = self.td_loss(next_state, q_values, done, next_reward, 1, gamma)
+            mean_td = tf.reduce_mean(td_loss*is_weights)
             self.update_metrics('TD', mean_td)
 
-            ntd_loss = self.td_loss(n_state, q_values, n_done, n_reward, actual_n, gamma, is_weights)
-            mean_ntd = tf.reduce_mean(ntd_loss)
+            ntd_loss = self.td_loss(n_state, q_values, n_done, n_reward, actual_n, gamma)
+            mean_ntd = tf.reduce_mean(ntd_loss, is_weights)
             self.update_metrics('nTD', mean_ntd)
 
             l2 = tf.add_n(self.online_model.losses)
@@ -166,10 +166,10 @@ class DQN:
         return td_loss, ntd_loss, l2, all_losses
 
     @tf.function
-    def td_loss(self, n_state, q_values, n_done, n_reward, actual_n, gamma, is_weights):
+    def td_loss(self, n_state, q_values, n_done, n_reward, actual_n, gamma):
         n_target = self.compute_target(n_state, n_done, n_reward, actual_n, gamma)
         n_target = tf.expand_dims(n_target, axis=-1)
-        ntd_loss = self.huber_loss(n_target, q_values, is_weights)
+        ntd_loss = self.huber_loss(n_target, q_values)
         return ntd_loss
 
     @tf.function
