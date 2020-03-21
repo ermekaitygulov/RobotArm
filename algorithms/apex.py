@@ -63,17 +63,17 @@ class Learner(DQN):
 
 @ray.remote
 class Actor(DQN):
-    def __init__(self, thread_id, remote_replay_buffer,  build_model, obs_shape, action_shape,
+    def __init__(self, thread_id, remote_replay_buffer, build_model, obs_shape, action_shape,
                  make_env, remote_param_server, gamma=0.99, n_step=10,
-                 sync_nn_mod=100, send_rollout_mod=64, test=False):
+                 sync_nn_steps=100, send_rollout_steps=64, test=False):
         import tensorflow as tf
         self.env = make_env('{}_thread'.format(thread_id), test)
         super().__init__(list(), build_model, obs_shape, action_shape,
                          gamma=gamma, n_step=n_step)
         self.remote_replay_buff = remote_replay_buffer
         self.parameter_server = remote_param_server
-        self.sync_nn_mod = sync_nn_mod
-        self.send_rollout_mod = send_rollout_mod
+        self.sync_nn_shedule = {'next': sync_nn_steps, 'every': sync_nn_steps}
+        self.send_rollout_schedule = {'next': send_rollout_steps, 'every': send_rollout_steps}
         self.summary_writer = tf.summary.create_file_writer('train/{}_actor/'.format(thread_id))
 
     def train(self, epsilon=0.1, final_epsilon=0.01, eps_decay=0.99,
@@ -105,9 +105,11 @@ class Actor(DQN):
                     epsilon = max(final_epsilon, epsilon * eps_decay)
 
     def schedule(self, counter):
-        if counter % self.sync_nn_mod == 0:
+        if counter > self.sync_nn_shedule['next'] >= 0:
+            self.sync_nn_shedule['next'] += self.sync_nn_shedule['every']
             self.sync_with_param_server()
-        if counter % self.send_rollout_mod == 0:
+        if counter > self.send_rollout_schedule['next'] >= 0 and all(['n_pov' in d for d in self.replay_buff]):
+            self.send_rollout_schedule['next'] += self.send_rollout_schedule['every']
             priorities = self.priority_err(self.replay_buff)
             self.remote_replay_buff.receive.remote(self.replay_buff, priorities)
             self.replay_buff.clear()
