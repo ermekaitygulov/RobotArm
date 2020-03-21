@@ -25,10 +25,10 @@ class DuelingModel(tf.keras.Model):
 class ClassicCnn(tf.keras.Model):
     def __init__(self, filters, kernels, strides):
         super(ClassicCnn, self).__init__()
-        self.cnn = Sequential(Conv2D(filters[0], kernels[0], strides[0],
-                                            activation='relu'), name='CNN')
+        self.cnn = Sequential(Conv2D(filters[0], kernels[0], strides[0], activation='relu',
+                                     kernel_regularizer=l2(1e-5)), name='CNN')
         for f, k, s in zip(filters[1:], kernels[1:], strides[1:]):
-            self.cnn.add(Conv2D(f, k, s, activation='relu'))
+            self.cnn.add(Conv2D(f, k, s, activation='relu', kernel_regularizer=l2(1e-5)))
         self.cnn.add(Flatten())
 
     @tf.function

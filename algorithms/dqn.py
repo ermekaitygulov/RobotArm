@@ -11,13 +11,13 @@ from utils.util import take_vector_elements
 
 
 class DQN:
-    def __init__(self, replay_buffer, build_model, frames_to_update=100, update_quantity=30,
+    def __init__(self, replay_buffer, build_model, obs_shape, action_shape, frames_to_update=100, update_quantity=30,
                  update_target_net_mod=1000, batch_size=32, replay_start_size=500, gamma=0.99, learning_rate=1e-4,
                  n_step=10, custom_loss=None):
 
         self.gamma = np.array(gamma, dtype='float32')
-        self.online_model = build_model('Online')
-        self.target_model = build_model('Target')
+        self.online_model = build_model('Online', obs_shape, action_shape)
+        self.target_model = build_model('Target', obs_shape, action_shape)
         self.custom_loss = custom_loss
         self.online_variables = self.online_model.trainable_variables
         self.optimizer = tf.keras.optimizers.Adam(learning_rate)

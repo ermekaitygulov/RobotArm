@@ -3,7 +3,6 @@ import ray
 
 import numpy as np
 import tensorflow as tf
-from tqdm import tqdm
 import timeit
 
 from algorithms.dqn import DQN
@@ -11,22 +10,22 @@ from algorithms.dqn import DQN
 
 @ray.remote
 class Learner(DQN):
-    def __init__(self, remote_replay_buffer, parameter_server, build_model, update_target_net_mod=1000,
-                 batch_size=32, replay_start_size=500, gamma=0.99, learning_rate=1e-4,
-                 custom_loss=None):
-        super().__init__(build_model, gamma, learning_rate, custom_loss)
-        self.update_target_net_mod = update_target_net_mod
-        self.batch_size = batch_size
-        self.replay_start_size = replay_start_size
+    def __init__(self, remote_replay_buffer, build_model, obs_shape, action_shape,
+                 parameter_server, update_target_net_mod=1000, gamma=0.99, learning_rate=1e-4,
+                 batch_size=32, replay_start_size=1000):
 
-        self.replay_buff = remote_replay_buffer
+        super().__init__(remote_replay_buffer, build_model, obs_shape, action_shape,
+                         gamma=gamma, learning_rate=learning_rate, update_target_net_mod=update_target_net_mod,
+                         batch_size=batch_size, replay_start_size=replay_start_size)
         self.parameter_server = parameter_server
 
-    def update(self, steps, log_freq=10):
-        progress = tqdm(total=steps)
-        for i in range(1, steps + 1):
-            progress.update(1)
-            tree_idxes, minibatch, is_weights = self.replay_buff.sample(self.batch_size)
+    def update(self, max_eps=10000, log_freq=10, **kwargs):
+        while self.replay_buff.len.remote() < self.replay_start_size:
+            continue
+
+        global_eps = ray.get(self.parameter_server.get_eps_done.remote())
+        while global_eps < max_eps:
+            tree_idxes, minibatch, is_weights = ray.get(self.replay_buff.sample.remote(self.batch_size))
 
             pov = (minibatch[0]/255).astype('float32')
             action = (minibatch[1]).astype('int32')
@@ -37,20 +36,21 @@ class Learner(DQN):
             n_reward = (minibatch[6]).astype('float32')
             n_done = (minibatch[7])
             actual_n = (minibatch[8]).astype('float32')
+            is_weights = is_weights.astype('float32')
 
             _, ntd_loss, _, _ = self.q_network_update(pov, action, next_rewards,
                                                       next_pov, done, n_pov,
                                                       n_reward, n_done, actual_n, is_weights, self.gamma)
 
             if tf.equal(self.optimizer.iterations % log_freq, 0):
-                print("Epoch: ", self.optimizer.iterations.numpy())
+                print("LearnerEpoch: ", self.optimizer.iterations.numpy())
                 for key, metric in self.avg_metrics.items():
                     tf.summary.scalar(key, metric.result(), step=self.optimizer.iterations)
                     print('  {}:     {:.3f}'.format(key, metric.result()))
                     metric.reset_states()
                 tf.summary.flush()
-            self.replay_buff.batch_update(tree_idxes, ntd_loss)
-        progress.close()
+            self.replay_buff.batch_update.remote(tree_idxes, ntd_loss)
+            global_eps = ray.get(self.parameter_server.get_eps_done.remote())
 
     def update_parameter_server(self):
         online_weights = self.online_model.get_weights()
@@ -60,60 +60,59 @@ class Learner(DQN):
 
 @ray.remote
 class Actor(DQN):
-    def __init__(self, thread_id, gamma, n_step, remote_replay_buffer, build_model, remote_param_server):
-        super().__init__(list(), build_model, gamma, n_step)
+    def __init__(self, thread_id, remote_replay_buffer,  build_model, obs_shape, action_shape,
+                 make_env, remote_param_server, gamma=0.99, n_step=10,
+                 sync_nn_mod=100, send_rollout_mod=64, test=False):
+        self.env = make_env(test)
+        super().__init__(list(), build_model, obs_shape, action_shape,
+                         gamma=gamma, n_step=n_step)
         self.thread_id = thread_id
         self.remote_replay_buff = remote_replay_buffer
         self.parameter_server = remote_param_server
+        self.sync_nn_mod = sync_nn_mod
+        self.send_rollout_mod = send_rollout_mod
 
-        if self.parameter_server:
-            self.config = ray.get(self.parameter_server.get_config.remote())
-            self.sync_nn_mod = self.config['sync_nn_mod']
-            self.max_steps = self.config['max_steps']
-            self.send_rollout_mod = self.config['send_rollout_mod']
-            self.test_mod = self.config['test_mod']
-            self.test_eps = self.config['test_eps']
-
-        self.rollout = list()
-
-    def train(self, env, epsilon=0.1, final_epsilon=0.01, eps_decay=0.99, **kwargs):
-        max_reward, counter, threads_ep = - np.inf, 0, 0
+    def train(self, epsilon=0.1, final_epsilon=0.01, eps_decay=0.99,
+              max_eps=1e+6, send_rollout_mod=64, sync_nn_mod=100, **kwargs):
+        max_reward, counter = - np.inf, 0
         self.sync_with_param_server()
-        done, score, state, start_time = False, 0, env.reset(), timeit.default_timer()
-        global_step = ray.get(self.parameter_server.get_steps_done())
-        while global_step < self.max_steps:
-            action, q = self.choose_act(state, epsilon, env.sample_action)
-            next_state, reward, done, _ = env.step(action)
+        done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
+        global_ep = ray.get(self.parameter_server.get_steps_done())
+        while global_ep < max_eps:
+            action, q = self.choose_act(state, epsilon, self.env.sample_action)
+            next_state, reward, done, _ = self.env.step(action)
             score += reward
             self.perceive(state, action, reward, next_state, done, q_value=q)
             counter += 1
-            self.parameter_server.update_step.remote()
-            global_step = ray.get(self.parameter_server.get_steps_done())
             state = next_state
-            if counter % self.sync_nn_mod == 0:
-                self.sync_with_param_server()
-            if counter % self.send_rollout_mod == 0:
-                priorities = self.priority_err(self.rollout)
-                self.remote_replay_buff.receive.remote(self.rollout, priorities)
-                self.replay_buff.clear()
+            self.schedule(counter)
             if done:
-                epsilon = max(final_epsilon, epsilon * eps_decay)
+                self.parameter_server.update_eps.remote()
+                global_ep = ray.get(self.parameter_server.get_eps_done())
                 stop_time = timeit.default_timer()
-                print("{}'s_episode: {}  score: {}  counter: {}  epsilon: {}  max: {}"
-                      .format(self.thread_id, threads_ep, score, counter, epsilon, max_reward))
+                print("episode: {}  score: {}  counter: {}  epsilon: {}  max: {}"
+                      .format(global_ep-1, score, counter, epsilon, max_reward))
                 print("RunTime: ", stop_time - start_time)
-                tf.summary.scalar("reward", score, step=threads_ep)
+                tf.summary.scalar("reward", score, step=global_ep-1)
                 tf.summary.flush()
-                done, score, state = False, 0, env.reset()
-                start_time = timeit.default_timer()
+                done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
+                epsilon = max(final_epsilon, epsilon * eps_decay)
 
-    def validate(self, env):
+    def schedule(self, counter):
+        if counter % self.sync_nn_mod == 0:
+            self.sync_with_param_server()
+        if counter % self.send_rollout_mod == 0:
+            priorities = self.priority_err(self.replay_buff)
+            self.remote_replay_buff.receive.remote(self.replay_buff, priorities)
+            self.replay_buff.clear()
+
+    def validate(self, test_mod, test_eps):
         global_step = ray.get(self.parameter_server.get_steps_done.remote())
-        while global_step < self.max_steps:
-            if global_step % self.test_mod:
+        while global_step < self.max_eps:
+            if global_step % test_mod:
                 self.sync_with_param_server()
-                total_reward = self.test(env, None, self.test_eps)
-                total_reward /= self.test_eps
+                total_reward = self.test(self.env, None, self.test_eps)
+                total_reward /= test_eps
                 tf.summary.scalar("validation", total_reward, step=global_step)
                 tf.summary.flush()
             global_step = ray.get(self.parameter_server.get_steps_done.remote())
@@ -138,11 +137,10 @@ class Actor(DQN):
 @ray.remote
 class ParameterServer(object):
 
-    def __init__(self, config):
+    def __init__(self):
         self.online_params = None
         self.target_params = None
-        self.steps_done = 0
-        self.config = config
+        self.eps_done = 0
 
     def update_params(self, online_params, target_params):
         self.online_params = online_params
@@ -151,11 +149,8 @@ class ParameterServer(object):
     def return_params(self):
         return self.online_params, self.target_params
 
-    def get_steps_done(self):
-        return self.steps_done
+    def get_eps_done(self):
+        return self.eps_done
 
-    def update_step(self):
-        self.steps_done += 1
-
-    def get_config(self):
-        return self.config
+    def update_eps(self):
+        self.eps_done += 1

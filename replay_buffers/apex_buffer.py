@@ -7,7 +7,7 @@ import tensorflow as tf
 
 
 @ray.remote
-class PrioritizedBuffer(object):
+class ApeXBuffer(object):
     def __init__(self, capacity,
                  epsilon=0.001,
                  alpha=0.4,
@@ -23,7 +23,7 @@ class PrioritizedBuffer(object):
         self.n_deque = deque([], maxlen=n_step)
         self.gamma = gamma
 
-    def __len__(self):
+    def len(self):
         return len(self.tree)
 
     def full(self):

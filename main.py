@@ -38,13 +38,13 @@ if __name__ == '__main__':
     env = DiscreteWrapper(env, discrete_dict)
     replay_buffer = PrioritizedBuffer(int(1e5))
 
-    def make_model(name):
+    def make_model(name, obs_shape, action_shape):
         base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])
-        head = DuelingModel([1024], env.action_space.n)
+        head = DuelingModel([1024], action_shape)
         model = tf.keras.Sequential([base, head], name)
-        model.build((None, ) + env.observation_space.shape)
+        model.build((None, ) + obs_shape)
         return model
-    agent = DQN(replay_buffer, make_model)
+    agent = DQN(replay_buffer, make_model, env.observation_space.shape, env.action_space.n)
     summary_writer = tf.summary.create_file_writer('train/')
     with summary_writer.as_default():
         agent.train(env, 1000)

@@ -1,7 +1,7 @@
 import ray
 
 from algorithms.apex import Learner, ParameterServer, Actor
-from replay_buffers.apex_buffer import PrioritizedBuffer
+from replay_buffers.apex_buffer import ApeXBuffer
 from algorithms.model import ClassicCnn, DuelingModel
 from environments.pyrep_env import RozumEnv
 from utils.wrappers import *
@@ -12,7 +12,8 @@ import os
 if __name__ == '__main__':
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-
+    ray.init()
+    n_actors = 3
     tf.debugging.set_log_device_placement(False)
 
     gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -27,39 +28,48 @@ if __name__ == '__main__':
             # Memory growth must be set before GPUs have been initialized
             print(e)
 
-    n_actors = 3
+    def make_env(test=False):
+        env = RozumEnv()
+        if test:
+            SaveVideoWrapper(env)
+        env = FrameSkip(env)
+        env = FrameStack(env, 2)
+        env = AccuracyLogWrapper(env, 10)
+        discrete_dict = dict()
+        robot_dof = env[0].action_space.shape[0]
+        for i in range(robot_dof):
+            discrete_dict[i] = [5 if j == i else 0 for j in range(robot_dof)]
+            discrete_dict[i + robot_dof] = [-5 if j == i else 0 for j in range(robot_dof)]
+        env = DiscreteWrapper(env, discrete_dict)
+        return env
 
-    env = [RozumEnv() for _ in range(n_actors)]
-    env[-1] = SaveVideoWrapper(env[-1])
-    env = [FrameSkip(e) for e in env]
-    env = [FrameStack(e, 2) for e in env]
-    env = [AccuracyLogWrapper(e, 10) for e in env[:-1]]
-    discrete_dict = dict()
-    robot_dof = env[0].action_space.shape[0]
-    for i in range(robot_dof):
-        discrete_dict[i] = [5 if j == i else 0 for j in range(robot_dof)]
-        discrete_dict[i + robot_dof] = [-5 if j == i else 0 for j in range(robot_dof)]
-    env = [DiscreteWrapper(e, discrete_dict) for e in env]
+    test_env = make_env()
+    obs_shape = test_env.observation_space.shape
+    action_shape = test_env.action_space.n
+    test_env.close()
 
-    def make_model(name):
+    def make_model(name, input_shape, output_shape):
         base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])
-        head = DuelingModel([1024], env[0].action_space.n)
+        head = DuelingModel([1024], output_shape)
         model = tf.keras.Sequential([base, head], name)
-        model.build((None, ) + env[0].observation_space.shape)
+        model.build((None, ) + input_shape)
         return model
-    config = None
-    parameter_server = ParameterServer.remote(config)
-    replay_buffer = PrioritizedBuffer.remote(int(1e5))
-    learner = Learner.remote(replay_buffer, parameter_server, make_model)
-    actors = [Actor.remote(i, 0.99, 10, replay_buffer, make_model, parameter_server) for i in range(n_actors)]
+
+    parameter_server = ParameterServer.remote()
+    replay_buffer = ApeXBuffer.remote(int(1e5))
+    learner = Learner.remote(replay_buffer, make_model, obs_shape, action_shape,
+                             parameter_server, update_target_net_mod=1000, gamma=0.99, learning_rate=1e-4,
+                             batch_size=32, replay_start_size=1000)
+    actors = [Actor.remote(i, replay_buffer,  make_model, obs_shape, action_shape,
+                           make_env, parameter_server, gamma=0.99, n_step=10, sync_nn_mod=100, send_rollout_mod=64,
+                           test=(i == (n_actors-1))) for i in range(n_actors)]
     summary_writer = tf.summary.create_file_writer('train/')
     with summary_writer.as_default():
         processes = list()
-        processes.append(learner.update.remote())
+        processes.append(learner.update.remote(max_eps=1e+6, log_freq=10))
         for i, a in enumerate(actors[:-1]):
-            processes.append(a.train.remote(env[i]))
-        processes.append(actors[-1].validate.remote(env[-1]))
-    ray.wait(processes)
+            processes.append(a.train.remote(epsilon=0.1, final_epsilon=0.01, eps_decay=0.99,
+                                            max_eps=1e+6, send_rollout_mod=64, sync_nn_mod=100))
+        processes.append(actors[-1].validate.remote(test_mod=100, test_eps=10))
+        ray.wait(processes)
     ray.timeline()
-    for e in env:
-        e.close()
