@@ -12,7 +12,7 @@ import os
 if __name__ == '__main__':
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    ray.init()
+    ray.init(webui_host='127.0.0.1')
     n_actors = 3
     config_gpu()
 
