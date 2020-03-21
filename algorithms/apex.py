@@ -83,7 +83,7 @@ class Actor(DQN):
             max_reward, counter = - np.inf, 0
             self.sync_with_param_server()
             done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
-            global_ep = ray.get(self.parameter_server.get_eps_done())
+            global_ep = ray.get(self.parameter_server.get_eps_done.remote())
             while global_ep < max_eps:
                 action, q = self.choose_act(state, epsilon, self.env.sample_action)
                 next_state, reward, done, _ = self.env.step(action)
