@@ -61,6 +61,6 @@ if __name__ == '__main__':
     for i, a in enumerate(actors[:-1]):
         processes.append(a.train.remote(epsilon=0.1, final_epsilon=0.01, eps_decay=0.99,
                                         max_eps=1e+6, send_rollout_mod=64, sync_nn_mod=100))
-    processes.append(actors[-1].validate.remote(test_mod=100, test_eps=10))
+    processes.append(actors[-1].validate.remote(test_mod=100, test_eps=10, max_eps=1e+6))
     ray.wait(processes)
     ray.timeline()

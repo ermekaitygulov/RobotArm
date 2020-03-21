@@ -110,11 +110,11 @@ class Actor(DQN):
             self.remote_replay_buff.receive.remote(self.replay_buff, priorities)
             self.replay_buff.clear()
 
-    def validate(self, test_mod, test_eps):
+    def validate(self, test_mod=100, test_eps=10, max_eps=1e+6):
         import tensorflow as tf
         with self.summary_writer.as_default():
             global_ep = ray.get(self.parameter_server.get_eps_done.remote())
-            while global_ep < self.max_eps:
+            while global_ep < max_eps:
                 if global_ep % test_mod:
                     self.sync_with_param_server()
                     total_reward = self.test(self.env, None, self.test_eps)
