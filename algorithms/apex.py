@@ -81,7 +81,7 @@ class Actor(DQN):
             max_reward, counter = - np.inf, 0
             self.sync_with_param_server()
             done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
-            global_ep = ray.get(self.parameter_server.get_steps_done())
+            global_ep = ray.get(self.parameter_server.get_eps_done())
             while global_ep < max_eps:
                 action, q = self.choose_act(state, epsilon, self.env.sample_action)
                 next_state, reward, done, _ = self.env.step(action)
@@ -113,15 +113,15 @@ class Actor(DQN):
     def validate(self, test_mod, test_eps):
         import tensorflow as tf
         with self.summary_writer.as_default():
-            global_step = ray.get(self.parameter_server.get_steps_done.remote())
-            while global_step < self.max_eps:
-                if global_step % test_mod:
+            global_ep = ray.get(self.parameter_server.get_eps_done.remote())
+            while global_ep < self.max_eps:
+                if global_ep % test_mod:
                     self.sync_with_param_server()
                     total_reward = self.test(self.env, None, self.test_eps)
                     total_reward /= test_eps
-                    tf.summary.scalar("validation", total_reward, step=global_step)
+                    tf.summary.scalar("validation", total_reward, step=global_ep)
                     tf.summary.flush()
-                global_step = ray.get(self.parameter_server.get_steps_done.remote())
+                global_ep = ray.get(self.parameter_server.get_eps_done.remote())
 
     def priority_err(self, rollout):
         q_values = np.array([data['q_value'] for data in rollout], dtype='float32')
