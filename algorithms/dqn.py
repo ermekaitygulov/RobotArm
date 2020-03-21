@@ -153,7 +153,7 @@ class DQN:
             self.update_metrics('TD', mean_td)
 
             ntd_loss = self.td_loss(n_state, q_values, n_done, n_reward, actual_n, gamma)
-            mean_ntd = tf.reduce_mean(ntd_loss, is_weights)
+            mean_ntd = tf.reduce_mean(ntd_loss*is_weights)
             self.update_metrics('nTD', mean_ntd)
 
             l2 = tf.add_n(self.online_model.losses)
