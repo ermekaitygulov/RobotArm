@@ -94,7 +94,7 @@ class Actor(DQN):
                 self.schedule(counter)
                 if done:
                     self.parameter_server.update_eps.remote()
-                    global_ep = ray.get(self.parameter_server.get_eps_done())
+                    global_ep = ray.get(self.parameter_server.get_eps_done.remote())
                     stop_time = timeit.default_timer()
                     print("episode: {}  score: {}  counter: {}  epsilon: {}  max: {}"
                           .format(global_ep-1, score, counter, epsilon, max_reward))
