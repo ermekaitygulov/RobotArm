@@ -108,10 +108,16 @@ class Actor(DQN):
         if counter > self.sync_nn_shedule['next'] >= 0:
             self.sync_nn_shedule['next'] += self.sync_nn_shedule['every']
             self.sync_with_param_server()
-        if counter > self.send_rollout_schedule['next'] >= 0 and all(['n_pov' in d for d in self.replay_buff]):
+        if counter > self.send_rollout_schedule['next'] >= 0:
             self.send_rollout_schedule['next'] += self.send_rollout_schedule['every']
-            priorities = self.priority_err(self.replay_buff)
-            self.remote_replay_buff.receive.remote(self.replay_buff, priorities)
+            transitions = []
+            while True:
+                if 'n_pov' in self.replay_buff[0].keys():
+                    transitions.append(self.replay_buff.pop(0))
+                else:
+                    break
+            priorities = self.priority_err(transitions)
+            self.remote_replay_buff.receive.remote(transitions, priorities)
             self.replay_buff.clear()
 
     def validate(self, test_mod=100, test_eps=10, max_eps=1e+6):
