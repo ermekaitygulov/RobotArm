@@ -3,7 +3,6 @@ from collections import deque
 import numpy as np
 from replay_buffers.sum_tree import SumTree
 import ray
-import tensorflow as tf
 
 
 @ray.remote
@@ -47,7 +46,6 @@ class ApeXBuffer(object):
                 b.append(d)
         prob = np.array(priorities) / self.tree.total()
         is_weights = np.power(self.tree.n_entries * prob, -self.beta)
-        is_weights /= np.max(is_weights)
         batch = [np.array(b) for b in batch]
         return idxs, batch, is_weights
 

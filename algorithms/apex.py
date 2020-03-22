@@ -119,7 +119,7 @@ class Actor(DQN):
         with self.summary_writer.as_default():
             global_ep = ray.get(self.parameter_server.get_eps_done.remote())
             while global_ep < max_eps:
-                if global_ep % test_mod:
+                if (global_ep + 1) % test_mod == 0:
                     self.sync_with_param_server()
                     total_reward = self.test(self.env, None, test_eps)
                     total_reward /= test_eps
