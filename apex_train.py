@@ -39,6 +39,8 @@ if __name__ == '__main__':
 
     def make_model(name, input_shape, output_shape):
         import tensorflow as tf
+        from utils.util import config_gpu
+        config_gpu()
         base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])
         head = DuelingModel([1024], output_shape)
         model = tf.keras.Sequential([base, head], name)

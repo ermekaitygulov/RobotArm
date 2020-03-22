@@ -7,7 +7,7 @@ import timeit
 from algorithms.dqn import DQN
 
 
-@ray.remote(num_gpus=0.5)
+@ray.remote(num_gpus=0.3)
 class Learner(DQN):
     def __init__(self, remote_replay_buffer, build_model, obs_shape, action_shape,
                  parameter_server, update_target_net_mod=1000, gamma=0.99, learning_rate=1e-4,
@@ -45,7 +45,7 @@ class Learner(DQN):
                                                           next_state, done, n_state,
                                                           n_reward, n_done, actual_n, is_weights, self.gamma)
 
-                if tf.equal(self.optimizer % self.update_target_net_mod, 0):
+                if tf.equal(self.optimizer.iterations % self.update_target_net_mod, 0):
                     self.target_update()
                 if tf.equal(self.optimizer.iterations % log_freq, 0):
                     stop_time = timeit.default_timer()
