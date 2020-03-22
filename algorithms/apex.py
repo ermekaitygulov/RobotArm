@@ -133,9 +133,8 @@ class Actor(DQN):
         n_reward = np.array([data['n_reward'] for data in rollout], dtype='float32')
         n_done = np.array([data['n_done'] for data in rollout])
         actual_n = np.array([data['actual_n'] for data in rollout], dtype='float32')
-        is_weights = np.ones(len(rollout))
 
-        ntd = self.td_loss(n_pov, q_values, n_done, n_reward, actual_n, self.gamma, is_weights)
+        ntd = self.td_loss(n_pov, q_values, n_done, n_reward, actual_n, self.gamma)
         return ntd
 
     def sync_with_param_server(self):
