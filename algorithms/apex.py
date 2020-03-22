@@ -13,8 +13,6 @@ class Learner(DQN):
                  parameter_server, update_target_net_mod=1000, gamma=0.99, learning_rate=1e-4,
                  batch_size=32, replay_start_size=1000):
         import tensorflow as tf
-        from utils.util import config_gpu
-        config_gpu()
         super().__init__(remote_replay_buffer, build_model, obs_shape, action_shape,
                          gamma=gamma, learning_rate=learning_rate, update_target_net_mod=update_target_net_mod,
                          batch_size=batch_size, replay_start_size=replay_start_size)
@@ -69,8 +67,6 @@ class Actor(DQN):
                  make_env, remote_param_server, gamma=0.99, n_step=10,
                  sync_nn_steps=100, send_rollout_steps=64, test=False):
         import tensorflow as tf
-        from utils.util import config_gpu
-        config_gpu()
         self.env = make_env('{}_thread'.format(thread_id), test)
         super().__init__(list(), build_model, obs_shape, action_shape,
                          gamma=gamma, n_step=n_step)
