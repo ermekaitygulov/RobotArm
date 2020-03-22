@@ -31,19 +31,19 @@ class Learner(DQN):
             while global_eps < max_eps:
                 tree_idxes, minibatch, is_weights = ray.get(self.replay_buff.sample.remote(self.batch_size))
 
-                pov = (minibatch[0]/255).astype('float32')
-                action = (minibatch[1]).astype('int32')
-                next_rewards = (minibatch[2]).astype('float32')
-                next_pov = (minibatch[3]/255).astype('float32')
-                done = minibatch[4]
-                n_pov = (minibatch[5]/255).astype('float32')
-                n_reward = (minibatch[6]).astype('float32')
-                n_done = (minibatch[7])
-                actual_n = (minibatch[8]).astype('float32')
+                state = (minibatch['state'] / 255).astype('float32')
+                action = (minibatch['action']).astype('int32')
+                next_rewards = (minibatch['reward']).astype('float32')
+                next_state = (minibatch['next_state'] / 255).astype('float32')
+                done = minibatch['done']
+                n_state = (minibatch['n_state'] / 255).astype('float32')
+                n_reward = (minibatch['n_reward']).astype('float32')
+                n_done = (minibatch['n_done'])
+                actual_n = (minibatch['actual_n']).astype('float32')
                 is_weights = is_weights.astype('float32')
 
-                _, ntd_loss, _, _ = self.q_network_update(pov, action, next_rewards,
-                                                          next_pov, done, n_pov,
+                _, ntd_loss, _, _ = self.q_network_update(state, action, next_rewards,
+                                                          next_state, done, n_state,
                                                           n_reward, n_done, actual_n, is_weights, self.gamma)
 
                 if tf.equal(self.optimizer.iterations % log_freq, 0):
@@ -133,12 +133,12 @@ class Actor(DQN):
 
     def priority_err(self, rollout):
         q_values = np.array([data['q_value'] for data in rollout], dtype='float32')
-        n_pov = np.array([(np.array(data['n_state'])/255) for data in rollout], dtype='float32')
+        n_state = np.array([(np.array(data['n_state'])/255) for data in rollout], dtype='float32')
         n_reward = np.array([data['n_reward'] for data in rollout], dtype='float32')
         n_done = np.array([data['n_done'] for data in rollout])
         actual_n = np.array([data['actual_n'] for data in rollout], dtype='float32')
 
-        ntd = self.td_loss(n_pov, q_values, n_done, n_reward, actual_n, self.gamma)
+        ntd = self.td_loss(n_state, q_values, n_done, n_reward, actual_n, self.gamma)
         return ntd
 
     def sync_with_param_server(self):
