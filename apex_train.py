@@ -11,7 +11,7 @@ import os
 if __name__ == '__main__':
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    ray.init(webui_host='127.0.0.1', num_gpus=1)
+    ray.init(webui_host='127.0.0.1')
     n_actors = 3
 
     def make_env(name, test=False):
