@@ -51,7 +51,7 @@ class Learner(DQN):
                     stop_time = timeit.default_timer()
                     runtime = stop_time - start_time
                     start_time = stop_time
-                    print("LearnerEpoch({}it/sec): ".format(log_freq / runtime), self.optimizer.iterations.numpy())
+                    print("LearnerEpoch({:.2f}it/sec): ".format(log_freq / runtime), self.optimizer.iterations.numpy())
                     for key, metric in self.avg_metrics.items():
                         tf.summary.scalar(key, metric.result(), step=self.optimizer.iterations)
                         print('  {}:     {:.3f}'.format(key, metric.result()))
@@ -102,8 +102,10 @@ class Actor(DQN):
                     self.parameter_server.update_eps.remote()
                     global_ep = ray.get(self.parameter_server.get_eps_done.remote())
                     stop_time = timeit.default_timer()
-                    print("episode: {}  score: {}  counter: {}  epsilon: {}  max: {}"
-                          .format(global_ep-1, score, counter, epsilon, max_reward))
+                    if reward > max_reward:
+                        max_reward = reward
+                    print("episode: {}  score: {}  epsilon: {}  max: {}"
+                          .format(global_ep-1, score, epsilon, max_reward))
                     print("RunTime: ", stop_time - start_time)
                     tf.summary.scalar("reward", score, step=global_ep-1)
                     tf.summary.flush()
@@ -127,8 +129,9 @@ class Actor(DQN):
             while global_ep < max_eps:
                 if (global_ep + 1) % test_mod == 0:
                     self.sync_with_param_server()
-                    total_reward = self.test(self.env, None, test_eps)
+                    total_reward = self.test(self.env, None, test_eps, False)
                     total_reward /= test_eps
+                    print("validation_reward (mean): {}".format(total_reward))
                     tf.summary.scalar("validation", total_reward, step=global_ep)
                     tf.summary.flush()
                 global_ep = ray.get(self.parameter_server.get_eps_done.remote())

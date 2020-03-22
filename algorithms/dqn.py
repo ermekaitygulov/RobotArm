@@ -70,13 +70,13 @@ class DQN:
                 self.target_update()
         return score, counter
 
-    def test(self, env, name="train/max_model.ckpt", number_of_trials=1, render=False, ):
+    def test(self, env, name="train/max_model.ckpt", number_of_trials=1, logging=False):
         """
         Method for testing model in environment
         :param env:
         :param name:
         :param number_of_trials:
-        :param render:
+        :param logging:
         :return:
         """
         # restore POV agent's graph
@@ -92,11 +92,10 @@ class DQN:
             while not done:
                 action, _ = self.choose_act(observation, 0, env.sample_action)
                 observation, r, done, _ = env.step(action)
-                if render:
-                    env.render()
                 reward += r
             total_reward += reward
-            print("reward/avg_reward for {} trial: {}; {}".format(trial_index, reward, total_reward/(trial_index+1)))
+            if logging:
+                print("reward/avg_reward for {} trial: {}; {}".format(trial_index, reward, total_reward/(trial_index+1)))
         env.reset()
         return total_reward
 
