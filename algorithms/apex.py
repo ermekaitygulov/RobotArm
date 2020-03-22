@@ -7,7 +7,7 @@ import timeit
 from algorithms.dqn import DQN
 
 
-@ray.remote
+@ray.remote(num_gpus=0.5)
 class Learner(DQN):
     def __init__(self, remote_replay_buffer, build_model, obs_shape, action_shape,
                  parameter_server, update_target_net_mod=1000, gamma=0.99, learning_rate=1e-4,
