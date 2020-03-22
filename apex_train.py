@@ -5,16 +5,14 @@ from replay_buffers.apex_buffer import ApeXBuffer
 from algorithms.model import ClassicCnn, DuelingModel
 from environments.pyrep_env import RozumEnv
 from utils.wrappers import *
-from utils.util import config_gpu
 import os
 
 
 if __name__ == '__main__':
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    ray.init(webui_host='127.0.0.1')
+    ray.init(webui_host='127.0.0.1', num_gpus=1)
     n_actors = 3
-    config_gpu()
 
     def make_env(name, test=False):
         env = RozumEnv()
