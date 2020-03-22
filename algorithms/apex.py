@@ -19,13 +19,14 @@ class Learner(DQN):
         self.parameter_server = parameter_server
         self.summary_writer = tf.summary.create_file_writer('train/learner/')
 
-    def update(self, max_eps=10000, log_freq=10, **kwargs):
+    def update(self, max_eps=10000, log_freq=100, **kwargs):
         import tensorflow as tf
         self.update_parameter_server()
         while ray.get(self.replay_buff.len.remote()) < self.replay_start_size:
             continue
         with self.summary_writer.as_default():
             global_eps = ray.get(self.parameter_server.get_eps_done.remote())
+            start_time = timeit.default_timer()
             while global_eps < max_eps:
                 tree_idxes, minibatch, is_weights = ray.get(self.replay_buff.sample.remote(self.batch_size))
 
@@ -44,8 +45,13 @@ class Learner(DQN):
                                                           next_state, done, n_state,
                                                           n_reward, n_done, actual_n, is_weights, self.gamma)
 
+                if tf.equal(self.optimizer % self.update_target_net_mod, 0):
+                    self.target_update()
                 if tf.equal(self.optimizer.iterations % log_freq, 0):
-                    print("LearnerEpoch: ", self.optimizer.iterations.numpy())
+                    stop_time = timeit.default_timer()
+                    runtime = stop_time - start_time
+                    start_time = stop_time
+                    print("LearnerEpoch({}it/sec): ".format(log_freq / runtime), self.optimizer.iterations.numpy())
                     for key, metric in self.avg_metrics.items():
                         tf.summary.scalar(key, metric.result(), step=self.optimizer.iterations)
                         print('  {}:     {:.3f}'.format(key, metric.result()))
