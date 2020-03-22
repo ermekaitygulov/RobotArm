@@ -51,7 +51,7 @@ if __name__ == '__main__':
     replay_buffer = ApeXBuffer.remote(int(1e5))
     learner = Learner.remote(replay_buffer, make_model, obs_shape, action_shape,
                              parameter_server, update_target_net_mod=1000, gamma=0.99, learning_rate=1e-4,
-                             batch_size=32, replay_start_size=1000)
+                             batch_size=32, replay_start_size=100)
     actors = [Actor.remote(i, replay_buffer,  make_model, obs_shape, action_shape,
                            make_env, parameter_server, gamma=0.99, n_step=10, sync_nn_steps=100, send_rollout_steps=64,
                            test=(i == (n_actors-1))) for i in range(n_actors)]
