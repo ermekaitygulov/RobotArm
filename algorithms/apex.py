@@ -110,14 +110,8 @@ class Actor(DQN):
             self.sync_with_param_server()
         if counter > self.send_rollout_schedule['next'] >= 0:
             self.send_rollout_schedule['next'] += self.send_rollout_schedule['every']
-            transitions = []
-            while True:
-                if 'n_pov' in self.replay_buff[0].keys():
-                    transitions.append(self.replay_buff.pop(0))
-                else:
-                    break
-            priorities = self.priority_err(transitions)
-            self.remote_replay_buff.receive.remote(transitions, priorities)
+            priorities = self.priority_err(self.replay_buff)
+            self.remote_replay_buff.receive.remote(self.replay_buff, priorities)
             self.replay_buff.clear()
 
     def validate(self, test_mod=100, test_eps=10, max_eps=1e+6):
@@ -135,7 +129,7 @@ class Actor(DQN):
 
     def priority_err(self, rollout):
         q_values = np.array([data['q_value'] for data in rollout], dtype='float32')
-        n_pov = np.array([(np.array(data['n_pov'])/255) for data in rollout], dtype='float32')
+        n_pov = np.array([(np.array(data['n_state'])/255) for data in rollout], dtype='float32')
         n_reward = np.array([data['n_reward'] for data in rollout], dtype='float32')
         n_done = np.array([data['n_done'] for data in rollout])
         actual_n = np.array([data['actual_n'] for data in rollout], dtype='float32')
