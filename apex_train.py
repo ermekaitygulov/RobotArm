@@ -14,16 +14,11 @@ if __name__ == '__main__':
     ray.init(webui_host='127.0.0.1')
     n_actors = 3
 
-    def make_env(name, test=False):
+    def make_env(name):
         env = RozumEnv()
-        if test:
-            SaveVideoWrapper(env)
-            clear_mod = 10
-        else:
-            clear_mod= None
         env = FrameSkip(env)
         env = FrameStack(env, 2)
-        env = AccuracyLogWrapper(env, 10, name, clear_mod)
+        env = AccuracyLogWrapper(env, 10, name)
         discrete_dict = dict()
         robot_dof = env.action_space.shape[0]
         for i in range(robot_dof):
@@ -51,16 +46,15 @@ if __name__ == '__main__':
     replay_buffer = ApeXBuffer.remote(int(1e5))
     learner = Learner.remote(replay_buffer, make_model, obs_shape, action_shape,
                              parameter_server, update_target_net_mod=1000, gamma=0.99, learning_rate=1e-4,
-                             batch_size=32, replay_start_size=1000)
+                             batch_size=32, replay_start_size=1500)
     actors = [Actor.remote(i, replay_buffer,  make_model, obs_shape, action_shape,
-                           make_env, parameter_server, gamma=0.99, n_step=10, sync_nn_steps=100, send_rollout_steps=64,
-                           test=(i == (n_actors-1))) for i in range(n_actors)]
+                           make_env, parameter_server, gamma=0.99, n_step=10, sync_nn_steps=100, send_rollout_steps=64,)
+              for i in range(n_actors)]
 
     processes = list()
-    processes.append(learner.update.remote(max_eps=1e+6, log_freq=100))
-    for i, a in enumerate(actors[:-1]):
+    processes.append(learner.update.remote(max_eps=1e+6, log_freq=1000))
+    for i, a in enumerate(actors):
         processes.append(a.train.remote(epsilon=0.1, final_epsilon=0.01, eps_decay=0.99,
                                         max_eps=1e+6))
-    processes.append(actors[-1].validate.remote(test_mod=50, test_eps=10, max_eps=1e+6))
     ray.wait(processes)
     ray.timeline()

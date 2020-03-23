@@ -71,9 +71,9 @@ class Learner(DQN):
 class Actor(DQN):
     def __init__(self, thread_id, remote_replay_buffer, build_model, obs_shape, action_shape,
                  make_env, remote_param_server, gamma=0.99, n_step=10,
-                 sync_nn_steps=100, send_rollout_steps=64, test=False):
+                 sync_nn_steps=100, send_rollout_steps=64):
         import tensorflow as tf
-        self.env = make_env('{}_thread'.format(thread_id), test)
+        self.env = make_env('{}_thread'.format(thread_id))
         super().__init__(list(), build_model, obs_shape, action_shape,
                          gamma=gamma, n_step=n_step)
         self.remote_replay_buff = remote_replay_buffer

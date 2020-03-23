@@ -157,7 +157,7 @@ class SaveVideoWrapper(gym.Wrapper):
 
 
 class AccuracyLogWrapper(gym.Wrapper):
-    def __init__(self, env, window, name='agent', clear_mod=None):
+    def __init__(self, env, window, name='agent'):
         super().__init__(env)
         self.accuracy = deque(maxlen=window)
         self.name = name
@@ -181,7 +181,4 @@ class AccuracyLogWrapper(gym.Wrapper):
             mean = sum(self.accuracy)/len(self.accuracy)
             tf.summary.scalar('{}_accuracy'.format(self.name), mean, step=self.episodes_done)
             print('{}_accuracy: {}'.format(self.name, mean))
-        if self.clear_mod:
-            if self.episodes_done % self.clear_mod == 0:
-                self.accuracy.clear()
         return observation
