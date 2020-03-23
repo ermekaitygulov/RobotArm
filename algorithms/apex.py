@@ -102,8 +102,8 @@ class Actor(DQN):
                     self.parameter_server.update_eps.remote()
                     global_ep = ray.get(self.parameter_server.get_eps_done.remote())
                     stop_time = timeit.default_timer()
-                    if reward > max_reward:
-                        max_reward = reward
+                    if score > max_reward:
+                        max_reward = score
                     print("episode: {}  score: {:.3f}  epsilon: {:.3f}  max: {:.3f}"
                           .format(global_ep-1, score, epsilon, max_reward))
                     print("RunTime: {:.3f}".format(stop_time - start_time))
