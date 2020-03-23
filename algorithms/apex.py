@@ -104,9 +104,9 @@ class Actor(DQN):
                     stop_time = timeit.default_timer()
                     if reward > max_reward:
                         max_reward = reward
-                    print("episode: {}  score: {}  epsilon: {}  max: {}"
+                    print("episode: {}  score: {:.3f}  epsilon: {:.3f}  max: {:.3f}"
                           .format(global_ep-1, score, epsilon, max_reward))
-                    print("RunTime: ", stop_time - start_time)
+                    print("RunTime: {:.3f}".format(stop_time - start_time))
                     tf.summary.scalar("reward", score, step=global_ep-1)
                     tf.summary.flush()
                     done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
