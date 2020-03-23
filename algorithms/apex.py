@@ -167,7 +167,6 @@ class ParameterServer(object):
         self.target_params = target_params
 
     def return_params(self):
-        print(self.online_params)
         return self.online_params, self.target_params
 
     def get_eps_done(self):
