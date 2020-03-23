@@ -162,7 +162,6 @@ class AccuracyLogWrapper(gym.Wrapper):
         self.accuracy = deque(maxlen=window)
         self.name = name
         self.episodes_done = 0
-        self.clear_mod = clear_mod
 
     def step(self, action):
         observation, reward, done, info = self.env.step(action)
