@@ -142,7 +142,7 @@ class DQN:
     @tf.function
     def q_network_update(self, state, action, next_reward, next_state, done, n_state,
                          n_reward, n_done, actual_n, is_weights, gamma):
-
+        print("Q-nn_update tracing")
         with tf.GradientTape() as tape:
             tape.watch(self.online_variables)
             q_values = self.online_model(state, training=True)
@@ -167,6 +167,7 @@ class DQN:
 
     @tf.function
     def td_loss(self, n_state, q_values, n_done, n_reward, actual_n, gamma):
+        print("TD-Loss tracing")
         n_target = self.compute_target(n_state, n_done, n_reward, actual_n, gamma)
         n_target = tf.expand_dims(n_target, axis=-1)
         ntd_loss = self.huber_loss(n_target, q_values)
@@ -174,6 +175,7 @@ class DQN:
 
     @tf.function
     def compute_target(self, next_state, done, reward, actual_n, gamma):
+        print("Compute_target tracing")
         q_network = self.online_model(next_state, training=True)
         argmax_actions = tf.argmax(q_network, axis=1, output_type='int32')
         q_target = self.target_model(next_state, training=True)
