@@ -1,3 +1,5 @@
+from collections import deque
+
 import ray
 
 
@@ -11,16 +13,22 @@ from algorithms.dqn import DQN
 class Learner(DQN):
     def __init__(self, remote_replay_buffer, build_model, obs_shape, action_shape,
                  parameter_server, update_target_net_mod=1000, gamma=0.99, learning_rate=1e-4,
-                 batch_size=32, replay_start_size=1000):
+                 batch_size=32, replay_start_size=1000, sync_nn_steps=100):
         import tensorflow as tf
         super().__init__(remote_replay_buffer, build_model, obs_shape, action_shape,
                          gamma=gamma, learning_rate=learning_rate, update_target_net_mod=update_target_net_mod,
                          batch_size=batch_size, replay_start_size=replay_start_size)
         self.parameter_server = parameter_server
+        self._schedule_dict = dict()
+        self._schedule_dict[self.target_update] = update_target_net_mod
+        self._schedule_dict[self.update_parameter_server] = sync_nn_steps
         self.summary_writer = tf.summary.create_file_writer('train/learner/')
+        self._update_frequency = 0
 
     def update(self, max_eps=10000, log_freq=100, **kwargs):
-        import tensorflow as tf
+        runtime_deque = deque(maxlen=log_freq)
+        self._schedule_dict[self.update_log] = log_freq
+
         self.update_parameter_server()
         while ray.get(self.replay_buff.len.remote()) < self.replay_start_size:
             continue
@@ -45,21 +53,28 @@ class Learner(DQN):
                                                           next_state, done, n_state,
                                                           n_reward, n_done, actual_n, is_weights, self.gamma)
 
-                if tf.equal(self.optimizer.iterations % self.update_target_net_mod, 0):
-                    self.target_update()
-                if tf.equal(self.optimizer.iterations % log_freq, 0):
-                    stop_time = timeit.default_timer()
-                    runtime = stop_time - start_time
-                    start_time = stop_time
-                    print("LearnerEpoch({:.2f}it/sec): ".format(log_freq / runtime), self.optimizer.iterations.numpy())
-                    for key, metric in self.avg_metrics.items():
-                        tf.summary.scalar(key, metric.result(), step=self.optimizer.iterations)
-                        print('  {}:     {:.3f}'.format(key, metric.result()))
-                        metric.reset_states()
-                    tf.summary.flush()
+                self.schedule()
+                stop_time = timeit.default_timer()
+                runtime_deque.append(stop_time - start_time)
+                start_time = stop_time
+                self._update_frequency = sum(runtime_deque)/len(runtime_deque)
                 self.replay_buff.batch_update.remote(tree_idxes, ntd_loss)
                 global_eps = ray.get(self.parameter_server.get_eps_done.remote())
-                self.update_parameter_server()
+
+    def schedule(self):
+        import tensorflow as tf
+        for key, value in self._schedule_dict.items():
+            if tf.equal(self.optimizer.iterations % value, 0):
+                key()
+
+    def update_log(self):
+        import tensorflow as tf
+        print("LearnerEpoch({:.2f}it/sec): ".format(self._update_frequency), self.optimizer.iterations.numpy())
+        for key, metric in self.avg_metrics.items():
+            tf.summary.scalar(key, metric.result(), step=self.optimizer.iterations)
+            print('  {}:     {:.3f}'.format(key, metric.result()))
+            metric.reset_states()
+        tf.summary.flush()
 
     def update_parameter_server(self):
         online_weights = self.online_model.get_weights()
