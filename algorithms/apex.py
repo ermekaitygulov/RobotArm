@@ -67,7 +67,7 @@ class Learner(DQN):
         self.parameter_server.update_params.remote(online_weights, target_weights)
 
 
-@ray.remote
+@ray.remote(num_gpus=0, num_cpus=2)
 class Actor(DQN):
     def __init__(self, thread_id, remote_replay_buffer, build_model, obs_shape, action_shape,
                  make_env, remote_param_server, gamma=0.99, n_step=10,
