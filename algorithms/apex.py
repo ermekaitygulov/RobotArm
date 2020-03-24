@@ -36,7 +36,8 @@ class Learner(DQN):
             global_eps = ray.get(self.parameter_server.get_eps_done.remote())
             start_time = timeit.default_timer()
             while global_eps < max_eps:
-                tree_idxes, minibatch, is_weights = ray.get(self.replay_buff.sample.remote(self.batch_size))
+                tree_idxes, minibatch, is_weights = self.replay_buff.sample.remote(self.batch_size)
+                minibatch, is_weights = ray.get([minibatch, is_weights])
 
                 state = (minibatch['state'] / 255).astype('float32')
                 action = (minibatch['action']).astype('int32')
