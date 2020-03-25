@@ -32,7 +32,7 @@ class PrioritizedBuffer(object):
             max_p = 1
         self.tree.add(max_p, transition)  # set the max_p for new transition
 
-    def sample(self, n):
+    def sample(self, n, dtype_dict):
         idxs = []
         batch = {key: [] for key in self.tree.transition_keys}
         priorities = []

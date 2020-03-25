@@ -54,13 +54,15 @@ class SumTree:
         """
         idx = self.data_pointer + self.capacity - 1
         self.data[self.data_pointer] = data
-        self.update(idx, p)
+        if p is not None:
+            self.update(idx, p)
         self.data_pointer += 1
         if self.data_pointer >= self.capacity:
             self.data_pointer = 0
             self.full = True
         if self.n_entries < self.capacity:
             self.n_entries += 1
+        return idx
 
     def update(self, idx, p):
         change = p - self.tree[idx]
