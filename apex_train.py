@@ -60,7 +60,7 @@ if __name__ == '__main__':
 
     counter = Counter.remote()
     replay_buffer = ApeXBuffer.remote(int(1e5))
-    learner = Learner.remote(replay_buffer, make_model, obs_shape, action_shape, update_target_net_mod=1000,
+    learner = Learner.remote(replay_buffer, make_model, obs_shape, action_shape, update_target_nn_mod=1000,
                              gamma=0.99, learning_rate=1e-4, send_nn_mod=300)
     actors = [Actor.remote(i, make_model, obs_shape, action_shape, make_env, counter, gamma=0.99, n_step=5)
               for i in range(n_actors)]
