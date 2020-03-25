@@ -64,7 +64,7 @@ if __name__ == '__main__':
                              gamma=0.99, learning_rate=1e-4, send_nn_mod=300)
     actors = [Actor.remote(i, make_model, obs_shape, action_shape, make_env, counter, gamma=0.99, n_step=5)
               for i in range(n_actors)]
-    online_weights, target_weights = learner.get_weights.remote()
+    online_weights, target_weights = ray.get(learner.get_weights.remote())
 
     @ray.remote
     def remote_sleep():
