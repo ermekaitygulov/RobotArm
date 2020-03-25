@@ -23,7 +23,7 @@ class Learner(DQN):
         self._schedule_dict[self.target_update] = update_target_nn_mod
         self._schedule_dict[self.get_weights] = send_nn_mod
 
-
+    @ray.method(num_return_vals=2)
     def update_asynch(self, minibatch, is_weights, log_freq=100):
         if self._run_time_deque.maxlen != log_freq:
             self._run_time_deque = deque(maxlen=log_freq)
@@ -79,6 +79,7 @@ class Actor(DQN):
         self.env_state = None
         self.remote_counter = remote_counter
 
+    @ray.method(num_return_vals=2)
     def rollout(self, online_weights, target_weights, rollout_size=300):
         import tensorflow as tf
         with self.summary_writer.as_default():

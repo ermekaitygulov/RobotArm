@@ -85,14 +85,14 @@ if __name__ == '__main__':
             tree_ids, minibatch, is_weights = replay_buffer.sample.remote(batch_size, dtype_dict)
             rollouts[learner.update_asynch.remote(minibatch, is_weights, log_freq=100)] = learner
         elif first == learner:
-            ntd, weights = ray.get(first_id)
+            ntd, weights = first_id
             if weights is not None:
                 online_weights, target_weights = online_weights
             replay_buffer.batch_update.remote(tree_ids, ntd)
             tree_ids, minibatch, is_weights = replay_buffer.sample.remote(batch_size)
             rollouts[first.update_asynch.remote(minibatch, is_weights, log_freq=100)] = first
         else:
-            replay_buffer.receive.remote(first_id)
+            replay_buffer.receive.remote(*first_id)
             rollouts[first.rollout.remote(epsilon=0.1, final_epsilon=0.01, eps_decay=0.99)] = first
         episodes_done = ray.get(counter.get_value.remote())
     ray.timeline()
