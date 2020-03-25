@@ -95,7 +95,7 @@ class Actor(DQN):
                 self.perceive(state, action, reward, next_state, done, q_value=q)
                 state = next_state
                 if done:
-                    global_ep = ray.get(self.remote_counter.increament.remote())
+                    global_ep = ray.get(self.remote_counter.increment.remote())
                     stop_time = timeit.default_timer()
                     if score > self.max_reward:
                         self.max_reward = score
