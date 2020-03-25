@@ -105,7 +105,7 @@ class Actor(DQN):
                     tf.summary.scalar("reward", score, step=global_ep-1)
                     tf.summary.flush()
                     done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
-                    self.epsilon = max(self.final_epsilon, self.epsilon * self.eps_decay)
+                    self.epsilon = max(self.final_epsilon, self.epsilon * self.epsilon_decay)
             self.env_state = [done, score, state, start_time]
             priorities = self.priority_err(self.replay_buff)
             rollout = self.replay_buff.copy()
