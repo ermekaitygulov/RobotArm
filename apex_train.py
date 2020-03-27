@@ -89,7 +89,7 @@ if __name__ == '__main__':
             optimization_step += 1
             ntd = first_id
             replay_buffer.batch_update.remote(tree_ids, ntd)
-            tree_ids, minibatch, is_weights = replay_buffer.sample.remote(batch_size)
+            tree_ids, minibatch, is_weights = replay_buffer.sample.remote(batch_size, dtype_dict)
             if optimization_step % sync_nn_mod == 0:
                 online_weights, target_weights = first.get_weights.remote()
             rollouts[first.update_asynch.remote(minibatch, is_weights, log_freq=100)] = first
