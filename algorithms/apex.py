@@ -12,7 +12,7 @@ from algorithms.dqn import DQN
 @ray.remote(num_gpus=0.3)
 class Learner(DQN):
     def __init__(self, remote_replay_buffer, build_model, obs_shape, action_shape, update_target_nn_mod=1000,
-                 gamma=0.99, learning_rate=1e-4, send_nn_mod=300):
+                 gamma=0.99, learning_rate=1e-4):
         import tensorflow as tf
         super().__init__(remote_replay_buffer, build_model, obs_shape, action_shape,
                          gamma=gamma, learning_rate=learning_rate, update_target_net_mod=update_target_nn_mod)
@@ -21,9 +21,7 @@ class Learner(DQN):
         self._run_time_deque = deque()
         self._schedule_dict = dict()
         self._schedule_dict[self.target_update] = update_target_nn_mod
-        self._schedule_dict[self.get_weights] = send_nn_mod
 
-    @ray.method(num_return_vals=2)
     def update_asynch(self, minibatch, is_weights, log_freq=100):
         if self._run_time_deque.maxlen != log_freq:
             self._run_time_deque = deque(maxlen=log_freq)
@@ -37,9 +35,8 @@ class Learner(DQN):
 
             stop_time = timeit.default_timer()
             self._run_time_deque.append(stop_time - start_time)
-            schedule_return = self.schedule()
-            weights = schedule_return[self.get_weights()]
-            return ntd_loss, weights
+            self.schedule()
+            return ntd_loss
 
     def schedule(self):
         import tensorflow as tf
@@ -59,6 +56,7 @@ class Learner(DQN):
             metric.reset_states()
         tf.summary.flush()
 
+    @ray.method(num_return_vals=2)
     def get_weights(self):
         return self.online_model.get_weights(), self.target_model.get_weights()
 
@@ -79,7 +77,6 @@ class Actor(DQN):
         self.env_state = None
         self.remote_counter = remote_counter
 
-    @ray.method(num_return_vals=2)
     def rollout(self, online_weights, target_weights, rollout_size=300):
         import tensorflow as tf
         with self.summary_writer.as_default():

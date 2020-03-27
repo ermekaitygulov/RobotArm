@@ -61,10 +61,10 @@ if __name__ == '__main__':
     counter = Counter.remote()
     replay_buffer = ApeXBuffer.remote(int(1e5))
     learner = Learner.remote(replay_buffer, make_model, obs_shape, action_shape, update_target_nn_mod=1000,
-                             gamma=0.99, learning_rate=1e-4, send_nn_mod=300)
+                             gamma=0.99, learning_rate=1e-4)
     actors = [Actor.remote(i, make_model, obs_shape, action_shape, make_env, counter, gamma=0.99, n_step=5)
               for i in range(n_actors)]
-    online_weights, target_weights = ray.get(learner.get_weights.remote())
+    online_weights, target_weights = learner.get_weights.remote()
 
     @ray.remote
     def remote_sleep():
@@ -77,6 +77,7 @@ if __name__ == '__main__':
     rollouts[remote_sleep.remote()] = 'learner_waiter'
     episodes_done = ray.get(counter.get_value.remote())
     tree_ids = None
+    optimization_step = 0
     while episodes_done < max_eps:
         ready_ids, _ = ray.wait(list(rollouts))
         first_id = ready_ids[0]
@@ -85,14 +86,15 @@ if __name__ == '__main__':
             tree_ids, minibatch, is_weights = replay_buffer.sample.remote(batch_size, dtype_dict)
             rollouts[learner.update_asynch.remote(minibatch, is_weights, log_freq=100)] = learner
         elif first == learner:
-            ntd, weights = first_id
-            if weights is not None:
-                online_weights, target_weights = online_weights
+            optimization_step += 1
+            ntd = first_id
             replay_buffer.batch_update.remote(tree_ids, ntd)
             tree_ids, minibatch, is_weights = replay_buffer.sample.remote(batch_size)
+            if optimization_step % sync_nn_mod == 0:
+                online_weights, target_weights = first.get_weights.remote()
             rollouts[first.update_asynch.remote(minibatch, is_weights, log_freq=100)] = first
         else:
-            replay_buffer.receive.remote(*first_id)
-            rollouts[first.rollout.remote(epsilon=0.1, final_epsilon=0.01, eps_decay=0.99)] = first
+            replay_buffer.receive.remote(first_id)
+            rollouts[first.rollout.remote(online_weights, target_weights, rollout_size=300)] = first
         episodes_done = ray.get(counter.get_value.remote())
     ray.timeline()

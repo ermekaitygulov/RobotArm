@@ -27,6 +27,7 @@ class ApeXBuffer(PrioritizedBuffer):
     def len(self):
         return len(self.tree)
 
-    def receive(self, transitions, priorities):
+    def receive(self, transitions_and_priorities):
+        transitions, priorities = transitions_and_priorities #pass as 1 argument because of ray
         idxes = [self.tree.add(None, t) for t in transitions]
         self.batch_update(idxes, priorities)
