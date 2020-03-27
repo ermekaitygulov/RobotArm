@@ -16,7 +16,7 @@ class ApeXBuffer(PrioritizedBuffer):
             idx, p, data = self.tree.get(s)
             priorities.append(p)
             idxs.append(idx)
-            for key in batch.keys():
+            for key in dtype_dict.keys():
                 dtype = dtype_dict[key]
                 batch[key].append(np.array(data[key]).astype(dtype))
         prob = np.array(priorities) / self.tree.total()
