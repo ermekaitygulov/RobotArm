@@ -19,5 +19,5 @@ class ApeXBuffer(PrioritizedReplayBuffer):
         self._it_min[idx] = priority ** self._alpha
 
     def receive_batch(self, transition_and_priorities):
-        for t, p in transition_and_priorities:
+        for t, p in zip(*transition_and_priorities):
             self.add(t, p)
