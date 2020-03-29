@@ -39,7 +39,7 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     ray.init(webui_host='0.0.0.0', num_gpus=1)
     n_actors = 3
-    max_eps = 1e+6
+    max_eps = 1000
     replay_start_size = 1500
     batch_size = 128
     sync_nn_mod = 300
