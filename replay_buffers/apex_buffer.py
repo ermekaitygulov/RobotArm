@@ -21,6 +21,7 @@ class ApeXBuffer(PrioritizedBuffer):
                 batch[key].append(np.array(data[key]).astype(dtype))
         prob = np.array(priorities) / self.tree.total()
         is_weights = np.power(self.tree.n_entries * prob, -self.beta).astype('float32')
+        is_weights /= np.max(is_weights)
         batch = {key: np.array(value) for key, value in batch.items()}
         return idxs, batch, is_weights
 
