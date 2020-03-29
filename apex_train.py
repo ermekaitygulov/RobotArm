@@ -83,16 +83,16 @@ if __name__ == '__main__':
         first_id = ready_ids[0]
         first = rollouts.pop(first_id)
         if first == 'learner_waiter':
-            tree_ids, minibatch, is_weights = replay_buffer.sample.remote(batch_size, dtype_dict)
-            rollouts[learner.update_asynch.remote(minibatch, is_weights, log_freq=100)] = learner
+            tree_ids, minibatch, is_weights = replay_buffer.sample.remote(batch_size)
+            rollouts[learner.update_asynch.remote(minibatch, is_weights, dtype_dict, log_freq=100)] = learner
         elif first == learner:
             optimization_step += 1
             ntd = first_id
             replay_buffer.batch_update.remote(tree_ids, ntd)
-            tree_ids, minibatch, is_weights = replay_buffer.sample.remote(batch_size, dtype_dict)
+            tree_ids, minibatch, is_weights = replay_buffer.sample.remote(batch_size)
             if optimization_step % sync_nn_mod == 0:
                 online_weights, target_weights = first.get_weights.remote()
-            rollouts[first.update_asynch.remote(minibatch, is_weights, log_freq=100)] = first
+            rollouts[first.update_asynch.remote(minibatch, is_weights, dtype_dict, log_freq=100)] = first
         else:
             replay_buffer.receive.remote(first_id)
             rollouts[first.rollout.remote(online_weights, target_weights, rollout_size=300)] = first

@@ -6,7 +6,7 @@ import ray
 @ray.remote
 class ApeXBuffer(PrioritizedBuffer):
     @ray.method(num_return_vals=3)
-    def sample(self, n, dtype_dict):
+    def sample(self, n):
         idxs = []
         batch = {key: [] for key in self.tree.transition_keys}
         priorities = []
@@ -16,9 +16,8 @@ class ApeXBuffer(PrioritizedBuffer):
             idx, p, data = self.tree.get(s)
             priorities.append(p)
             idxs.append(idx)
-            for key in dtype_dict.keys():
-                dtype = dtype_dict[key]
-                batch[key].append(np.array(data[key]).astype(dtype))
+            for key in batch.keys():
+                batch[key].append(np.array(data[key]))
         prob = np.array(priorities) / self.tree.total()
         is_weights = np.power(self.tree.n_entries * prob, -self.beta).astype('float32')
         is_weights /= np.max(is_weights)
@@ -29,6 +28,6 @@ class ApeXBuffer(PrioritizedBuffer):
         return len(self.tree)
 
     def receive(self, transitions_and_priorities):
-        transitions, priorities = transitions_and_priorities #pass as 1 argument because of ray
+        transitions, priorities = transitions_and_priorities  # pass as 1 argument because of ray
         idxes = [self.tree.add(None, t) for t in transitions]
         self.batch_update(idxes, priorities)

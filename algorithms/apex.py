@@ -22,16 +22,18 @@ class Learner(DQN):
         self._schedule_dict = dict()
         self._schedule_dict[self.target_update] = update_target_nn_mod
 
-    def update_asynch(self, minibatch, is_weights, log_freq=100):
+    def update_asynch(self, minibatch, is_weights, dtype_dict, log_freq=100):
         if self._run_time_deque.maxlen != log_freq:
             self._run_time_deque = deque(maxlen=log_freq)
             self._schedule_dict[self.update_log] = log_freq
         with self.summary_writer.as_default():
             start_time = timeit.default_timer()
-            _, ntd_loss, _, _ = self.q_network_update(minibatch['state'], minibatch['action'], minibatch['reward'],
-                                                      minibatch['next_state'] , minibatch['done'], minibatch['n_state'],
-                                                      minibatch['n_reward'], minibatch['n_done'], minibatch['actual_n'],
-                                                      is_weights, self.gamma)
+            casted_batch = {key: minibatch[key].astype(dtype_dict[key]) for key in dtype_dict.keys()}
+            _, ntd_loss, _, _ = self.q_network_update(casted_batch['state'], casted_batch['action'],
+                                                      casted_batch['reward'], casted_batch['next_state'],
+                                                      casted_batch['done'], casted_batch['n_state'],
+                                                      casted_batch['n_reward'], casted_batch['n_done'],
+                                                      casted_batch['actual_n'], is_weights, self.gamma)
 
             stop_time = timeit.default_timer()
             self._run_time_deque.append(stop_time - start_time)
