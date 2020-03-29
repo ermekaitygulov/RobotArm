@@ -20,4 +20,4 @@ class ApeXBuffer(PrioritizedReplayBuffer):
 
     def receive_batch(self, transition_and_priorities):
         for t, p in zip(*transition_and_priorities):
-            self.add(t, p)
+            self.append(t, p)
