@@ -1,147 +1,171 @@
-from collections import deque
+import random
 
 import numpy as np
-from replay_buffers.sum_tree import SumTree
+from replay_buffers.sum_tree import SumSegmentTree, MinSegmentTree
 
 
-class PrioritizedBuffer(object):
-    def __init__(self, capacity,
-                 epsilon=0.001,
-                 alpha=0.4,
-                 beta=0.6,
-                 beta_increment_per_sampling=0.001,
-                 n_step=10, gamma=0.99
-                 ):
-        self.epsilon = epsilon
-        self.alpha = alpha
-        self.beta = beta
-        self.beta_increment_per_sampling = beta_increment_per_sampling
-        self.tree = SumTree(capacity)
-        self.n_deque = deque([], maxlen=n_step)
-        self.gamma = gamma
+class ReplayBuffer(object):
+    def __init__(self, size):
+        """Create Replay buffer.
+        Parameters
+        ----------
+        size: int
+            Max number of transitions to store in the buffer. When the buffer
+            overflows the old memories are dropped.
+        """
+        self._storage = []
+        self._maxsize = size
+        self._next_idx = 0
 
     def __len__(self):
-        return len(self.tree)
-
-    def full(self):
-        return self.tree.full
+        return len(self._storage)
 
     def append(self, transition):
-        max_p = np.max(self.tree.tree[-self.tree.capacity:])
-        if max_p == 0:
-            max_p = 1
-        self.tree.add(max_p, transition)  # set the max_p for new transition
+        data = transition
 
-    def sample(self, n):
-        idxs = []
-        batch = {key: [] for key in self.tree.transition_keys}
-        priorities = []
-        self.beta = np.min([1., self.beta + self.beta_increment_per_sampling])
-        for i in range(n):
-            s = np.random.uniform(0, self.tree.total())
-            idx, p, data = self.tree.get(s)
-            priorities.append(p)
-            idxs.append(idx)
-            for key in batch.keys():
-                batch[key].append(np.array(data[key]))
-        prob = np.array(priorities) / self.tree.total()
-        is_weights = np.power(self.tree.n_entries * prob, -self.beta)
+        if self._next_idx >= len(self._storage):
+            self._storage.append(data)
+        else:
+            self._storage[self._next_idx] = data
+        self._next_idx = (self._next_idx + 1) % self._maxsize
+
+    @property
+    def transition_keys(self):
+        return self._storage[0].keys()
+
+    def _encode_sample(self, idxes):
+        batch = {key: [] for key in self.transition_keys}
+        for i in idxes:
+            data = self._storage[i]
+            for key, value in data.items():
+                batch[key].append(np.array(value, copy=False))
         batch = {key: np.array(value) for key, value in batch.items()}
-        return idxs, batch, is_weights
+        return batch
 
-    def batch_update(self, tree_idxes, abs_errors):
-        errors = [abs_err + self.epsilon for abs_err in abs_errors]
-        ps = np.power(errors, self.alpha)
-        for ti, p in zip(tree_idxes, ps):
-            self.tree.update(ti, p)
-
-    def free_space(self):
-        self.tree.free()
-
-
-class AggregatedBuff:
-    def __init__(self, capacity, demo_n=32):
-        self.demo_buff = PrioritizedBuffer(capacity=capacity, epsilon=1.0)
-        self.replay_buff = PrioritizedBuffer(capacity=capacity)
-        self.demo_n = demo_n
-        self.no_demo = False
-        self.capacity = capacity
-
-    def store(self, transition, demo=False):
-        if demo:
-            self.demo_buff.append(transition)
-        else:
-            self.replay_buff.append(transition)
-
-    def sample(self, n=32, proportion=0.0):
-        idxs, batch, is_weights = [], [], ()
-        agent_n = int(n*proportion)
-        self.demo_n = n - agent_n
-        if self.demo_n != 0:
-            demo_idxs, demo_batch, demo_is_weights = self.demo_buff.sample(self.demo_n)
-            idxs += demo_idxs
-            batch += demo_batch
-            is_weights += (demo_is_weights,)
-        if agent_n > 0:
-            replay_idxs, replay_batch, replay_is_weights = self.replay_buff.sample(agent_n)
-            idxs += replay_idxs
-            batch += replay_batch
-            is_weights += (replay_is_weights,)
-        is_weights = np.concatenate(is_weights)
-        return idxs, batch, is_weights
-
-    def batch_update(self, tree_idxes, abs_errors):
-        demo_errors = abs_errors[:self.demo_n]
-        replay_errors = abs_errors[self.demo_n:]
-        if not isinstance(self.demo_buff, list):
-            self.demo_buff.batch_update(tree_idxes[:self.demo_n], demo_errors)
-        self.replay_buff.batch_update(tree_idxes[self.demo_n:], replay_errors)
-
-    def __len__(self):
-        return len(self.replay_buff)
-
-    def full(self):
-        return {'demo': self.demo_buff.full(), 'replay': self.replay_buff.full()}
-
-    def free_demo(self):
-        self.demo_buff.free_space()
+    def sample(self, batch_size):
+        """Sample a batch of experiences.
+        Parameters
+        ----------
+        batch_size: int
+            How many transitions to sample.
+        Returns
+        -------
+        obs_batch: np.array
+            batch of observations
+        act_batch: np.array
+            batch of actions executed given obs_batch
+        rew_batch: np.array
+            rewards received as results of executing act_batch
+        next_obs_batch: np.array
+            next set of observations seen after executing act_batch
+        done_mask: np.array
+            done_mask[i] = 1 if executing act_batch[i] resulted in
+            the end of an episode and 0 otherwise.
+        """
+        idxes = [random.randint(0, len(self._storage) - 1) for _ in range(batch_size)]
+        return self._encode_sample(idxes)
 
 
-class DQfDBuff(PrioritizedBuffer):
-    def __init__(self, capacity,
-                 epsilon=0.001,
-                 alpha=0.4,
-                 beta=0.6,
-                 beta_increment_per_sampling=0.001,
-                 demo_epsilon=1.0):
-        super(DQfDBuff, self).__init__(capacity, epsilon, alpha,
-                                       beta, beta_increment_per_sampling)
-        self.demo_epsilon = demo_epsilon
-        self.agent_pointer = 0
-        self.demo_pointer = 0
+class PrioritizedReplayBuffer(ReplayBuffer):
+    def __init__(self, size, alpha=0.6, eps=1e-6, beta = 0.6, beta_increment_per_sampling = 0.001):
+        """Create Prioritized Replay buffer.
+        Parameters
+        ----------
+        size: int
+            Max number of transitions to store in the buffer. When the buffer
+            overflows the old memories are dropped.
+        alpha: float
+            how much prioritization is used
+            (0 - no prioritization, 1 - full prioritization)
+        See Also
+        --------
+        ReplayBuffer.__init__
+        """
+        super(PrioritizedReplayBuffer, self).__init__(size)
+        assert alpha >= 0
+        self._alpha = alpha
+        self._eps = eps
+        self._beta = beta
+        self._beta_increment = beta_increment_per_sampling
 
-    def batch_update(self, tree_idxes, abs_errors):
-        data_idxes = [idx - self.tree.capacity + 1 for idx in tree_idxes]
-        epsilon = [self.epsilon if idx > self.demo_pointer
-                   else self.demo_epsilon for idx in data_idxes]
-        errors = [abs_err + eps for abs_err, eps in zip(abs_errors, epsilon)]
-        ps = np.power(errors, self.alpha)
-        for ti, p in zip(tree_idxes, ps):
-            self.tree.update(ti, p)
+        it_capacity = 1
+        while it_capacity < size:
+            it_capacity *= 2
 
-    def store(self, transition, demo=False):
-        max_p = np.max(self.tree.tree[-self.tree.capacity:])
-        if max_p == 0:
-            max_p = 1
-        if demo:
-            self.tree.data_pointer = self.demo_pointer
-            self.demo_pointer += 1
-            if self.demo_pointer >= self.tree.capacity:
-                self.demo_pointer = 0
-        else:
-            if self.agent_pointer >= self.tree.capacity or self.agent_pointer <= self.demo_pointer:
-                self.agent_pointer = self.demo_pointer + 1
-            self.tree.data_pointer = self.agent_pointer
-            self.agent_pointer += 1
+        self._it_sum = SumSegmentTree(it_capacity)
+        self._it_min = MinSegmentTree(it_capacity)
+        self._max_priority = 1.0
 
-        self.tree.add(max_p, transition)
+    def append(self, *args, **kwargs):
+        """See ReplayBuffer.store_effect"""
+        idx = self._next_idx
+        super().append(*args, **kwargs)
+        self._it_sum[idx] = self._max_priority ** self._alpha
+        self._it_min[idx] = self._max_priority ** self._alpha
+
+    def _sample_proportional(self, batch_size):
+        res = []
+        p_total = self._it_sum.sum(0, len(self._storage) - 1)
+        every_range_len = p_total / batch_size
+        for i in range(batch_size):
+            mass = random.random() * every_range_len + i * every_range_len
+            idx = self._it_sum.find_prefixsum_idx(mass)
+            res.append(idx)
+        return res
+
+    def sample(self, batch_size):
+        """Sample a batch of experiences.
+        compared to ReplayBuffer.sample
+        it also returns importance weights and idxes
+        of sampled experiences.
+        Parameters
+        ----------
+        batch_size: int
+            How many transitions to sample.
+        Returns
+        -------
+        encoded_sample: dict of np.array
+            Array of shape(batch_size, ...) and dtype np.*32
+        weights: np.array
+            Array of shape (batch_size,) and dtype np.float32
+            denoting importance weight of each sampled transition
+        idxes: np.array
+            Array of shape (batch_size,) and dtype np.int32
+            idexes in buffer of sampled experiences
+        """
+        self._beta = np.min([1., self._beta + self._beta_increment])
+        idxes = self._sample_proportional(batch_size)
+
+        weights = []
+        p_min = self._it_min.min() / self._it_sum.sum()
+        max_weight = (p_min * len(self._storage)) ** (-self._beta)
+
+        for idx in idxes:
+            p_sample = self._it_sum[idx] / self._it_sum.sum()
+            weight = (p_sample * len(self._storage)) ** (-self._beta)
+            weights.append(weight / max_weight)
+        weights = np.array(weights, dtype='float32')
+        encoded_sample = self._encode_sample(idxes)
+        return idxes, encoded_sample, weights
+
+    def update_priorities(self, idxes, priorities):
+        """Update priorities of sampled transitions.
+        sets priority of transition at index idxes[i] in buffer
+        to priorities[i].
+        Parameters
+        ----------
+        idxes: [int]
+            List of idxes of sampled transitions
+        priorities: [float]
+            List of updated priorities corresponding to
+            transitions at the sampled idxes denoted by
+            variable `idxes`.
+        """
+        assert len(idxes) == len(priorities)
+        for idx, priority in zip(idxes, priorities):
+            assert priority > 0
+            assert 0 <= idx < len(self._storage)
+            self._it_sum[idx] = (priority + self._eps) ** self._alpha
+            self._it_min[idx] = (priority + self._eps) ** self._alpha
+
+            self._max_priority = max(self._max_priority, priority)
