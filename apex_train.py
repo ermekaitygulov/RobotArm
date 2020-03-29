@@ -37,7 +37,7 @@ def make_model(name, input_shape, output_shape):
 if __name__ == '__main__':
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    ray.init(webui_host='127.0.0.1', num_gpus=1)
+    ray.init(webui_host='0.0.0.0', num_gpus=1)
     n_actors = 3
     max_eps = 1e+6
     replay_start_size = 1500
