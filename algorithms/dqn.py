@@ -21,7 +21,7 @@ class DQN:
         self.custom_loss = custom_loss
         self.online_variables = self.online_model.trainable_variables
         self.optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.huber_loss = tf.keras.losses.Huber(0.4, tf.keras.losses.Reduction.NONE)
+        self.huber_loss = tf.keras.losses.Huber(1.0, tf.keras.losses.Reduction.NONE)
         self.avg_metrics = dict()
 
         self.frames_to_update = frames_to_update
@@ -127,7 +127,7 @@ class DQN:
                     print('  {}:     {:.3f}'.format(key, metric.result()))
                     metric.reset_states()
                 tf.summary.flush()
-            self.replay_buff.batch_update(tree_idxes, ntd_loss)
+            self.replay_buff.update_priorities(tree_idxes, ntd_loss)
         progress.close()
 
     def choose_act(self, state, epsilon, action_sampler):
