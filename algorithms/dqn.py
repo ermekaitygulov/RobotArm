@@ -109,6 +109,7 @@ class DQN:
 
     def update(self, steps):
         for i in range(1, steps + 1):
+            start_time = timeit.default_timer()
             tree_idxes, minibatch, is_weights = self.replay_buff.sample(self.batch_size)
             casted_batch = {key: minibatch[key].astype(self.dtype_dict[key]) for key in self.dtype_dict.keys()}
             casted_batch['state'] = (casted_batch['state'] / 255).astype('float32')
@@ -121,6 +122,8 @@ class DQN:
                                                       casted_batch['n_reward'], casted_batch['n_done'],
                                                       casted_batch['actual_n'], is_weights, self.gamma)
 
+            stop_time = timeit.default_timer()
+            self._run_time_deque.append(stop_time - start_time)
             self.schedule()
             self.replay_buff.update_priorities(tree_idxes, ntd_loss)
 
