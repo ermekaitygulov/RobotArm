@@ -125,7 +125,7 @@ class DQN:
             stop_time = timeit.default_timer()
             self._run_time_deque.append(stop_time - start_time)
             self.schedule()
-            self.replay_buff.update_priorities(tree_idxes, ntd_loss)
+            self.replay_buff.update_priorities(tree_idxes, ntd_loss.numpy())
 
     def choose_act(self, state, epsilon, action_sampler):
         inputs = (np.array(state) / 255).astype('float32')
