@@ -8,7 +8,7 @@ from utils.util import take_vector_elements
 
 
 class DQN:
-    def __init__(self, replay_buffer, build_model, obs_shape, action_shape, train_freq=1, train_quantity=1,
+    def __init__(self, replay_buffer, build_model, obs_shape, action_shape, train_freq=100, train_quantity=100,
                  log_freq=100, update_target_nn_mod=500, batch_size=32, replay_start_size=1000, gamma=0.99,
                  learning_rate=1e-4, n_step=10, custom_loss=None):
 
