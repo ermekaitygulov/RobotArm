@@ -1,36 +1,45 @@
 import random
-
 from collections import deque
-
 import numpy as np
 import tensorflow as tf
-from tqdm import tqdm
 import timeit
 
 from utils.util import take_vector_elements
 
 
 class DQN:
-    def __init__(self, replay_buffer, build_model, obs_shape, action_shape, frames_to_update=100, update_quantity=30,
-                 update_target_net_mod=1000, batch_size=32, replay_start_size=500, gamma=0.99, learning_rate=1e-4,
-                 n_step=10, custom_loss=None):
+    def __init__(self, replay_buffer, build_model, obs_shape, action_shape, train_freq=1, train_quantity=1,
+                 log_freq=100, update_target_nn_mod=500, batch_size=32, replay_start_size=1000, gamma=0.99,
+                 learning_rate=1e-4, n_step=10, custom_loss=None):
 
         self.gamma = np.array(gamma, dtype='float32')
         self.online_model = build_model('Online', obs_shape, action_shape)
         self.target_model = build_model('Target', obs_shape, action_shape)
         self.custom_loss = custom_loss
-        self.online_variables = self.online_model.trainable_variables
         self.optimizer = tf.keras.optimizers.Adam(learning_rate)
         self.huber_loss = tf.keras.losses.Huber(1.0, tf.keras.losses.Reduction.NONE)
         self.avg_metrics = dict()
-
-        self.frames_to_update = frames_to_update
-        self.update_quantity = update_quantity
-        self.update_target_net_mod = update_target_net_mod
+        self.train_freq = train_freq
+        self.train_quantity = train_quantity
         self.batch_size = batch_size
         self.replay_start_size = replay_start_size
         self.n_deque = deque([], maxlen=n_step)
         self.replay_buff = replay_buffer
+
+        self.dtype_dict = {'state': 'float32',
+                           'action': 'int32',
+                           'reward': 'float32',
+                           'next_state': 'float32',
+                           'done': 'bool',
+                           'n_state': 'float32',
+                           'n_reward': 'float32',
+                           'n_done': 'bool',
+                           'actual_n': 'float32'}
+        self._update_frequency = 0
+        self._run_time_deque = deque(maxlen=log_freq)
+        self._schedule_dict = dict()
+        self._schedule_dict[self.target_update] = update_target_nn_mod
+        self._schedule_dict[self.update_log] = log_freq
 
     def train(self, env, episodes=200, name="train/max_model.ckpt", epsilon=0.1, final_epsilon=0.01, eps_decay=0.99):
         max_reward = - np.inf
@@ -64,10 +73,8 @@ class DQN:
             self.perceive(state, action, reward, next_state, done)
             counter += 1
             state = next_state
-            if len(self.replay_buff) > self.replay_start_size and counter % self.frames_to_update == 0:
-                self.update(self.update_quantity)
-            if counter % self.update_target_net_mod == 0:
-                self.target_update()
+            if len(self.replay_buff) > self.replay_start_size and counter % self.train_freq == 0:
+                self.update(self.train_quantity)
         return score, counter
 
     def test(self, env, name="train/max_model.ckpt", number_of_trials=1, logging=False):
@@ -95,40 +102,27 @@ class DQN:
                 reward += r
             total_reward += reward
             if logging:
-                print("reward/avg_reward for {} trial: {}; {}".format(trial_index, reward, total_reward/(trial_index+1)))
+                print("reward/avg_reward for {} trial: {}; {}".
+                      format(trial_index, reward, total_reward/(trial_index+1)))
         env.reset()
         return total_reward
 
-    def update(self, steps, log_freq=10):
-        progress = tqdm(total=steps)
+    def update(self, steps):
         for i in range(1, steps + 1):
-            progress.update(1)
             tree_idxes, minibatch, is_weights = self.replay_buff.sample(self.batch_size)
+            casted_batch = {key: minibatch[key].astype(self.dtype_dict[key]) for key in self.dtype_dict.keys()}
+            casted_batch['state'] = (casted_batch['state'] / 255).astype('float32')
+            casted_batch['next_state'] = (casted_batch['next_state'] / 255).astype('float32')
+            casted_batch['n_state'] = (casted_batch['n_state'] / 255).astype('float32')
 
-            state = (minibatch['state'] / 255).astype('float32')
-            action = (minibatch['action']).astype('int32')
-            next_rewards = (minibatch['reward']).astype('float32')
-            next_state = (minibatch['next_state'] / 255).astype('float32')
-            done = minibatch['done']
-            n_state = (minibatch['n_state'] / 255).astype('float32')
-            n_reward = (minibatch['n_reward']).astype('float32')
-            n_done = (minibatch['n_done'])
-            actual_n = (minibatch['actual_n']).astype('float32')
-            is_weights = is_weights.astype('float32')
+            _, ntd_loss, _, _ = self.q_network_update(casted_batch['state'], casted_batch['action'],
+                                                      casted_batch['reward'], casted_batch['next_state'],
+                                                      casted_batch['done'], casted_batch['n_state'],
+                                                      casted_batch['n_reward'], casted_batch['n_done'],
+                                                      casted_batch['actual_n'], is_weights, self.gamma)
 
-            _, ntd_loss, _, _ = self.q_network_update(state, action, next_rewards,
-                                                      next_state, done, n_state,
-                                                      n_reward, n_done, actual_n, is_weights, self.gamma)
-
-            if tf.equal(self.optimizer.iterations % log_freq, 0):
-                print("Epoch: ", self.optimizer.iterations.numpy())
-                for key, metric in self.avg_metrics.items():
-                    tf.summary.scalar(key, metric.result(), step=self.optimizer.iterations)
-                    print('  {}:     {:.3f}'.format(key, metric.result()))
-                    metric.reset_states()
-                tf.summary.flush()
+            self.schedule()
             self.replay_buff.update_priorities(tree_idxes, ntd_loss)
-        progress.close()
 
     def choose_act(self, state, epsilon, action_sampler):
         inputs = (np.array(state) / 255).astype('float32')
@@ -143,8 +137,9 @@ class DQN:
     def q_network_update(self, state, action, next_reward, next_state, done, n_state,
                          n_reward, n_done, actual_n, is_weights, gamma):
         print("Q-nn_update tracing")
+        online_variables = self.online_model.trainable_variables
         with tf.GradientTape() as tape:
-            tape.watch(self.online_variables)
+            tape.watch(online_variables)
             q_values = self.online_model(state, training=True)
             q_values = take_vector_elements(q_values, action)
             td_loss = self.td_loss(next_state, q_values, done, next_reward, 1, gamma)
@@ -161,8 +156,8 @@ class DQN:
             all_losses = mean_td + mean_ntd + l2
             self.update_metrics('all_losses', all_losses)
 
-        gradients = tape.gradient(all_losses, self.online_variables)
-        self.optimizer.apply_gradients(zip(gradients, self.online_variables))
+        gradients = tape.gradient(all_losses, online_variables)
+        self.optimizer.apply_gradients(zip(gradients, online_variables))
         return td_loss, ntd_loss, l2, all_losses
 
     @tf.function
@@ -209,6 +204,22 @@ class DQN:
                 self.replay_buff.append(self.n_deque.popleft())
                 if not n_step_done:
                     break
+
+    def schedule(self):
+        return_dict = {key: None for key in self._schedule_dict.keys()}
+        for key, value in self._schedule_dict.items():
+            if tf.equal(self.optimizer.iterations % value, 0):
+                return_dict[key] = key()
+        return return_dict
+
+    def update_log(self):
+        update_frequency = sum(self._run_time_deque) / len(self._run_time_deque)
+        print("LearnerEpoch({:.2f}it/sec): ".format(update_frequency), self.optimizer.iterations.numpy())
+        for key, metric in self.avg_metrics.items():
+            tf.summary.scalar(key, metric.result(), step=self.optimizer.iterations)
+            print('  {}:     {:.3f}'.format(key, metric.result()))
+            metric.reset_states()
+        tf.summary.flush()
 
     def save(self, out_dir=None):
         self.online_model.save_weights(out_dir)

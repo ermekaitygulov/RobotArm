@@ -43,15 +43,6 @@ if __name__ == '__main__':
     replay_start_size = 1500
     batch_size = 128
     sync_nn_mod = 300
-    dtype_dict = {'state': 'float32',
-                  'action': 'int32',
-                  'reward': 'float32',
-                  'next_state': 'float32',
-                  'done': 'bool',
-                  'n_state': 'float32',
-                  'n_reward': 'float32',
-                  'n_done': 'bool',
-                  'actual_n': 'float32'}
 
     test_env = make_env('test_name')
     obs_shape = test_env.observation_space.shape
@@ -61,7 +52,7 @@ if __name__ == '__main__':
     counter = Counter.remote()
     replay_buffer = ApeXBuffer.remote(int(1e5))
     learner = Learner.remote(make_model, obs_shape, action_shape, update_target_nn_mod=1000,
-                             gamma=0.99, learning_rate=1e-4)
+                             gamma=0.99, learning_rate=1e-4, log_freq=100)
     actors = [Actor.remote(i, make_model, obs_shape, action_shape, make_env, counter, gamma=0.99, n_step=5)
               for i in range(n_actors)]
     online_weights, target_weights = learner.get_weights.remote()
@@ -84,7 +75,7 @@ if __name__ == '__main__':
         first = rollouts.pop(first_id)
         if first == 'learner_waiter':
             tree_ids, minibatch, is_weights = replay_buffer.sample.remote(batch_size)
-            rollouts[learner.update_asynch.remote(minibatch, is_weights, dtype_dict, log_freq=100)] = learner
+            rollouts[learner.update_asynch.remote(minibatch, is_weights)] = learner
         elif first == learner:
             optimization_step += 1
             ntd = first_id
@@ -92,7 +83,7 @@ if __name__ == '__main__':
             tree_ids, minibatch, is_weights = replay_buffer.sample.remote(batch_size)
             if optimization_step % sync_nn_mod == 0:
                 online_weights, target_weights = first.get_weights.remote()
-            rollouts[first.update_asynch.remote(minibatch, is_weights, dtype_dict, log_freq=100)] = first
+            rollouts[first.update_asynch.remote(minibatch, is_weights)] = first
         else:
             replay_buffer.receive_batch.remote(first_id)
             rollouts[first.rollout.remote(online_weights, target_weights, rollout_size=300)] = first

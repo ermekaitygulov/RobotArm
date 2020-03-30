@@ -67,7 +67,7 @@ class ReplayBuffer(object):
 
 
 class PrioritizedReplayBuffer(ReplayBuffer):
-    def __init__(self, size, alpha=0.6, eps=1e-6, beta = 0.6, beta_increment_per_sampling = 0.001):
+    def __init__(self, size, alpha=0.6, eps=1e-6, beta = 0.4, beta_increment_per_sampling = 0.001):
         """Create Prioritized Replay buffer.
         Parameters
         ----------

@@ -12,23 +12,20 @@ from algorithms.dqn import DQN
 @ray.remote(num_gpus=0.3)
 class Learner(DQN):
     def __init__(self, build_model, obs_shape, action_shape, update_target_nn_mod=1000,
-                 gamma=0.99, learning_rate=1e-4):
+                 gamma=0.99, learning_rate=1e-4, log_freq=100):
         import tensorflow as tf
         super().__init__(None, build_model, obs_shape, action_shape,
-                         gamma=gamma, learning_rate=learning_rate, update_target_net_mod=update_target_nn_mod)
+                         gamma=gamma, learning_rate=learning_rate, update_target_nn_mod=update_target_nn_mod,
+                         log_freq=log_freq)
         self.summary_writer = tf.summary.create_file_writer('train/learner/')
-        self._update_frequency = 0
-        self._run_time_deque = deque()
-        self._schedule_dict = dict()
-        self._schedule_dict[self.target_update] = update_target_nn_mod
 
-    def update_asynch(self, minibatch, is_weights, dtype_dict, log_freq=100):
-        if self._run_time_deque.maxlen != log_freq:
-            self._run_time_deque = deque(maxlen=log_freq)
-            self._schedule_dict[self.update_log] = log_freq
+    def update_asynch(self, minibatch, is_weights):
         with self.summary_writer.as_default():
             start_time = timeit.default_timer()
-            casted_batch = {key: minibatch[key].astype(dtype_dict[key]) for key in dtype_dict.keys()}
+            casted_batch = {key: minibatch[key].astype(self.dtype_dict[key]) for key in self.dtype_dict.keys()}
+            casted_batch['state'] = (casted_batch['state'] / 255).astype('float32')
+            casted_batch['next_state'] = (casted_batch['next_state'] / 255).astype('float32')
+            casted_batch['n_state'] = (casted_batch['n_state'] / 255).astype('float32')
             _, ntd_loss, _, _ = self.q_network_update(casted_batch['state'], casted_batch['action'],
                                                       casted_batch['reward'], casted_batch['next_state'],
                                                       casted_batch['done'], casted_batch['n_state'],
@@ -39,24 +36,6 @@ class Learner(DQN):
             self._run_time_deque.append(stop_time - start_time)
             self.schedule()
             return ntd_loss
-
-    def schedule(self):
-        import tensorflow as tf
-        return_dict = {key: None for key in self._schedule_dict.keys()}
-        for key, value in self._schedule_dict.items():
-            if tf.equal(self.optimizer.iterations % value, 0):
-                return_dict[key] = key()
-        return return_dict
-
-    def update_log(self):
-        import tensorflow as tf
-        update_frequency = sum(self._run_time_deque) / len(self._run_time_deque)
-        print("LearnerEpoch({:.2f}it/sec): ".format(update_frequency), self.optimizer.iterations.numpy())
-        for key, metric in self.avg_metrics.items():
-            tf.summary.scalar(key, metric.result(), step=self.optimizer.iterations)
-            print('  {}:     {:.3f}'.format(key, metric.result()))
-            metric.reset_states()
-        tf.summary.flush()
 
     @ray.method(num_return_vals=2)
     def get_weights(self):
