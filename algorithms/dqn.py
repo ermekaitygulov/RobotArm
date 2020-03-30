@@ -145,6 +145,7 @@ class DQN:
             tape.watch(online_variables)
             q_values = self.online_model(state, training=True)
             q_values = take_vector_elements(q_values, action)
+            q_values = tf.expand_dims(q_values, axis=-1)
             td_loss = self.td_loss(next_state, q_values, done, next_reward, 1, gamma)
             mean_td = tf.reduce_mean(td_loss*is_weights)
             self.update_metrics('TD', mean_td)
