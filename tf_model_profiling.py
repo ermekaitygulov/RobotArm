@@ -12,14 +12,14 @@ class TestBuffer:
         idxes = None
         weights = random.uniform(size=[batch_size]).astype('float32')
         minibatch = dict()
-        minibatch['state'] = random.randint(0, 255, size=(batch_size, 256, 256, 12), dtype='uint8'),
-        minibatch['action'] = random.randint(0, 5, size=(batch_size)),
-        minibatch['reward'] = random.randint(0, 10, size=(batch_size)),
-        minibatch['next_state'] = random.randint(0, 255, size=(batch_size, 256, 256, 12), dtype='uint8'),
-        minibatch['done'] = random.randint(0, 1, size=(batch_size)),
-        minibatch['n_state'] = random.randint(0, 255, size=(batch_size, 256, 256, 12), dtype='uint8'),
-        minibatch['n_reward'] = random.randint(0, 10, size=(batch_size)),
-        minibatch['n_done'] = random.randint(0, 1, size=(batch_size)),
+        minibatch['state'] = random.randint(0, 255, size=(batch_size, 256, 256, 12), dtype='uint8')
+        minibatch['action'] = random.randint(0, 5, size=(batch_size))
+        minibatch['reward'] = random.randint(0, 10, size=(batch_size))
+        minibatch['next_state'] = random.randint(0, 255, size=(batch_size, 256, 256, 12), dtype='uint8')
+        minibatch['done'] = random.randint(0, 1, size=(batch_size))
+        minibatch['n_state'] = random.randint(0, 255, size=(batch_size, 256, 256, 12), dtype='uint8')
+        minibatch['n_reward'] = random.randint(0, 10, size=(batch_size))
+        minibatch['n_done'] = random.randint(0, 1, size=(batch_size))
         minibatch['actual_n'] = random.randint(0, 5, size=(batch_size))
         return idxes, minibatch, weights
 
