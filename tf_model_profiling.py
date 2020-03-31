@@ -47,7 +47,7 @@ if __name__ == '__main__':
     agent = DQN(replay_buffer, make_model, env.observation_space.shape, env.action_space.n, log_freq=10)
     summary_writer = tf.summary.create_file_writer('train/')
     with summary_writer.as_default():
-        agent.train(env, 100)
+        agent.train(env, 1)
     env.close()
     print("Starting Profiling")
     with tf.profiler.experimental.Profile('train/'):
