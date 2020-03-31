@@ -1,10 +1,30 @@
 from algorithms.dqn import DQN
-from replay_buffers.replay_buffers import PrioritizedReplayBuffer
 from algorithms.model import ClassicCnn, DuelingModel
-from environments.pyrep_env import RozumEnv
-from utils.wrappers import *
 import tensorflow as tf
+from numpy import random
 import os
+
+class TestBuffer:
+    def __init__(self):
+        pass
+
+    def sample(self, batch_size):
+        idxes = None
+        weights = random.uniform(size=[batch_size]).astype('float32')
+        minibatch = dict()
+        minibatch['state'] = random.randint(0, 255, size=(batch_size, 256, 256, 12), dtype='uint8'),
+        minibatch['action'] = random.randint(0, 5, size=(batch_size)),
+        minibatch['reward'] = random.randint(0, 10, size=(batch_size)),
+        minibatch['next_state'] = random.randint(0, 255, size=(batch_size, 256, 256, 12), dtype='uint8'),
+        minibatch['done'] = random.randint(0, 1, size=(batch_size)),
+        minibatch['n_state'] = random.randint(0, 255, size=(batch_size, 256, 256, 12), dtype='uint8'),
+        minibatch['n_reward'] = random.randint(0, 10, size=(batch_size)),
+        minibatch['n_done'] = random.randint(0, 1, size=(batch_size)),
+        minibatch['actual_n'] = random.randint(0, 5, size=(batch_size))
+        return idxes, minibatch, weights
+
+    def update_priorities(self, *args, **kwargs):
+        pass
 
 
 if __name__ == '__main__':
@@ -25,18 +45,7 @@ if __name__ == '__main__':
             # Memory growth must be set before GPUs have been initialized
             print(e)
 
-    env = RozumEnv()
-    # env = SaveVideoWrapper(env)
-    env = FrameSkip(env)
-    env = FrameStack(env, 2)
-    env = AccuracyLogWrapper(env, 10)
-    discrete_dict = dict()
-    robot_dof = env.action_space.shape[0]
-    for i in range(robot_dof):
-        discrete_dict[i] = [5 if j == i else 0 for j in range(robot_dof)]
-        discrete_dict[i + robot_dof] = [-5 if j == i else 0 for j in range(robot_dof)]
-    env = DiscreteWrapper(env, discrete_dict)
-    replay_buffer = PrioritizedReplayBuffer(200)
+    replay_buffer = TestBuffer()
 
     def make_model(name, obs_shape, action_shape):
         base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])
@@ -44,11 +53,7 @@ if __name__ == '__main__':
         model = tf.keras.Sequential([base, head], name)
         model.build((None, ) + obs_shape)
         return model
-    agent = DQN(replay_buffer, make_model, env.observation_space.shape, env.action_space.n, log_freq=10)
-    summary_writer = tf.summary.create_file_writer('train/')
-    with summary_writer.as_default():
-        agent.train(env, 1)
-    env.close()
+    agent = DQN(replay_buffer, make_model, (256, 256, 12), 6, log_freq=10)
     print("Starting Profiling")
     with tf.profiler.experimental.Profile('train/'):
         agent.update(100)
