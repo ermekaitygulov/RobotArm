@@ -29,7 +29,7 @@ class TestBuffer:
     def update_priorities(self, *args, **kwargs):
         pass
 
-@ray.remote(num_gpus=0, num_cpus=2)
+@ray.remote(num_gpus=0.3)
 class QueueBuffer:
     def __init__(self):
         import tensorflow as tf
