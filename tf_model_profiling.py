@@ -33,7 +33,7 @@ class TestBuffer:
 class QueueBuffer:
     def __init__(self):
         import tensorflow as tf
-        dtype_list = ('float32',
+        dtype_list = ['float32',
                       'int32',
                       'float32',
                       'float32',
@@ -42,8 +42,8 @@ class QueueBuffer:
                       'float32',
                       'bool',
                       'float32',
-                      'float32')
-        names = ('state',
+                      'float32']
+        names = ['state',
                  'action',
                  'reward',
                  'next_state',
@@ -52,7 +52,7 @@ class QueueBuffer:
                  'n_reward',
                  'n_done',
                  'actual_n'
-                 'weights')
+                 'weights']
         self.queue = tf.queue.FIFOQueue(500, dtypes=dtype_list, names=names)
         self.buffer = TestBuffer()
 
