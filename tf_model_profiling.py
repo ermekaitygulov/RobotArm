@@ -82,7 +82,7 @@ class TestAgent(DQN):
                                                   batch['reward'], batch['next_state'],
                                                   batch['done'], batch['n_state'],
                                                   batch['n_reward'], batch['n_done'],
-                                                  batch['actual_n'], batch['is_weights'], self.gamma)
+                                                  batch['actual_n'], batch['weights'], self.gamma)
 
         stop_time = timeit.default_timer()
         self._run_time_deque.append(stop_time - start_time)
