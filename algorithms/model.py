@@ -26,7 +26,7 @@ class ClassicCnn(tf.keras.Model):
     def __init__(self, filters, kernels, strides, reg=l2(1e-6), data_format='channels_first'):
         super(ClassicCnn, self).__init__()
         self.cnn = Sequential(Conv2D(filters[0], kernels[0], strides[0], activation='relu',
-                                     kernel_regularizer=reg), data_format=data_format, name='CNN')
+                                     kernel_regularizer=reg, data_format=data_format), name='CNN')
         for f, k, s in zip(filters[1:], kernels[1:], strides[1:]):
             self.cnn.add(Conv2D(f, k, s, activation='relu', kernel_regularizer=reg, data_format=data_format))
         self.cnn.add(Flatten())
