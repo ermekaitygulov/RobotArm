@@ -147,6 +147,7 @@ def profiling_asynch_dqn(update_number=100):
             if first == 'enqueue':
                 tasks[queue.enqueue.remote(32)] = 'enqueue'
             elif first == 'updating':
+                iteration += 1
                 batch = queue.dequeue.remote(32)
                 tasks[agent.batch_update.remote(batch)] = 'updating'
 
