@@ -29,7 +29,7 @@ class ClassicCnn(tf.keras.Model):
                                      kernel_regularizer=reg, data_format=data_format), name='CNN')
         for f, k, s in zip(filters[1:], kernels[1:], strides[1:]):
             self.cnn.add(Conv2D(f, k, s, activation='relu', kernel_regularizer=reg, data_format=data_format))
-        self.cnn.add(Flatten())
+        self.cnn.add(Flatten(data_format=data_format))
 
     @tf.function
     def call(self, inputs):
