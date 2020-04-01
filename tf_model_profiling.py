@@ -111,7 +111,7 @@ def profiling_data_dqn(update_number=15, batch_size=32):
 
     agent = TestAgent(None, make_model, (256, 256, 12), 6, log_freq=10, batch_size=batch_size)
     dataset = Dataset(update_number, batch_size=batch_size)
-    ds = tf.data.Dataset.from_tensor_slices(dataset)
+    ds = tf.data.Dataset.from_tensor_slices(dataset.data)
     dtype_dict = agent.dtype_dict
 
     def preprocess_ds(sample):
