@@ -51,7 +51,7 @@ class QueueBuffer:
                  'n_state',
                  'n_reward',
                  'n_done',
-                 'actual_n'
+                 'actual_n',
                  'weights']
         self.queue = tf.queue.FIFOQueue(500, dtypes=dtype_list, names=names)
         self.buffer = TestBuffer()
