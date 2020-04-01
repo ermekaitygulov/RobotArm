@@ -53,7 +53,16 @@ class QueueBuffer:
                  'n_done',
                  'actual_n',
                  'weights']
-        shapes = [() for _ in names]
+        shapes = [(256, 256, 12),
+                  (),
+                  (),
+                  (256, 256, 12),
+                  (),
+                  (256, 256, 12),
+                  (),
+                  (),
+                  (),
+                  ()]
         self.queue = tf.queue.FIFOQueue(500, dtypes=dtype_list, names=names, shapes=shapes)
         self.buffer = TestBuffer()
 
