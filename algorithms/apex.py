@@ -30,7 +30,7 @@ class Learner(DQN):
                                                       casted_batch['reward'], casted_batch['next_state'],
                                                       casted_batch['done'], casted_batch['n_state'],
                                                       casted_batch['n_reward'], casted_batch['n_done'],
-                                                      casted_batch['actual_n'], is_weights, self.gamma)
+                                                      casted_batch['actual_n'], casted_batch['weights'], self.gamma)
 
             stop_time = timeit.default_timer()
             self._run_time_deque.append(stop_time - start_time)

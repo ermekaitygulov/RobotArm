@@ -146,7 +146,8 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             weights.append(weight / max_weight)
         weights = np.array(weights, dtype='float32')
         encoded_sample = self._encode_sample(idxes)
-        return idxes, encoded_sample, weights
+        encoded_sample['weights'] = weights
+        return idxes, encoded_sample
 
     def update_priorities(self, idxes, priorities):
         """Update priorities of sampled transitions.

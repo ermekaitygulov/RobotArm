@@ -34,7 +34,8 @@ class DQN:
                            'n_state': 'float32',
                            'n_reward': 'float32',
                            'n_done': 'bool',
-                           'actual_n': 'float32'}
+                           'actual_n': 'float32',
+                           'weights': 'float32'}
         self._update_frequency = 0
         self._run_time_deque = deque(maxlen=log_freq)
         self._schedule_dict = dict()
@@ -110,7 +111,7 @@ class DQN:
     def update(self, steps):
         for i in range(1, steps + 1):
             start_time = timeit.default_timer()
-            tree_idxes, minibatch, is_weights = self.replay_buff.sample(self.batch_size)
+            tree_idxes, minibatch = self.replay_buff.sample(self.batch_size)
             casted_batch = {key: minibatch[key].astype(self.dtype_dict[key]) for key in self.dtype_dict.keys()}
             casted_batch['state'] = (casted_batch['state'] / 255).astype('float32')
             casted_batch['next_state'] = (casted_batch['next_state'] / 255).astype('float32')
@@ -120,7 +121,7 @@ class DQN:
                                                       casted_batch['reward'], casted_batch['next_state'],
                                                       casted_batch['done'], casted_batch['n_state'],
                                                       casted_batch['n_reward'], casted_batch['n_done'],
-                                                      casted_batch['actual_n'], is_weights, self.gamma)
+                                                      casted_batch['actual_n'], casted_batch['weights'], self.gamma)
             self.schedule()
             self.replay_buff.update_priorities(tree_idxes, ntd_loss.numpy())
             stop_time = timeit.default_timer()
