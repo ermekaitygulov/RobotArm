@@ -10,33 +10,33 @@ import tensorflow as tf
 class Dataset:
     def __init__(self, steps, batch_size):
         self.data = dict()
-        dtype_dict = {'state': 'float32',
-                      'action': 'int32',
-                      'reward': 'float32',
-                      'next_state': 'float32',
-                      'done': 'bool',
-                      'n_state': 'float32',
-                      'n_reward': 'float32',
-                      'n_done': 'bool',
-                      'actual_n': 'float32',
-                      'weights': 'float32'}
-        self.data['state'] = random.randint(0, 255, size=(steps*batch_size, 256, 256, 12)).astype(dtype_dict['state'])
-        self.data['action'] = random.randint(0, 5, size=(steps*batch_size)).astype(dtype_dict['action'])
-        self.data['reward'] = random.randint(0, 10, size=(steps*batch_size)).astype(dtype_dict['reward'])
-        self.data['next_state'] = random.randint(0, 255, size=(steps*batch_size, 256, 256, 12)).astype(dtype_dict['next_state'])
-        self.data['done'] = random.randint(0, 1, size=(steps*batch_size)).astype(dtype_dict['done'])
-        self.data['n_state'] = random.randint(0, 255, size=(steps*batch_size, 256, 256, 12)).astype(dtype_dict['n_state'])
-        self.data['n_reward'] = random.randint(0, 10, size=(steps*batch_size)).astype(dtype_dict['n_reward'])
-        self.data['n_done'] = random.randint(0, 1, size=(steps*batch_size)).astype(dtype_dict['n_done'])
-        self.data['actual_n'] = random.randint(0, 5, size=(steps*batch_size)).astype(dtype_dict['actual_n'])
-        self.data['weights'] = random.uniform(size=[steps*batch_size]).astype(dtype_dict['weights'])
-
+        self.data['state'] = random.randint(0, 255, size=(steps*batch_size, 256, 256, 12), dtype='uint8')
+        self.data['action'] = random.randint(0, 5, size=(steps*batch_size))
+        self.data['reward'] = random.randint(0, 10, size=(steps*batch_size))
+        self.data['next_state'] = random.randint(0, 255, size=(steps*batch_size, 256, 256, 12), dtype='uint8')
+        self.data['done'] = random.randint(0, 1, size=(steps*batch_size))
+        self.data['n_state'] = random.randint(0, 255, size=(steps*batch_size, 256, 256, 12), dtype='uint8')
+        self.data['n_reward'] = random.randint(0, 10, size=(steps*batch_size))
+        self.data['n_done'] = random.randint(0, 1, size=(steps*batch_size))
+        self.data['actual_n'] = random.randint(0, 5, size=(steps*batch_size))
+        self.data['weights'] = random.uniform(size=[steps*batch_size])
+        self.dtype_dict = {'state': 'float32',
+                           'action': 'int32',
+                           'reward': 'float32',
+                           'next_state': 'float32',
+                           'done': 'bool',
+                           'n_state': 'float32',
+                           'n_reward': 'float32',
+                           'n_done': 'bool',
+                           'actual_n': 'float32',
+                           'weights': 'float32'}
         self.step = 0
 
     def sample(self, batch_size):
         minibatch = {key: value[self.step:(self.step+batch_size)] for key, value in self.data.items()}
+        casted_batch = {key: minibatch[key].astype(self.dtype_dict[key]) for key in self.dtype_dict.keys()}
         idx = None
-        return idx, minibatch
+        return idx, casted_batch
 
     def update_priorities(self, *args, **kwargs):
         pass
@@ -60,6 +60,11 @@ def make_model(name, input_shape, output_shape):
     model = tf.keras.Sequential([base, head], name)
     model.build((None, ) + input_shape)
     return model
+
+
+def preprocess_ds(value, datatype):
+    sample = tf.cast(value, dtype=datatype)
+    return sample
 
 
 def profiling_simple_dqn(update_number=100, batch_size=32):
@@ -109,12 +114,16 @@ def profiling_data_dqn(update_number=100, batch_size=32):
             # Memory growth must be set before GPUs have been initialized
             print(e)
 
+    agent = TestAgent(None, make_model, (256, 256, 12), 6, log_freq=10, batch_size=batch_size)
     dataset = Dataset(update_number, batch_size=batch_size)
-    ds = tf.data.Dataset.from_tensor_slices(dataset.data.values())
+    ds = {key: tf.data.Dataset.from_tensor_slices([value]) for key, value in dataset.data.items()}
+    dtype_dict = agent.dtype_dict
+    preprocess_func = {key: lambda x: preprocess_ds(x, datatype) for key, datatype in dtype_dict.items()}
+    ds = {key: value.map(preprocess_func[key]) for key, value in ds.items()}
+    ds = tf.data.Dataset.zip(ds.values())
     ds = ds.batch(batch_size)
     ds = ds.cache()
     ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
-    agent = TestAgent(None, make_model, (256, 256, 12), 6, log_freq=10, batch_size=batch_size)
     print("Starting Profiling")
     with tf.profiler.experimental.Profile('train/'):
         for batch in ds:
