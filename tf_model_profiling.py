@@ -10,16 +10,27 @@ import tensorflow as tf
 class Dataset:
     def __init__(self, steps, batch_size):
         self.data = dict()
-        self.data['state'] = random.randint(0, 255, size=(steps*batch_size, 256, 256, 12), dtype='uint8')
-        self.data['action'] = random.randint(0, 5, size=(steps*batch_size))
-        self.data['reward'] = random.randint(0, 10, size=(steps*batch_size))
-        self.data['next_state'] = random.randint(0, 255, size=(steps*batch_size, 256, 256, 12), dtype='uint8')
-        self.data['done'] = random.randint(0, 1, size=(steps*batch_size))
-        self.data['n_state'] = random.randint(0, 255, size=(steps*batch_size, 256, 256, 12), dtype='uint8')
-        self.data['n_reward'] = random.randint(0, 10, size=(steps*batch_size))
-        self.data['n_done'] = random.randint(0, 1, size=(steps*batch_size))
-        self.data['actual_n'] = random.randint(0, 5, size=(steps*batch_size))
-        self.data['weights'] = random.uniform(size=[steps*batch_size])
+        dtype_dict = {'state': 'float32',
+                      'action': 'int32',
+                      'reward': 'float32',
+                      'next_state': 'float32',
+                      'done': 'bool',
+                      'n_state': 'float32',
+                      'n_reward': 'float32',
+                      'n_done': 'bool',
+                      'actual_n': 'float32',
+                      'weights': 'float32'}
+        self.data['state'] = random.randint(0, 255, size=(steps*batch_size, 256, 256, 12)).astype(dtype_dict['state'])
+        self.data['action'] = random.randint(0, 5, size=(steps*batch_size)).astype(dtype_dict['action'])
+        self.data['reward'] = random.randint(0, 10, size=(steps*batch_size)).astype(dtype_dict['reward'])
+        self.data['next_state'] = random.randint(0, 255, size=(steps*batch_size, 256, 256, 12)).astype(dtype_dict['next_state'])
+        self.data['done'] = random.randint(0, 1, size=(steps*batch_size)).astype(dtype_dict['done'])
+        self.data['n_state'] = random.randint(0, 255, size=(steps*batch_size, 256, 256, 12)).astype(dtype_dict['n_state'])
+        self.data['n_reward'] = random.randint(0, 10, size=(steps*batch_size)).astype(dtype_dict['n_reward'])
+        self.data['n_done'] = random.randint(0, 1, size=(steps*batch_size)).astype(dtype_dict['n_done'])
+        self.data['actual_n'] = random.randint(0, 5, size=(steps*batch_size)).astype(dtype_dict['actual_n'])
+        self.data['weights'] = random.uniform(size=[steps*batch_size]).astype(dtype_dict['weights'])
+
         self.step = 0
 
     def sample(self, batch_size):
