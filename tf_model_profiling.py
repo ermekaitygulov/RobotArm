@@ -88,7 +88,7 @@ def profiling_simple_dqn(update_number=100, batch_size=32):
             _, batch = dataset.sample(batch_size)
             agent.batch_update(batch)
             stop_time = timeit.default_timer()
-            agent._run_time_deque.append(stop_time - start_time)
+            agent._run_time_deque.append(1/(stop_time - start_time))
     while True:
         continue
 
@@ -129,7 +129,7 @@ def profiling_data_dqn(update_number=15, batch_size=32):
             start_time = timeit.default_timer()
             agent.batch_update(batch)
             stop_time = timeit.default_timer()
-            agent._run_time_deque.append(stop_time - start_time)
+            agent._run_time_deque.append(1/(stop_time - start_time))
     while True:
         continue
 
