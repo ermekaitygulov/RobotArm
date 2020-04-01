@@ -138,4 +138,4 @@ def profiling_data_dqn(update_number=100, batch_size=32):
 if __name__ == '__main__':
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    profiling_simple_dqn(100, 32)
+    profiling_data_dqn(100, 32)
