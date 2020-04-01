@@ -125,11 +125,12 @@ def profiling_data_dqn(update_number=15, batch_size=32):
     ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
     print("Starting Profiling")
     with tf.profiler.experimental.Profile('train/'):
+        start_time = timeit.default_timer()
         for batch in ds:
-            start_time = timeit.default_timer()
             agent.batch_update(batch)
             stop_time = timeit.default_timer()
             agent._run_time_deque.append(1/(stop_time - start_time))
+            start_time = timeit.default_timer()
     while True:
         continue
 
