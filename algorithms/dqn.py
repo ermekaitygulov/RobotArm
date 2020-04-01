@@ -121,11 +121,10 @@ class DQN:
                                                       casted_batch['done'], casted_batch['n_state'],
                                                       casted_batch['n_reward'], casted_batch['n_done'],
                                                       casted_batch['actual_n'], is_weights, self.gamma)
-
-            stop_time = timeit.default_timer()
-            self._run_time_deque.append(stop_time - start_time)
             self.schedule()
             self.replay_buff.update_priorities(tree_idxes, ntd_loss.numpy())
+            stop_time = timeit.default_timer()
+            self._run_time_deque.append(1/(stop_time - start_time))
 
     def choose_act(self, state, epsilon, action_sampler):
         inputs = (np.array(state) / 255).astype('float32')
