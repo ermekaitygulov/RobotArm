@@ -10,12 +10,12 @@ class TestBuffer:
         self.idxes = None
         self.weights = random.uniform(size=[batch_size]).astype('float32')
         self.minibatch = dict()
-        self.minibatch['state'] = random.randint(0, 255, size=(batch_size, 12, 256, 256), dtype='uint8')
+        self.minibatch['state'] = random.randint(0, 255, size=(batch_size, 256, 256, 12), dtype='uint8')
         self.minibatch['action'] = random.randint(0, 5, size=(batch_size))
         self.minibatch['reward'] = random.randint(0, 10, size=(batch_size))
-        self.minibatch['next_state'] = random.randint(0, 255, size=(batch_size, 12, 256, 256), dtype='uint8')
+        self.minibatch['next_state'] = random.randint(0, 255, size=(batch_size, 256, 256, 12), dtype='uint8')
         self.minibatch['done'] = random.randint(0, 1, size=(batch_size))
-        self.minibatch['n_state'] = random.randint(0, 255, size=(batch_size, 12, 256, 256), dtype='uint8')
+        self.minibatch['n_state'] = random.randint(0, 255, size=(batch_size, 256, 256, 12), dtype='uint8')
         self.minibatch['n_reward'] = random.randint(0, 10, size=(batch_size))
         self.minibatch['n_done'] = random.randint(0, 1, size=(batch_size))
         self.minibatch['actual_n'] = random.randint(0, 5, size=(batch_size))
@@ -55,7 +55,7 @@ if __name__ == '__main__':
         model = tf.keras.Sequential([base, head], name)
         model.build((None, ) + obs_shape)
         return model
-    agent = DQN(replay_buffer, make_model, (12, 256, 256), 6, log_freq=10)
+    agent = DQN(replay_buffer, make_model, (256, 256, 12), 6, log_freq=10)
     print("Starting Profiling")
     with tf.profiler.experimental.Profile('train/'):
         agent.update(100)
