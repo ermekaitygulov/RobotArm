@@ -62,11 +62,6 @@ def make_model(name, input_shape, output_shape):
     return model
 
 
-def preprocess_ds(value, datatype):
-    sample = tf.cast(value, dtype=datatype)
-    return sample
-
-
 def profiling_simple_dqn(update_number=100, batch_size=32):
     tf.debugging.set_log_device_placement(False)
     tf.config.optimizer.set_jit(True)
@@ -98,7 +93,7 @@ def profiling_simple_dqn(update_number=100, batch_size=32):
         continue
 
 
-def profiling_data_dqn(update_number=100, batch_size=32):
+def profiling_data_dqn(update_number=15, batch_size=32):
     tf.debugging.set_log_device_placement(False)
     tf.config.optimizer.set_jit(True)
 
@@ -116,11 +111,15 @@ def profiling_data_dqn(update_number=100, batch_size=32):
 
     agent = TestAgent(None, make_model, (256, 256, 12), 6, log_freq=10, batch_size=batch_size)
     dataset = Dataset(update_number, batch_size=batch_size)
-    ds = {key: tf.data.Dataset.from_tensor_slices([value]) for key, value in dataset.data.items()}
+    ds = tf.data.Dataset.from_tensor_slices(dataset)
     dtype_dict = agent.dtype_dict
-    preprocess_func = {key: lambda x: preprocess_ds(x, datatype) for key, datatype in dtype_dict.items()}
-    ds = {key: value.map(preprocess_func[key]) for key, value in ds.items()}
-    ds = tf.data.Dataset.zip(ds.values())
+
+    def preprocess_ds(sample):
+        casted_sample = dict()
+        for key, value in sample.items():
+            casted_sample[key] = tf.cast(value, dtype=dtype_dict[key])
+        return casted_sample
+    ds = ds.map(preprocess_ds)
     ds = ds.batch(batch_size)
     ds = ds.cache()
     ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
@@ -138,4 +137,4 @@ def profiling_data_dqn(update_number=100, batch_size=32):
 if __name__ == '__main__':
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    profiling_data_dqn(100, 32)
+    profiling_data_dqn(15, 32)
