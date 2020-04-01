@@ -120,6 +120,7 @@ def profiling_simple_dqn(update_number=100):
 
 def profiling_asynch_dqn(update_number=100):
     import tensorflow as tf
+    tf.config.optimizer.set_jit(True)
     ray.init(webui_host='0.0.0.0', num_gpus=1)
     queue = QueueBuffer.remote()
     agent = TestAgent.remote(None, make_model, (256, 256, 12), 6, log_freq=10)
@@ -145,4 +146,4 @@ def profiling_asynch_dqn(update_number=100):
 if __name__ == '__main__':
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    profiling_simple_dqn()
+    profiling_asynch_dqn()
