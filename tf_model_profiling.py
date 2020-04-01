@@ -33,15 +33,12 @@ class Dataset:
 
 class TestAgent(DQN):
     def batch_update(self, batch):
-        start_time = timeit.default_timer()
         _, ntd_loss, _, _ = self.q_network_update(batch['state'], batch['action'],
                                                   batch['reward'], batch['next_state'],
                                                   batch['done'], batch['n_state'],
                                                   batch['n_reward'], batch['n_done'],
                                                   batch['actual_n'], batch['weights'], self.gamma)
 
-        stop_time = timeit.default_timer()
-        self._run_time_deque.append(stop_time - start_time)
         self.schedule()
         return ntd_loss
 
@@ -76,7 +73,11 @@ def profiling_simple_dqn(update_number=100, batch_size=32):
     print("Starting Profiling")
     with tf.profiler.experimental.Profile('train/'):
         for i in range(update_number):
-            agent.batch_update(dataset.sample(batch_size))
+            start_time = timeit.default_timer()
+            _, batch = dataset.sample(batch_size)
+            agent.batch_update(batch)
+            stop_time = timeit.default_timer()
+            agent._run_time_deque.append(stop_time - start_time)
     while True:
         continue
 
@@ -106,7 +107,10 @@ def profiling_data_dqn(update_number=100, batch_size=32):
     print("Starting Profiling")
     with tf.profiler.experimental.Profile('train/'):
         for batch in ds:
+            start_time = timeit.default_timer()
             agent.batch_update(batch)
+            stop_time = timeit.default_timer()
+            agent._run_time_deque.append(stop_time - start_time)
     while True:
         continue
 
