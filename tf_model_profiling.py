@@ -50,7 +50,7 @@ if __name__ == '__main__':
     replay_buffer = TestBuffer()
 
     def make_model(name, obs_shape, action_shape):
-        base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2], data_format='channels_first')
+        base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])
         head = DuelingModel([1024], action_shape)
         model = tf.keras.Sequential([base, head], name)
         model.build((None, ) + obs_shape)
