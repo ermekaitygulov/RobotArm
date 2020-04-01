@@ -6,22 +6,23 @@ import os
 
 class TestBuffer:
     def __init__(self):
-        pass
+        batch_size = 32
+        self.idxes = None
+        self.weights = random.uniform(size=[batch_size]).astype('float32')
+        self.minibatch = dict()
+        self.minibatch['state'] = random.randint(0, 255, size=(batch_size, 12, 256, 256), dtype='uint8')
+        self.minibatch['action'] = random.randint(0, 5, size=(batch_size))
+        self.minibatch['reward'] = random.randint(0, 10, size=(batch_size))
+        self.minibatch['next_state'] = random.randint(0, 255, size=(batch_size, 12, 256, 256), dtype='uint8')
+        self.minibatch['done'] = random.randint(0, 1, size=(batch_size))
+        self.minibatch['n_state'] = random.randint(0, 255, size=(batch_size, 12, 256, 256), dtype='uint8')
+        self.minibatch['n_reward'] = random.randint(0, 10, size=(batch_size))
+        self.minibatch['n_done'] = random.randint(0, 1, size=(batch_size))
+        self.minibatch['actual_n'] = random.randint(0, 5, size=(batch_size))
 
     def sample(self, batch_size):
-        idxes = None
-        weights = random.uniform(size=[batch_size]).astype('float32')
-        minibatch = dict()
-        minibatch['state'] = random.randint(0, 255, size=(batch_size, 12, 256, 256), dtype='uint8')
-        minibatch['action'] = random.randint(0, 5, size=(batch_size))
-        minibatch['reward'] = random.randint(0, 10, size=(batch_size))
-        minibatch['next_state'] = random.randint(0, 255, size=(batch_size, 12, 256, 256), dtype='uint8')
-        minibatch['done'] = random.randint(0, 1, size=(batch_size))
-        minibatch['n_state'] = random.randint(0, 255, size=(batch_size, 12, 256, 256), dtype='uint8')
-        minibatch['n_reward'] = random.randint(0, 10, size=(batch_size))
-        minibatch['n_done'] = random.randint(0, 1, size=(batch_size))
-        minibatch['actual_n'] = random.randint(0, 5, size=(batch_size))
-        return idxes, minibatch, weights
+
+        return self.idxes, self.minibatch, self.weights
 
     def update_priorities(self, *args, **kwargs):
         pass
