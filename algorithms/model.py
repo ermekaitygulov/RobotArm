@@ -11,7 +11,7 @@ class DuelingModel(tf.keras.Model):
         self.a_head, self.v_head = Dense(units[-1]/2, 'relu', kernel_regularizer=reg), Dense(units[-1]/2, 'relu', kernel_regularizer=reg)
         self.a_head1, self.v_head1 = Dense(action_dim, kernel_regularizer=reg), Dense(1, kernel_regularizer=reg)
 
-    @tf.function(experimental_compile=True)
+    @tf.function
     def call(self, inputs):
         print('Building model')
         features = self.h_layers(inputs)
@@ -31,6 +31,6 @@ class ClassicCnn(tf.keras.Model):
             self.cnn.add(Conv2D(f, k, s, activation='relu', kernel_regularizer=reg, data_format=data_format))
         self.cnn.add(Flatten(data_format=data_format))
 
-    @tf.function(experimental_compile=True)
+    @tf.function
     def call(self, inputs):
         return self.cnn(inputs)

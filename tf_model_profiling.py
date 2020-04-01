@@ -33,6 +33,7 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
     tf.debugging.set_log_device_placement(False)
+    tf.config.optimizer.set_jit(True)
 
     gpus = tf.config.experimental.list_physical_devices('GPU')
     if gpus:

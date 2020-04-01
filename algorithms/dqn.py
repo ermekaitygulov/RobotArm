@@ -135,7 +135,7 @@ class DQN:
             action = action_sampler()
         return action, q_value[action]
 
-    @tf.function(experimental_compile=True)
+    @tf.function
     def q_network_update(self, state, action, next_reward, next_state, done, n_state,
                          n_reward, n_done, actual_n, is_weights, gamma):
         print("Q-nn_update tracing")
@@ -163,7 +163,7 @@ class DQN:
         self.optimizer.apply_gradients(zip(gradients, online_variables))
         return td_loss, ntd_loss, l2, all_losses
 
-    @tf.function(experimental_compile=True)
+    @tf.function
     def td_loss(self, n_state, q_values, n_done, n_reward, actual_n, gamma):
         print("TD-Loss tracing")
         n_target = self.compute_target(n_state, n_done, n_reward, actual_n, gamma)
@@ -171,7 +171,7 @@ class DQN:
         ntd_loss = self.huber_loss(n_target, q_values)
         return ntd_loss
 
-    @tf.function(experimental_compile=True)
+    @tf.function
     def compute_target(self, next_state, done, reward, actual_n, gamma):
         print("Compute_target tracing")
         q_network = self.online_model(next_state, training=True)
