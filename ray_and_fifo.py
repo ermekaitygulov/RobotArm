@@ -5,7 +5,6 @@ from algorithms.model import ClassicCnn, DuelingModel
 import os
 import ray
 
-@ray.remote(num_gpus=0.3)
 class QueueBuffer:
     def __init__(self, steps=100, batch_size=32):
         import tensorflow as tf
@@ -39,15 +38,15 @@ class QueueBuffer:
                   (),
                   (),
                   ()]
-        self.queue = tf.queue.FIFOQueue(100, dtypes=dtype_list, names=names, shapes=shapes)
+        self.queue = ray.remote(tf.queue.FIFOQueue(100, dtypes=dtype_list, names=names, shapes=shapes))
         self.dataset = Dataset(steps, batch_size)
 
     def enqueue(self, n):
         _, batch = self.dataset.sample(n)
-        self.queue.enqueue_many(batch)
+        return self.queue.enqueue_many.remote(batch)
 
     def dequeue(self, n):
-        return self.queue.dequeue_many(n)
+        return self.queue.dequeue_many.remote(n)
 
 
 @ray.remote(num_gpus=0.3)
@@ -76,15 +75,15 @@ def make_model(name, input_shape, output_shape):
     return model
 
 
-def profiling_asynch_dqn(update_number=100):
+def profiling_asynch_dqn(update_number=100, batch_size=32):
     import tensorflow as tf
     tf.config.optimizer.set_jit(True)
     ray.init(webui_host='0.0.0.0', num_gpus=1)
-    queue = QueueBuffer.remote()
+    queue = QueueBuffer(update_number, batch_size)
     agent = TestAgent.remote(None, make_model, (256, 256, 12), 6, log_freq=10)
     tasks = dict()
-    tasks[queue.enqueue.remote(32)] = 'enqueue'
-    batch = queue.dequeue.remote(32)
+    tasks[queue.enqueue(batch_size)] = 'enqueue'
+    batch = queue.dequeue(batch_size)
     start_time = timeit.default_timer()
     tasks[agent.batch_update.remote(batch, start_time)] = 'updating'
     iteration = 0
@@ -93,11 +92,11 @@ def profiling_asynch_dqn(update_number=100):
         first_id = ready_ids[0]
         first = tasks.pop(first_id)
         if first == 'enqueue':
-            tasks[queue.enqueue.remote(32)] = 'enqueue'
+            tasks[queue.enqueue(batch_size)] = 'enqueue'
         elif first == 'updating':
             iteration += 1
             start_time = timeit.default_timer()
-            batch = queue.dequeue.remote(32)
+            batch = queue.dequeue(batch_size)
             tasks[agent.batch_update.remote(batch, start_time)] = 'updating'
 
 
