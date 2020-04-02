@@ -5,6 +5,8 @@ from algorithms.model import ClassicCnn, DuelingModel
 import os
 import ray
 
+
+
 class QueueBuffer:
     def __init__(self, steps=100, batch_size=32):
         import tensorflow as tf
@@ -38,7 +40,11 @@ class QueueBuffer:
                   (),
                   (),
                   ()]
-        self.queue = ray.remote(tf.queue.FIFOQueue(100, dtypes=dtype_list, names=names, shapes=shapes))
+        @ray.remote
+        class RayFifo(tf.queue.FIFOQueue):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+        self.queue = RayFifo.remote(100, dtypes=dtype_list, names=names, shapes=shapes)
         self.dataset = Dataset(steps, batch_size)
 
     def enqueue(self, n):
