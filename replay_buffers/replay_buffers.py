@@ -137,11 +137,13 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         idxes = self._sample_proportional(batch_size)
 
         weights = []
-        p_min = self._it_min.min() / self._it_sum.sum()
+        it_sum = self._it_sum.sum()
+        it_min = self._it_min.min()
+        p_min = it_min / it_sum
         max_weight = (p_min * len(self._storage)) ** (-self._beta)
 
         for idx in idxes:
-            p_sample = self._it_sum[idx] / self._it_sum.sum()
+            p_sample = self._it_sum[idx] / it_sum
             weight = (p_sample * len(self._storage)) ** (-self._beta)
             weights.append(weight / max_weight)
         weights = np.array(weights, dtype='float32')
