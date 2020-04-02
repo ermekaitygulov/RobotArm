@@ -34,7 +34,7 @@ class Learner(DQN):
             stop_time = timeit.default_timer()
             self._run_time_deque.append(1/(stop_time - start_time))
             self.schedule()
-            return ntd_loss.numpy()
+            return ntd_loss
 
     @ray.method(num_return_vals=2)
     def get_weights(self):

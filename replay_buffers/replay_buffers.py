@@ -2,7 +2,7 @@ import random
 
 import numpy as np
 from replay_buffers.sum_tree import SumSegmentTree, MinSegmentTree
-
+import tensorflow as tf
 
 class ReplayBuffer(object):
     def __init__(self, size):
@@ -139,11 +139,11 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         it_min = self._it_min.min()
         p_min = it_min / it_sum
         max_weight = (p_min * len(self._storage)) ** (-self._beta)
-        p_sample = np.array([self._it_sum[idx] / it_sum for idx in idxes])
+        p_sample = tf.stack([self._it_sum[idx] / it_sum for idx in idxes])
         weights = (p_sample*len(self._storage)) ** (-self._beta)
         weights = weights / max_weight
         encoded_sample = self._encode_sample(idxes)
-        encoded_sample['weights'] = weights.astype('float32')
+        encoded_sample['weights'] = weights
         return idxes, encoded_sample
 
     def update_priorities(self, idxes, priorities):
