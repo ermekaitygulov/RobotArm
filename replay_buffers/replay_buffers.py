@@ -116,7 +116,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
     def _sample_asynch(self, batch_size, workers_number=2):
         p_total = self._it_sum.sum(0, len(self._storage) - 1)
         every_range_len = p_total / batch_size
-        prefixsums = [random.random() * every_range_len + j * every_range_len for j in range(batch_size)]
+        prefixsums = np.random.random(batch_size) * every_range_len + np.arange(batch_size) * every_range_len
         res = self._it_sum.find_asynch_prefixsum_idx(prefixsums, workers_number)
         return res
 
@@ -150,7 +150,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         weights = (p_sample*len(self._storage)) ** (-self._beta)
         weights = weights / max_weight
         encoded_sample = self._encode_sample(idxes)
-        encoded_sample['weights'] = weights.astype('float32')
+        encoded_sample['weights'] = weights
         return idxes, encoded_sample
 
     def update_priorities(self, idxes, priorities):
