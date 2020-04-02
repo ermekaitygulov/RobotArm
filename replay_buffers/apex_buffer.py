@@ -4,7 +4,7 @@ import ray
 
 @ray.remote
 class ApeXBuffer(PrioritizedReplayBuffer):
-    @ray.method(num_return_vals=3)
+    @ray.method(num_return_vals=2)
     def sample(self, *args, **kwargs):
         return super().sample(*args, **kwargs)
 
