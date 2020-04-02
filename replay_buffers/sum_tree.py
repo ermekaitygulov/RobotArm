@@ -159,7 +159,7 @@ class SumSegmentTree(SegmentTree):
                 processes.append(p)
             for p in processes:
                 p.join()
-            return res
+            return list(res)
 
 
 
