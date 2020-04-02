@@ -115,7 +115,7 @@ class DQN:
             casted_batch['state'] = (casted_batch['state'] / 255).astype('float32')
             casted_batch['next_state'] = (casted_batch['next_state'] / 255).astype('float32')
             casted_batch['n_state'] = (casted_batch['n_state'] / 255).astype('float32')
-
+            casted_batch['weights'] = minibatch['weights']
             _, ntd_loss, _, _ = self.q_network_update(casted_batch['state'], casted_batch['action'],
                                                       casted_batch['reward'], casted_batch['next_state'],
                                                       casted_batch['done'], casted_batch['n_state'],

@@ -1,4 +1,5 @@
 import operator
+import tensorflow as tf
 
 
 class SegmentTree(object):
@@ -88,7 +89,7 @@ class SumSegmentTree(SegmentTree):
         super(SumSegmentTree, self).__init__(
             capacity=capacity,
             operation=operator.add,
-            neutral_element=0.0
+            neutral_element=tf.zeros(1, dtype='float32')
         )
 
     def sum(self, start=0, end=None):
@@ -103,7 +104,7 @@ class SumSegmentTree(SegmentTree):
         probability efficiently.
         Parameters
         ----------
-        perfixsum: float
+        prefixsum: float
             upperbound on the sum of array prefix
         Returns
         -------

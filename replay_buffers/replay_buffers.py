@@ -139,7 +139,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         it_min = self._it_min.min()
         p_min = it_min / it_sum
         max_weight = (p_min * len(self._storage)) ** (-self._beta)
-        p_sample = tf.stack([self._it_sum[idx] / it_sum for idx in idxes], dtype='float32')
+        p_sample = tf.concat([self._it_sum[idx] / it_sum for idx in idxes], axis=0)
         weights = (p_sample*len(self._storage)) ** (-self._beta)
         weights = weights / max_weight
         encoded_sample = self._encode_sample(idxes)
