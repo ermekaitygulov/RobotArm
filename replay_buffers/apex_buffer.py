@@ -8,6 +8,24 @@ class ApeXBuffer(PrioritizedReplayBuffer):
     def sample(self, *args, **kwargs):
         return super().sample(*args, **kwargs)
 
+    @ray.method(num_return_vals=2)
+    def sample_ds(self, dtype_dict, number_of_batchs=10, batch_size=128, workers_number=2):
+        import tensorflow as tf
+        idxes, ds = super().sample(batch_size*number_of_batchs, workers_number)
+        ds = tf.data.Dataset.from_tensor_slices(ds)
+        def preprocess_ds(sample):
+            casted_sample = dict()
+            for key, value in sample.items():
+                casted_sample[key] = tf.cast(value, dtype=dtype_dict[key])
+                if 'state' in key:
+                    casted_sample[key] /= 255
+            return casted_sample
+        ds = ds.map(preprocess_ds)
+        ds = ds.batch(batch_size)
+        ds = ds.cache()
+        ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
+        return idxes, ds
+
     def len(self):
         return self.__len__()
 

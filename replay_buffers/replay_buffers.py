@@ -120,7 +120,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         res = self._it_sum.find_asynch_prefixsum_idx(prefixsums, workers_number)
         return res
 
-    def sample(self, batch_size):
+    def sample(self, batch_size, workers_number=2):
         """Sample a batch of experiences.
         compared to ReplayBuffer.sample
         it also returns importance weights and idxes
@@ -141,7 +141,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             idexes in buffer of sampled experiences
         """
         self._beta = np.min([1., self._beta + self._beta_increment])
-        idxes = self._sample_asynch(batch_size, 2)
+        idxes = self._sample_asynch(batch_size, workers_number)
         it_sum = self._it_sum.sum()
         it_min = self._it_min.min()
         p_min = it_min / it_sum

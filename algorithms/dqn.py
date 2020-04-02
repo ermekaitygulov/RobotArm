@@ -8,6 +8,16 @@ from utils.util import take_vector_elements
 
 
 class DQN:
+    dtype_dict = {'state': 'float32',
+                  'action': 'int32',
+                  'reward': 'float32',
+                  'next_state': 'float32',
+                  'done': 'bool',
+                  'n_state': 'float32',
+                  'n_reward': 'float32',
+                  'n_done': 'bool',
+                  'actual_n': 'float32',
+                  'weights': 'float32'}
     def __init__(self, replay_buffer, build_model, obs_shape, action_shape, train_freq=100, train_quantity=100,
                  log_freq=100, update_target_nn_mod=500, batch_size=32, replay_start_size=1000, gamma=0.99,
                  learning_rate=1e-4, n_step=10, custom_loss=None):
@@ -136,8 +146,8 @@ class DQN:
         return action, q_value[action]
 
     @tf.function
-    def q_network_update(self, state, action, next_reward, next_state, done, n_state,
-                         n_reward, n_done, actual_n, is_weights, gamma):
+    def q_network_update(self, state, action, reward, next_state, done, n_state,
+                         n_reward, n_done, actual_n, weights, gamma):
         print("Q-nn_update tracing")
         online_variables = self.online_model.trainable_variables
         with tf.GradientTape() as tape:
@@ -145,12 +155,12 @@ class DQN:
             q_values = self.online_model(state, training=True)
             q_values = take_vector_elements(q_values, action)
             q_values = tf.expand_dims(q_values, axis=-1)
-            td_loss = self.td_loss(next_state, q_values, done, next_reward, 1, gamma)
-            mean_td = tf.reduce_mean(td_loss*is_weights)
+            td_loss = self.td_loss(next_state, q_values, done, reward, 1, gamma)
+            mean_td = tf.reduce_mean(td_loss * weights)
             self.update_metrics('TD', mean_td)
 
             ntd_loss = self.td_loss(n_state, q_values, n_done, n_reward, actual_n, gamma)
-            mean_ntd = tf.reduce_mean(ntd_loss*is_weights)
+            mean_ntd = tf.reduce_mean(ntd_loss * weights)
             self.update_metrics('nTD', mean_ntd)
 
             l2 = tf.add_n(self.online_model.losses)

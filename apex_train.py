@@ -46,6 +46,9 @@ if __name__ == '__main__':
     batch_size = 128
     sync_nn_mod = 300
     rollout_size = 100
+    number_of_batchs = 10
+    workers_for_batching = 8
+    dtype_dict = Learner.dtype_dict
 
     test_env = make_env('test_name')
     obs_shape = test_env.observation_space.shape
@@ -70,17 +73,19 @@ if __name__ == '__main__':
         rollouts[a.rollout.remote(online_weights, target_weights, rollout_size)] = a
     rollouts[remote_sleep.remote()] = 'learner_waiter'
     episodes_done = ray.get(counter.get_value.remote())
-    ready_tree_ids, minibatch, proc_tree_ids = None, None, None
+    ready_tree_ids, ds, proc_tree_ids = None, None, None
     optimization_step = 0
     while episodes_done < max_eps:
         ready_ids, _ = ray.wait(list(rollouts))
         first_id = ready_ids[0]
         first = rollouts.pop(first_id)
         if first == 'learner_waiter':
-            ready_tree_ids, minibatch = replay_buffer.sample.remote(batch_size)
+            ready_tree_ids, ds = replay_buffer.sample_ds.remote(dtype_dict, number_of_batchs, batch_size,
+                                                                workers_for_batching)
             start_time = timeit.default_timer()
-            rollouts[learner.update_asynch.remote(minibatch, start_time)] = learner
-            proc_tree_ids,  minibatch = replay_buffer.sample.remote(batch_size)
+            rollouts[learner.update_from_ds.remote(ds, start_time)] = learner
+            proc_tree_ids, ds = replay_buffer.sample_ds.remote(dtype_dict, number_of_batchs, batch_size,
+                                                               workers_for_batching)
         elif first == learner:
             optimization_step += 1
             start_time = timeit.default_timer()
@@ -89,8 +94,9 @@ if __name__ == '__main__':
             ready_tree_ids = proc_tree_ids
             if optimization_step % sync_nn_mod == 0:
                 online_weights, target_weights = first.get_weights.remote()
-            rollouts[first.update_asynch.remote(minibatch, start_time)] = first
-            proc_tree_ids, minibatch = replay_buffer.sample.remote(batch_size)
+            rollouts[first.update_from_ds.remote(ds, start_time)] = first
+            proc_tree_ids, ds = replay_buffer.sample_ds.remote(dtype_dict, number_of_batchs, batch_size,
+                                                               workers_number=2)
         else:
             replay_buffer.receive_batch.remote(first_id)
             rollouts[first.rollout.remote(online_weights, target_weights, rollout_size)] = first

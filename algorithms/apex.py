@@ -36,6 +36,17 @@ class Learner(DQN):
             self.schedule()
             return ntd_loss.numpy()
 
+    def update_from_ds(self, ds, start_time):
+        loss_list = list()
+        for batch in ds:
+            _, ntd_loss, _, _ = self.q_network_update(gamma=self.gamma, **batch)
+            stop_time = timeit.default_timer()
+            self._run_time_deque.append(1 / (stop_time - start_time))
+            self.schedule()
+            loss_list.append(ntd_loss)
+            start_time = timeit.default_timer()
+        return np.concatenate(loss_list)
+
     @ray.method(num_return_vals=2)
     def get_weights(self):
         return self.online_model.get_weights(), self.target_model.get_weights()
