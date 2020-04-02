@@ -21,7 +21,8 @@ class Learner(DQN):
 
     def update_asynch(self, minibatch, start_time):
         with self.summary_writer.as_default():
-            casted_batch = {key: minibatch[key].astype(self.dtype_dict[key]) for key in self.dtype_dict.keys()}
+            casted_batch = {key: minibatch[key].astype(self.dtype_dict[key]) for key in self.dtype_dict.keys()
+                            if key != 'weights'}
             casted_batch['state'] = (casted_batch['state'] / 255).astype('float32')
             casted_batch['next_state'] = (casted_batch['next_state'] / 255).astype('float32')
             casted_batch['n_state'] = (casted_batch['n_state'] / 255).astype('float32')
