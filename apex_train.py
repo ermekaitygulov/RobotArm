@@ -78,7 +78,8 @@ if __name__ == '__main__':
         first = rollouts.pop(first_id)
         if first == 'learner_waiter':
             ready_tree_ids, minibatch = replay_buffer.sample.remote(batch_size)
-            rollouts[learner.update_asynch.remote(minibatch)] = learner
+            start_time = timeit.default_timer()
+            rollouts[learner.update_asynch.remote(minibatch, start_time)] = learner
             proc_tree_ids,  minibatch = replay_buffer.sample.remote(batch_size)
         elif first == learner:
             optimization_step += 1
