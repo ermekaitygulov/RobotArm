@@ -32,7 +32,7 @@ class Learner(DQN):
                                                       casted_batch['actual_n'], casted_batch['weights'], self.gamma)
 
             stop_time = timeit.default_timer()
-            self._run_time_deque.append(stop_time - start_time)
+            self._run_time_deque.append(1/(stop_time - start_time))
             self.schedule()
             return ntd_loss
 
