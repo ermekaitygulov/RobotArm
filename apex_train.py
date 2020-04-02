@@ -45,6 +45,7 @@ if __name__ == '__main__':
     replay_start_size = 300
     batch_size = 128
     sync_nn_mod = 300
+    rollout_size = 100
 
     test_env = make_env('test_name')
     obs_shape = test_env.observation_space.shape
@@ -66,7 +67,7 @@ if __name__ == '__main__':
 
     rollouts = {}
     for a in actors:
-        rollouts[a.rollout.remote(online_weights, target_weights, rollout_size=300)] = a
+        rollouts[a.rollout.remote(online_weights, target_weights, rollout_size)] = a
     rollouts[remote_sleep.remote()] = 'learner_waiter'
     episodes_done = ray.get(counter.get_value.remote())
     ready_tree_ids, minibatch, proc_tree_ids = None, None, None
@@ -91,6 +92,6 @@ if __name__ == '__main__':
             proc_tree_ids, minibatch = replay_buffer.sample.remote(batch_size)
         else:
             replay_buffer.receive_batch.remote(first_id)
-            rollouts[first.rollout.remote(online_weights, target_weights, rollout_size=100)] = first
+            rollouts[first.rollout.remote(online_weights, target_weights, rollout_size)] = first
         episodes_done = ray.get(counter.get_value.remote())
     ray.timeline()

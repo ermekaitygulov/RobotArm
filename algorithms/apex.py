@@ -112,7 +112,7 @@ class Actor(DQN):
         actual_n = np.array([data['actual_n'] for data in rollout], dtype='float32')
 
         ntd = self.td_loss(n_state, q_values, n_done, n_reward, actual_n, self.gamma)
-        return ntd
+        return ntd.numpy()
 
 
 @ray.remote
