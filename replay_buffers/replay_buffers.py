@@ -2,7 +2,7 @@ import random
 
 import numpy as np
 from replay_buffers.sum_tree import SumSegmentTree, MinSegmentTree
-import tensorflow as tf
+
 
 class ReplayBuffer(object):
     def __init__(self, size):
@@ -67,7 +67,7 @@ class ReplayBuffer(object):
 
 
 class PrioritizedReplayBuffer(ReplayBuffer):
-    def __init__(self, size, alpha=0.6, eps=1e-6, beta = 0.4, beta_increment_per_sampling = 0.001):
+    def __init__(self, size, alpha=0.6, eps=1e-6, beta=0.4, beta_increment_per_sampling = 0.001):
         """Create Prioritized Replay buffer.
         Parameters
         ----------
@@ -143,7 +143,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         weights = (p_sample*len(self._storage)) ** (-self._beta)
         weights = weights / max_weight
         encoded_sample = self._encode_sample(idxes)
-        encoded_sample['weights'] = weights
+        encoded_sample['weights'] = weights.astype('float32')
         return idxes, encoded_sample
 
     def update_priorities(self, idxes, priorities):
@@ -159,9 +159,12 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             transitions at the sampled idxes denoted by
             variable `idxes`.
         """
-        shaped_priorities = (priorities + self._eps) ** self._alpha
-        for i, idx in enumerate(idxes):
-            self._it_sum[idx] = shaped_priorities[i]
-            self._it_min[idx] = shaped_priorities[i]
+        assert len(idxes) == len(priorities)
+        for idx, priority in zip(idxes, priorities):
+            assert priority > 0
+            assert 0 <= idx < len(self._storage)
+            self._it_sum[idx] = (priority + self._eps) ** self._alpha
+            self._it_min[idx] = (priority + self._eps) ** self._alpha
 
-            self._max_priority = max(self._max_priority, priorities[i])
+            self._max_priority = max(self._max_priority, priority)
+
