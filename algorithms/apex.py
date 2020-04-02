@@ -36,8 +36,21 @@ class Learner(DQN):
             self.schedule()
             return ntd_loss.numpy()
 
-    def update_from_ds(self, ds, start_time):
+    def update_from_ds(self, ds, start_time, batch_size):
+        import tensorflow as tf
         loss_list = list()
+        ds = tf.data.Dataset.from_tensor_slices(ds)
+        def preprocess_ds(sample):
+            casted_sample = dict()
+            for key, value in sample.items():
+                casted_sample[key] = tf.cast(value, dtype=self.dtype_dict[key])
+                if 'state' in key:
+                    casted_sample[key] /= 255
+            return casted_sample
+        ds = ds.map(preprocess_ds)
+        ds = ds.batch(batch_size)
+        ds = ds.cache()
+        ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
         for batch in ds:
             _, ntd_loss, _, _ = self.q_network_update(gamma=self.gamma, **batch)
             stop_time = timeit.default_timer()

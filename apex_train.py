@@ -48,7 +48,6 @@ if __name__ == '__main__':
     rollout_size = 100
     number_of_batchs = 5
     workers_for_batching = 8
-    dtype_dict = Learner.dtype_dict
 
     test_env = make_env('test_name')
     obs_shape = test_env.observation_space.shape
@@ -80,11 +79,11 @@ if __name__ == '__main__':
         first_id = ready_ids[0]
         first = rollouts.pop(first_id)
         if first == 'learner_waiter':
-            ready_tree_ids, ds = replay_buffer.sample_ds.remote(dtype_dict, number_of_batchs, batch_size,
+            ready_tree_ids, ds = replay_buffer.sample_ds.remote(number_of_batchs, batch_size,
                                                                 workers_for_batching)
             start_time = timeit.default_timer()
-            rollouts[learner.update_from_ds.remote(ds, start_time)] = learner
-            proc_tree_ids, ds = replay_buffer.sample_ds.remote(dtype_dict, number_of_batchs, batch_size,
+            rollouts[learner.update_from_ds.remote(ds, start_time, batch_size)] = learner
+            proc_tree_ids, ds = replay_buffer.sample_ds.remote(number_of_batchs, batch_size,
                                                                workers_for_batching)
         elif first == learner:
             optimization_step += 1
@@ -94,9 +93,9 @@ if __name__ == '__main__':
             ready_tree_ids = proc_tree_ids
             if optimization_step % sync_nn_mod == 0:
                 online_weights, target_weights = first.get_weights.remote()
-            rollouts[first.update_from_ds.remote(ds, start_time)] = first
-            proc_tree_ids, ds = replay_buffer.sample_ds.remote(dtype_dict, number_of_batchs, batch_size,
-                                                               workers_number=2)
+            rollouts[first.update_from_ds.remote(ds, start_time, batch_size)] = first
+            proc_tree_ids, ds = replay_buffer.sample_ds.remote(number_of_batchs, batch_size,
+                                                               workers_for_batching)
         else:
             replay_buffer.receive_batch.remote(first_id)
             rollouts[first.rollout.remote(online_weights, target_weights, rollout_size)] = first
