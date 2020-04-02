@@ -67,7 +67,7 @@ class ReplayBuffer(object):
 
 
 class PrioritizedReplayBuffer(ReplayBuffer):
-    def __init__(self, size, alpha=0.6, eps=1e-6, beta=0.4, beta_increment_per_sampling = 0.001):
+    def __init__(self, size, alpha=0.6, eps=1e-6, beta=0.4, beta_increment_per_sampling=0.001):
         """Create Prioritized Replay buffer.
         Parameters
         ----------
@@ -113,6 +113,13 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             res.append(idx)
         return res
 
+    def _sample_asynch(self, batch_size, workers_number=2):
+        p_total = self._it_sum.sum(0, len(self._storage) - 1)
+        every_range_len = p_total / batch_size
+        prefixsums = [random.random() * every_range_len + j * every_range_len for j in range(batch_size)]
+        res = self._it_sum.find_asynch_prefixsum_idx(prefixsums, workers_number)
+        return res
+
     def sample(self, batch_size):
         """Sample a batch of experiences.
         compared to ReplayBuffer.sample
@@ -134,7 +141,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             idexes in buffer of sampled experiences
         """
         self._beta = np.min([1., self._beta + self._beta_increment])
-        idxes = self._sample_proportional(batch_size)
+        idxes = self._sample_asynch(batch_size, 2)
         it_sum = self._it_sum.sum()
         it_min = self._it_min.min()
         p_min = it_min / it_sum
@@ -167,4 +174,3 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             self._it_min[idx] = (priority + self._eps) ** self._alpha
 
             self._max_priority = max(self._max_priority, priority)
-
