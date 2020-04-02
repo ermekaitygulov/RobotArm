@@ -139,7 +139,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         it_min = self._it_min.min()
         p_min = it_min / it_sum
         max_weight = (p_min * len(self._storage)) ** (-self._beta)
-        p_sample = tf.concat([self._it_sum[idx] / it_sum for idx in idxes], axis=0)
+        p_sample = np.array([self._it_sum[idx] / it_sum for idx in idxes])
         weights = (p_sample*len(self._storage)) ** (-self._beta)
         weights = weights / max_weight
         encoded_sample = self._encode_sample(idxes)
@@ -159,11 +159,9 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             transitions at the sampled idxes denoted by
             variable `idxes`.
         """
-        assert len(idxes) == len(priorities)
-        for idx, priority in zip(idxes, priorities):
-            assert priority > 0
-            assert 0 <= idx < len(self._storage)
-            self._it_sum[idx] = (priority + self._eps) ** self._alpha
-            self._it_min[idx] = (priority + self._eps) ** self._alpha
+        shaped_priorities = (priorities + self._eps) ** self._alpha
+        for i, idx in enumerate(idxes):
+            self._it_sum[idx] = shaped_priorities[i]
+            self._it_min[idx] = shaped_priorities[i]
 
-            self._max_priority = max(self._max_priority, priority)
+            self._max_priority = max(self._max_priority, priorities[i])

@@ -34,7 +34,8 @@ class DQN:
                            'n_state': 'float32',
                            'n_reward': 'float32',
                            'n_done': 'bool',
-                           'actual_n': 'float32'}
+                           'actual_n': 'float32',
+                           'weights': 'float32'}
         self._update_frequency = 0
         self._run_time_deque = deque(maxlen=log_freq)
         self._schedule_dict = dict()
@@ -115,7 +116,6 @@ class DQN:
             casted_batch['state'] = (casted_batch['state'] / 255).astype('float32')
             casted_batch['next_state'] = (casted_batch['next_state'] / 255).astype('float32')
             casted_batch['n_state'] = (casted_batch['n_state'] / 255).astype('float32')
-            casted_batch['weights'] = minibatch['weights']
             _, ntd_loss, _, _ = self.q_network_update(casted_batch['state'], casted_batch['action'],
                                                       casted_batch['reward'], casted_batch['next_state'],
                                                       casted_batch['done'], casted_batch['n_state'],

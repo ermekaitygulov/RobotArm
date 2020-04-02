@@ -1,5 +1,4 @@
 import operator
-import tensorflow as tf
 
 
 class SegmentTree(object):
@@ -89,7 +88,7 @@ class SumSegmentTree(SegmentTree):
         super(SumSegmentTree, self).__init__(
             capacity=capacity,
             operation=operator.add,
-            neutral_element=tf.zeros(1, dtype='float32')
+            neutral_element=0.0
         )
 
     def sum(self, start=0, end=None):
