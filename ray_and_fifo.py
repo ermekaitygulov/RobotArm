@@ -40,11 +40,11 @@ class QueueBuffer:
                   (),
                   (),
                   ()]
-        @ray.remote
+        @ray.remote(num_gpus=0.3)
         class RayFifo(tf.queue.FIFOQueue):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
-        self.queue = RayFifo.remote(100, dtypes=dtype_list, names=names, shapes=shapes)
+        self.queue = RayFifo.remote(500, dtypes=dtype_list, names=names, shapes=shapes)
         self.dataset = Dataset(steps, batch_size)
 
     def enqueue(self, n):
