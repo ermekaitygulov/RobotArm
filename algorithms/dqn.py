@@ -34,8 +34,7 @@ class DQN:
                            'n_state': 'float32',
                            'n_reward': 'float32',
                            'n_done': 'bool',
-                           'actual_n': 'float32',
-                           'weights': 'float32'}
+                           'actual_n': 'float32'}
         self._update_frequency = 0
         self._run_time_deque = deque(maxlen=log_freq)
         self._schedule_dict = dict()
