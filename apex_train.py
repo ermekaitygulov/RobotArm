@@ -1,3 +1,5 @@
+import timeit
+
 import ray
 
 from algorithms.apex import Learner, Counter, Actor
@@ -40,7 +42,7 @@ if __name__ == '__main__':
     ray.init(webui_host='0.0.0.0', num_gpus=1)
     n_actors = 3
     max_eps = 1000
-    replay_start_size = 1500
+    replay_start_size = 300
     batch_size = 128
     sync_nn_mod = 300
 
@@ -67,25 +69,28 @@ if __name__ == '__main__':
         rollouts[a.rollout.remote(online_weights, target_weights, rollout_size=300)] = a
     rollouts[remote_sleep.remote()] = 'learner_waiter'
     episodes_done = ray.get(counter.get_value.remote())
-    tree_ids = None
+    ready_tree_ids, minibatch, proc_tree_ids = None, None, None
     optimization_step = 0
     while episodes_done < max_eps:
         ready_ids, _ = ray.wait(list(rollouts))
         first_id = ready_ids[0]
         first = rollouts.pop(first_id)
         if first == 'learner_waiter':
-            tree_ids, minibatch, is_weights = replay_buffer.sample.remote(batch_size)
-            rollouts[learner.update_asynch.remote(minibatch, is_weights)] = learner
+            ready_tree_ids, minibatch = replay_buffer.sample.remote(batch_size)
+            rollouts[learner.update_asynch.remote(minibatch)] = learner
+            proc_tree_ids,  minibatch = replay_buffer.sample.remote(batch_size)
         elif first == learner:
             optimization_step += 1
+            start_time = timeit.default_timer()
             ntd = first_id
-            replay_buffer.update_priorities.remote(tree_ids, ntd)
-            tree_ids, minibatch, is_weights = replay_buffer.sample.remote(batch_size)
+            replay_buffer.update_priorities.remote(ready_tree_ids, ntd)
+            ready_tree_ids = proc_tree_ids
             if optimization_step % sync_nn_mod == 0:
                 online_weights, target_weights = first.get_weights.remote()
-            rollouts[first.update_asynch.remote(minibatch, is_weights)] = first
+            rollouts[first.update_asynch.remote(minibatch, start_time)] = first
+            proc_tree_ids, minibatch = replay_buffer.sample.remote(batch_size)
         else:
             replay_buffer.receive_batch.remote(first_id)
-            rollouts[first.rollout.remote(online_weights, target_weights, rollout_size=300)] = first
+            rollouts[first.rollout.remote(online_weights, target_weights, rollout_size=100)] = first
         episodes_done = ray.get(counter.get_value.remote())
     ray.timeline()

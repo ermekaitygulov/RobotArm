@@ -19,9 +19,8 @@ class Learner(DQN):
                          log_freq=log_freq)
         self.summary_writer = tf.summary.create_file_writer('train/learner/')
 
-    def update_asynch(self, minibatch, is_weights):
+    def update_asynch(self, minibatch, start_time):
         with self.summary_writer.as_default():
-            start_time = timeit.default_timer()
             casted_batch = {key: minibatch[key].astype(self.dtype_dict[key]) for key in self.dtype_dict.keys()}
             casted_batch['state'] = (casted_batch['state'] / 255).astype('float32')
             casted_batch['next_state'] = (casted_batch['next_state'] / 255).astype('float32')
