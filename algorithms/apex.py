@@ -105,7 +105,7 @@ class Actor(DQN):
                 global_ep = ray.get(self.parameter_server.get_eps_done.remote())
 
     def priority_err(self, rollout):
-        q_values = np.array([data['q_value'] for data in rollout], dtype='float32')
+        q_values = np.array([[data['q_value']] for data in rollout], dtype='float32')
         n_state = np.array([(np.array(data['n_state'])/255) for data in rollout], dtype='float32')
         n_reward = np.array([data['n_reward'] for data in rollout], dtype='float32')
         n_done = np.array([data['n_done'] for data in rollout])
