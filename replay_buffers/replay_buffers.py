@@ -35,7 +35,7 @@ class ReplayBuffer(object):
 
     def _encode_sample(self, idxes):
         #TODO add ignore keys
-        batch = {key: [] for key in self.transition_keys}
+        batch = {key: [] for key in self.transition_keys if key != 'q_value'}
         for i in idxes:
             data = self._storage[i]
             for key, value in data.items():
