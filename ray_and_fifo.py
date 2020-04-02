@@ -1,8 +1,7 @@
 import timeit
-from model_tests.tf_model_profiling import Dataset
+from tf_model_profiling import Dataset
 from algorithms.dqn import DQN
 from algorithms.model import ClassicCnn, DuelingModel
-from numpy import random
 import os
 import ray
 
