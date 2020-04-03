@@ -42,11 +42,11 @@ if __name__ == '__main__':
     ray.init(webui_host='0.0.0.0', num_gpus=1)
     n_actors = 3
     max_eps = 1000
-    replay_start_size = 700
+    replay_start_size = 1000
     batch_size = 128
     sync_nn_mod = 300
     rollout_size = 100
-    number_of_batchs = 5
+    number_of_batchs = 16
     workers_for_batching = 8
 
     test_env = make_env('test_name')
