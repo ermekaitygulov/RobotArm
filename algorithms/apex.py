@@ -14,6 +14,7 @@ class Learner(DQN):
     def __init__(self, build_model, obs_shape, action_shape, update_target_nn_mod=1000,
                  gamma=0.99, learning_rate=1e-4, log_freq=100):
         import tensorflow as tf
+        tf.config.optimizer.set_jit(True)
         super().__init__(None, build_model, obs_shape, action_shape,
                          gamma=gamma, learning_rate=learning_rate, update_target_nn_mod=update_target_nn_mod,
                          log_freq=log_freq)

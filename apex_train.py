@@ -47,7 +47,7 @@ if __name__ == '__main__':
     sync_nn_mod = 300
     rollout_size = 100
     number_of_batchs = 16
-    workers_for_batching = 8
+    workers_for_batching = 16
 
     test_env = make_env('test_name')
     obs_shape = test_env.observation_space.shape

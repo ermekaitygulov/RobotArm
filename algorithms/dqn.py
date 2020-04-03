@@ -18,8 +18,9 @@ class DQN:
                   'n_done': 'bool',
                   'actual_n': 'float32',
                   'weights': 'float32'}
-    def __init__(self, replay_buffer, build_model, obs_shape, action_shape, train_freq=100, train_quantity=100,
-                 log_freq=100, update_target_nn_mod=500, batch_size=32, replay_start_size=1000, gamma=0.99,
+
+    def __init__(self, replay_buffer, build_model, obs_shape, action_shape, train_freq=100, train_quantity=30,
+                 log_freq=100, update_target_nn_mod=500, batch_size=32, replay_start_size=500, gamma=0.99,
                  learning_rate=1e-4, n_step=10, custom_loss=None):
 
         self.gamma = np.array(gamma, dtype='float32')
@@ -178,6 +179,7 @@ class DQN:
         print("TD-Loss tracing")
         n_target = self.compute_target(n_state, n_done, n_reward, actual_n, gamma)
         n_target = tf.expand_dims(n_target, axis=-1)
+        n_target = tf.stop_gradient(n_target)
         ntd_loss = self.huber_loss(n_target, q_values)
         return ntd_loss
 
