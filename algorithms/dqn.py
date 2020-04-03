@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 import timeit
 
-from utils.util import take_vector_elements
+from utils.util import take_vector_elements, huber_loss
 
 
 class DQN:
@@ -155,7 +155,6 @@ class DQN:
             tape.watch(online_variables)
             q_values = self.online_model(state, training=True)
             q_values = take_vector_elements(q_values, action)
-            q_values = tf.expand_dims(q_values, axis=-1)
             td_loss = self.td_loss(next_state, q_values, done, reward, 1, gamma)
             mean_td = tf.reduce_mean(td_loss * weights)
             self.update_metrics('TD', mean_td)
@@ -180,9 +179,8 @@ class DQN:
     def td_loss(self, n_state, q_values, n_done, n_reward, actual_n, gamma):
         print("TD-Loss tracing")
         n_target = self.compute_target(n_state, n_done, n_reward, actual_n, gamma)
-        n_target = tf.expand_dims(n_target, axis=-1)
         n_target = tf.stop_gradient(n_target)
-        ntd_loss = self.huber_loss(n_target, q_values)
+        ntd_loss = huber_loss(q_values - n_target)
         return ntd_loss
 
     @tf.function
