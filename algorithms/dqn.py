@@ -127,7 +127,7 @@ class DQN:
             casted_batch['state'] = (casted_batch['state'] / 255).astype('float32')
             casted_batch['next_state'] = (casted_batch['next_state'] / 255).astype('float32')
             casted_batch['n_state'] = (casted_batch['n_state'] / 255).astype('float32')
-            _, ntd_loss, _, _ = self.q_network_update(casted_batch['state'], casted_batch['action'],
+            _, ntd_loss, _ = self.q_network_update(casted_batch['state'], casted_batch['action'],
                                                       casted_batch['reward'], casted_batch['next_state'],
                                                       casted_batch['done'], casted_batch['n_state'],
                                                       casted_batch['n_reward'], casted_batch['n_done'],
@@ -164,17 +164,17 @@ class DQN:
             mean_ntd = tf.reduce_mean(ntd_loss * weights)
             self.update_metrics('nTD', mean_ntd)
 
-            l2 = tf.add_n(self.online_model.losses)
-            self.update_metrics('l2', l2)
+            # l2 = tf.add_n(self.online_model.losses)
+            # self.update_metrics('l2', l2)
 
-            all_losses = mean_td + mean_ntd + l2
+            all_losses = mean_td + mean_ntd
             self.update_metrics('all_losses', all_losses)
 
         gradients = tape.gradient(all_losses, online_variables)
         for i, g in enumerate(gradients):
             gradients[i] = tf.clip_by_norm(g, 10)
         self.optimizer.apply_gradients(zip(gradients, online_variables))
-        return td_loss, ntd_loss, l2, all_losses
+        return td_loss, ntd_loss, all_losses
 
     @tf.function
     def td_loss(self, n_state, q_values, n_done, n_reward, actual_n, gamma):
