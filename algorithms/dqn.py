@@ -176,7 +176,7 @@ class DQN:
             l2 = tf.add_n(self.online_model.losses)
             self.update_metrics('l2', l2)
 
-            all_losses = mean_td + mean_ntd
+            all_losses = mean_td + mean_ntd + l2
             self.update_metrics('all_losses', all_losses)
 
         gradients = tape.gradient(all_losses, online_variables)
@@ -244,7 +244,7 @@ class DQN:
         print("LearnerEpoch({:.2f}it/sec): ".format(update_frequency), self.optimizer.iterations.numpy())
         for key, metric in self.avg_metrics.items():
             tf.summary.scalar(key, metric.result(), step=self.optimizer.iterations)
-            print('  {}:     {:.3f}'.format(key, metric.result()))
+            print('  {}:     {:.5f}'.format(key, metric.result()))
             metric.reset_states()
         tf.summary.flush()
 
