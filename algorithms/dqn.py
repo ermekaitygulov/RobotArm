@@ -19,8 +19,8 @@ class DQN:
                   'actual_n': 'float32',
                   'weights': 'float32'}
 
-    def __init__(self, replay_buffer, build_model, obs_shape, action_shape, train_freq=100, train_quantity=30,
-                 log_freq=10, update_target_nn_mod=200, batch_size=32, replay_start_size=500, gamma=0.99,
+    def __init__(self, replay_buffer, build_model, obs_shape, action_shape, train_freq=100, train_quantity=100,
+                 log_freq=50, update_target_nn_mod=200, batch_size=32, replay_start_size=500, gamma=0.99,
                  learning_rate=1e-4, n_step=10, custom_loss=None):
 
         self.gamma = np.array(gamma, dtype='float32')
@@ -120,22 +120,30 @@ class DQN:
         return total_reward
 
     def update(self, steps):
-        for i in range(1, steps + 1):
-            start_time = timeit.default_timer()
-            tree_idxes, minibatch = self.replay_buff.sample(self.batch_size)
-            casted_batch = {key: minibatch[key].astype(self.dtype_dict[key]) for key in self.dtype_dict.keys()}
-            casted_batch['state'] = (casted_batch['state'] / 255).astype('float32')
-            casted_batch['next_state'] = (casted_batch['next_state'] / 255).astype('float32')
-            casted_batch['n_state'] = (casted_batch['n_state'] / 255).astype('float32')
-            _, ntd_loss, _ = self.q_network_update(casted_batch['state'], casted_batch['action'],
-                                                   casted_batch['reward'], casted_batch['next_state'],
-                                                   casted_batch['done'], casted_batch['n_state'],
-                                                   casted_batch['n_reward'], casted_batch['n_done'],
-                                                   casted_batch['actual_n'], casted_batch['weights'], self.gamma)
-            self.schedule()
-            self.replay_buff.update_priorities(tree_idxes, ntd_loss.numpy())
+        start_time = timeit.default_timer()
+        tree_idxes, ds = self.replay_buff.sample(self.batch_size*steps, workers_number=8)
+        loss_list = list()
+        ds = tf.data.Dataset.from_tensor_slices(ds)
+        ds = ds.map(self.preprocess_ds)
+        ds = ds.batch(self.batch_size)
+        ds = ds.cache()
+        ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
+        for batch in ds:
+            _, ntd_loss, _ = self.q_network_update(gamma=self.gamma, **batch)
             stop_time = timeit.default_timer()
-            self._run_time_deque.append(1/(stop_time - start_time))
+            self._run_time_deque.append(1 / (stop_time - start_time))
+            self.schedule()
+            loss_list.append(ntd_loss)
+            start_time = timeit.default_timer()
+        self.replay_buff.update_priorities(tree_idxes, np.concatenate(loss_list))
+
+    def preprocess_ds(self, sample):
+        casted_sample = dict()
+        for key, value in sample.items():
+            casted_sample[key] = tf.cast(value, dtype=self.dtype_dict[key])
+            if 'state' in key:
+                casted_sample[key] /= 255
+        return casted_sample
 
     def choose_act(self, state, epsilon, action_sampler):
         inputs = (np.array(state) / 255).astype('float32')

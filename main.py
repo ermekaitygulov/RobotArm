@@ -1,5 +1,5 @@
 from algorithms.dqn import DQN
-from replay_buffers.replay_buffers import PrioritizedReplayBuffer, ReplayBuffer
+from replay_buffers.replay_buffers import PrioritizedReplayBuffer
 from algorithms.model import ClassicCnn, DuelingModel
 from environments.pyrep_env import RozumEnv
 from utils.wrappers import *
@@ -37,7 +37,7 @@ if __name__ == '__main__':
         discrete_dict[i] = [5 if j == i else 0 for j in range(robot_dof)]
         discrete_dict[i + robot_dof] = [-5 if j == i else 0 for j in range(robot_dof)]
     env = DiscreteWrapper(env, discrete_dict)
-    replay_buffer = ReplayBuffer(50000)
+    replay_buffer = PrioritizedReplayBuffer(50000)
 
     def make_model(name, obs_shape, action_shape):
         base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])

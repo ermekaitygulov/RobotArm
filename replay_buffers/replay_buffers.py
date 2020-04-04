@@ -42,11 +42,9 @@ class ReplayBuffer(object):
                 if key != 'q_value':
                     batch[key].append(np.array(value, copy=False))
         batch = {key: np.array(value) for key, value in batch.items()}
-        if 'weights' not in batch.keys():
-            batch['weights'] = np.ones_like(batch['rewards'])
         return batch
 
-    def sample(self, batch_size):
+    def sample(self, batch_size, *args, **kwargs):
         """Sample a batch of experiences.
         Parameters
         ----------
@@ -127,7 +125,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         res = self._it_sum.find_asynch_prefixsum_idx(prefixsums, workers_number)
         return res
 
-    def sample(self, batch_size, workers_number=2):
+    def sample(self, batch_size, workers_number=2, *args, **kwargs):
         """Sample a batch of experiences.
         compared to ReplayBuffer.sample
         it also returns importance weights and idxes
