@@ -42,6 +42,8 @@ class ReplayBuffer(object):
                 if key != 'q_value':
                     batch[key].append(np.array(value, copy=False))
         batch = {key: np.array(value) for key, value in batch.items()}
+        if 'weights' not in batch.keys():
+            batch['weights'] = np.ones_like(batch['rewards'])
         return batch
 
     def sample(self, batch_size):
@@ -66,6 +68,9 @@ class ReplayBuffer(object):
         """
         idxes = [random.randint(0, len(self._storage) - 1) for _ in range(batch_size)]
         return self._encode_sample(idxes)
+
+    def update_priorities(self, *args, **kwargs):
+        pass
 
 
 class PrioritizedReplayBuffer(ReplayBuffer):
