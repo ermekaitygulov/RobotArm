@@ -5,6 +5,7 @@ from pyrep.robots.end_effectors.baxter_gripper import BaxterGripper
 from pyrep.objects.vision_sensor import VisionSensor
 from pyrep.objects import Shape
 import numpy as np
+from utils.rewards import tolerance
 
 
 class Rozum(Arm):
@@ -61,7 +62,7 @@ class RozumEnv(gym.Env):
 
         tx, ty, tz = self.cube.get_position()
         curent_distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
-        reward = min(max(self.previous_distance - curent_distance, -1), 1)
+        reward = tolerance(curent_distance, (0.0, 0.02), 0.25)
         self.previous_distance = curent_distance
         self.current_step += 1
         if self.always_render:
@@ -71,7 +72,6 @@ class RozumEnv(gym.Env):
 
         if curent_distance < 0.02:
             done = True
-            reward += 1
             info = 'SUCCESS'
         elif self.current_step >= self.step_limit:
             done = True
