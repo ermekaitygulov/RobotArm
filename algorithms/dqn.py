@@ -133,7 +133,7 @@ class DQN:
             stop_time = timeit.default_timer()
             self._run_time_deque.append(1 / (stop_time - start_time))
             self.schedule()
-            loss_list.append(ntd_loss)
+            loss_list.append(np.abs(ntd_loss.numpy()))
             start_time = timeit.default_timer()
         self.replay_buff.update_priorities(tree_idxes, np.concatenate(loss_list))
 
@@ -162,15 +162,15 @@ class DQN:
         with tf.GradientTape() as tape:
             tape.watch(online_variables)
             q_values = self.online_model(state, training=True)
-            tf.summary.histogram('q_values', q_values, self.optimizer.iterations)
-            tf.summary.histogram('weights', weights, self.optimizer.iterations)
             q_values = take_vector_elements(q_values, action)
             td_loss = self.td_loss(next_state, q_values, done, reward, 1, gamma)
-            mean_td = tf.reduce_mean(td_loss * weights)
+            huber_td = td_loss
+            mean_td = tf.reduce_mean(huber_td * weights)
             self.update_metrics('TD', mean_td)
 
             ntd_loss = self.td_loss(n_state, q_values, n_done, n_reward, actual_n, gamma)
-            mean_ntd = tf.reduce_mean(ntd_loss * weights)
+            huber_ntd = huber_td(ntd_loss)
+            mean_ntd = tf.reduce_mean(huber_ntd * weights)
             self.update_metrics('nTD', mean_ntd)
 
             # l2 = tf.add_n(self.online_model.losses)
@@ -190,7 +190,7 @@ class DQN:
         print("TD-Loss tracing")
         n_target = self.compute_target(n_state, n_done, n_reward, actual_n, gamma)
         n_target = tf.stop_gradient(n_target)
-        ntd_loss = huber_loss(q_values - n_target)
+        ntd_loss = q_values - n_target
         return ntd_loss
 
     @tf.function
