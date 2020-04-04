@@ -20,7 +20,7 @@ class DQN:
                   'weights': 'float32'}
 
     def __init__(self, replay_buffer, build_model, obs_shape, action_shape, train_freq=100, train_quantity=30,
-                 log_freq=100, update_target_nn_mod=500, batch_size=32, replay_start_size=500, gamma=0.99,
+                 log_freq=100, update_target_nn_mod=200, batch_size=32, replay_start_size=500, gamma=0.99,
                  learning_rate=1e-4, n_step=10, custom_loss=None):
 
         self.gamma = np.array(gamma, dtype='float32')
@@ -128,10 +128,10 @@ class DQN:
             casted_batch['next_state'] = (casted_batch['next_state'] / 255).astype('float32')
             casted_batch['n_state'] = (casted_batch['n_state'] / 255).astype('float32')
             _, ntd_loss, _ = self.q_network_update(casted_batch['state'], casted_batch['action'],
-                                                      casted_batch['reward'], casted_batch['next_state'],
-                                                      casted_batch['done'], casted_batch['n_state'],
-                                                      casted_batch['n_reward'], casted_batch['n_done'],
-                                                      casted_batch['actual_n'], casted_batch['weights'], self.gamma)
+                                                   casted_batch['reward'], casted_batch['next_state'],
+                                                   casted_batch['done'], casted_batch['n_state'],
+                                                   casted_batch['n_reward'], casted_batch['n_done'],
+                                                   casted_batch['actual_n'], casted_batch['weights'], self.gamma)
             self.schedule()
             self.replay_buff.update_priorities(tree_idxes, ntd_loss.numpy())
             stop_time = timeit.default_timer()
@@ -201,6 +201,8 @@ class DQN:
         self.avg_metrics[key].update_state(value)
 
     def target_update(self):
+        # TODO remove print
+        print("target update")
         self.target_model.set_weights(self.online_model.get_weights())
 
     def perceive(self, state, action, reward, next_state, done, **kwargs):
