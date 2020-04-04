@@ -62,8 +62,7 @@ class RozumEnv(gym.Env):
 
         tx, ty, tz = self.cube.get_position()
         curent_distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
-        reward = tolerance(curent_distance, (0.0, 0.02), 0.25)
-        self.previous_distance = curent_distance
+        reward = tolerance(curent_distance, (0.0, 0.02), 0.1)
         self.current_step += 1
         if self.always_render:
             state = self.render()
@@ -83,11 +82,8 @@ class RozumEnv(gym.Env):
         # self.cube.set_position(self.init_cube_pose)
         self.pr.stop()
         self.pr.start()
-        x, y, z = self.rozum_tip.get_position()
         tx, ty, tz = self.cube.get_position()
-        self.cube.set_position([tx + np.random.uniform(-0.2, 0.2), ty + np.random.uniform(-0.2, 0.2), tz])
-        tx, ty, tz = self.cube.get_position()
-        self.previous_distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
+        self.cube.set_position([tx + np.random.uniform(-0.2, 0.2), ty, tz])
         state = self.render()
         self.current_step = 0
         return state
