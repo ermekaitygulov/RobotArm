@@ -164,12 +164,12 @@ class DQN:
             q_values = self.online_model(state, training=True)
             q_values = take_vector_elements(q_values, action)
             td_loss = self.td_loss(next_state, q_values, done, reward, 1, gamma)
-            huber_td = td_loss
+            huber_td = huber_loss(td_loss)
             mean_td = tf.reduce_mean(huber_td * weights)
             self.update_metrics('TD', mean_td)
 
             ntd_loss = self.td_loss(n_state, q_values, n_done, n_reward, actual_n, gamma)
-            huber_ntd = huber_td(ntd_loss)
+            huber_ntd = huber_loss(ntd_loss)
             mean_ntd = tf.reduce_mean(huber_ntd * weights)
             self.update_metrics('nTD', mean_ntd)
 
