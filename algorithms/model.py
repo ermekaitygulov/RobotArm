@@ -5,7 +5,7 @@ from tensorflow.keras.layers import Dense, Conv2D, Flatten
 
 
 class DuelingModel(tf.keras.Model):
-    def __init__(self, units, action_dim, reg=None):
+    def __init__(self, units, action_dim, reg=l2(1e-6)):
         super(DuelingModel, self).__init__()
         self.h_layers = Sequential([Dense(l, 'relu', kernel_regularizer=reg) for l in units[:-1]])
         self.a_head, self.v_head = Dense(units[-1]/2, 'relu', kernel_regularizer=reg), Dense(units[-1]/2, 'relu', kernel_regularizer=reg)
@@ -23,7 +23,7 @@ class DuelingModel(tf.keras.Model):
 
 
 class ClassicCnn(tf.keras.Model):
-    def __init__(self, filters, kernels, strides, reg=None):
+    def __init__(self, filters, kernels, strides, reg=l2(1e-6)):
         super(ClassicCnn, self).__init__()
         self.cnn = Sequential(Conv2D(filters[0], kernels[0], strides[0], activation='relu',
                                      kernel_regularizer=reg), name='CNN')

@@ -57,7 +57,7 @@ class Learner(DQN):
             stop_time = timeit.default_timer()
             self._run_time_deque.append(1 / (stop_time - start_time))
             self.schedule()
-            loss_list.append(ntd_loss)
+            loss_list.append(np.abs(ntd_loss))
             start_time = timeit.default_timer()
         return np.concatenate(loss_list)
 
@@ -137,7 +137,7 @@ class Actor(DQN):
         actual_n = np.array([data['actual_n'] for data in rollout], dtype='float32')
 
         ntd = self.td_loss(n_state, q_values, n_done, n_reward, actual_n, self.gamma)
-        return ntd.numpy()
+        return np.abs(ntd.numpy())
 
 
 @ray.remote

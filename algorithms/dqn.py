@@ -129,7 +129,7 @@ class DQN:
         ds = ds.cache()
         ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
         for batch in ds:
-            _, ntd_loss, _ = self.q_network_update(gamma=self.gamma, **batch)
+            _, ntd_loss, _, _ = self.q_network_update(gamma=self.gamma, **batch)
             stop_time = timeit.default_timer()
             self._run_time_deque.append(1 / (stop_time - start_time))
             self.schedule()
@@ -173,8 +173,8 @@ class DQN:
             mean_ntd = tf.reduce_mean(huber_ntd * weights)
             self.update_metrics('nTD', mean_ntd)
 
-            # l2 = tf.add_n(self.online_model.losses)
-            # self.update_metrics('l2', l2)
+            l2 = tf.add_n(self.online_model.losses)
+            self.update_metrics('l2', l2)
 
             all_losses = mean_td + mean_ntd
             self.update_metrics('all_losses', all_losses)
@@ -183,7 +183,7 @@ class DQN:
         for i, g in enumerate(gradients):
             gradients[i] = tf.clip_by_norm(g, 10)
         self.optimizer.apply_gradients(zip(gradients, online_variables))
-        return td_loss, ntd_loss, all_losses
+        return td_loss, ntd_loss, l2, all_losses
 
     @tf.function
     def td_loss(self, n_state, q_values, n_done, n_reward, actual_n, gamma):

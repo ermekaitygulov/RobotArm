@@ -44,7 +44,7 @@ if __name__ == '__main__':
     max_eps = 1000
     replay_start_size = 1000
     batch_size = 128
-    sync_nn_mod = 300
+    sync_nn_mod = 100
     rollout_size = 100
     number_of_batchs = 16
     workers_for_batching = 16
