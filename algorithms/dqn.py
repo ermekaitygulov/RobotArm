@@ -163,6 +163,7 @@ class DQN:
             tape.watch(online_variables)
             q_values = self.online_model(state, training=True)
             tf.summary.histogram('q_values', q_values, self.optimizer.iterations)
+            tf.summary.histogram('weights', weights, self.optimizer.iterations)
             q_values = take_vector_elements(q_values, action)
             td_loss = self.td_loss(next_state, q_values, done, reward, 1, gamma)
             mean_td = tf.reduce_mean(td_loss * weights)
