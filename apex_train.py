@@ -58,7 +58,7 @@ if __name__ == '__main__':
     replay_buffer = ApeXBuffer.remote(int(1e5))
     learner = Learner.remote(make_model, obs_shape, action_shape, update_target_nn_mod=1000,
                              gamma=0.9, learning_rate=1e-4, log_freq=100)
-    actors = [Actor.remote(i, make_model, obs_shape, action_shape, make_env, counter, gamma=0.9, n_step=5)
+    actors = [Actor.remote(i, make_model, obs_shape, action_shape, make_env, counter, gamma=0.99, n_step=5)
               for i in range(n_actors)]
     online_weights, target_weights = learner.get_weights.remote()
 

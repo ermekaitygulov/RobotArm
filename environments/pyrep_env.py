@@ -62,7 +62,7 @@ class RozumEnv(gym.Env):
 
         tx, ty, tz = self.cube.get_position()
         curent_distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
-        reward = tolerance(curent_distance, (0.0, 0.02), 0.25)
+        reward = tolerance(curent_distance, (0.0, 0.02), 0.25)/25
         self.current_step += 1
         if self.always_render:
             state = self.render()
