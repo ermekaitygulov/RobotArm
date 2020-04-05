@@ -25,12 +25,12 @@ def make_env(name):
     return env
 
 
-def make_model(name, input_shape, output_shape):
+def make_model(name, input_shape, output_shape, reg=1e-8):
     import tensorflow as tf
     from utils.util import config_gpu
     config_gpu()
-    base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])
-    head = DuelingModel([1024], output_shape)
+    base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2], reg)
+    head = DuelingModel([1024], output_shape, reg)
     model = tf.keras.Sequential([base, head], name)
     model.build((None, ) + input_shape)
     return model
