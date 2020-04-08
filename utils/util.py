@@ -34,3 +34,13 @@ def config_gpu():
         except RuntimeError as e:
             # Memory growth must be set before GPUs have been initialized
             print(e)
+
+
+def extract_from_dict(dictionary, left, right):
+    result = dict()
+    for key, value in dictionary.items():
+        if isinstance(value, dict):
+            result[key] = extract_from_dict(value, left, right)
+        else:
+            result[key] = value[left:right]
+    return result

@@ -30,7 +30,7 @@ class FrameSkip(gym.Wrapper):
 
 
 class FrameStack(gym.Wrapper):
-    def __init__(self, env, k, channel_order='hwc', use_tuple=False):
+    def __init__(self, env, k, channel_order='hwc', stack_key=None):
         """Stack k last frames.
         Returns lazy array, which is much more memory efficient.
         """
@@ -38,27 +38,48 @@ class FrameStack(gym.Wrapper):
         self.k = k
         self.observations = deque([], maxlen=k)
         self.stack_axis = {'hwc': 2, 'chw': 0}[channel_order]
-        self.use_tuple = use_tuple
-
-        pov_space = env.observation_space
-        low_pov = np.repeat(pov_space.low, k, axis=self.stack_axis)
-        high_pov = np.repeat(pov_space.high, k, axis=self.stack_axis)
-        self.observation_space = gym.spaces.Box(low=low_pov, high=high_pov, dtype=pov_space.dtype)
+        if stack_key:
+            space = env.observation_space.space.copy()
+            low_pov = np.repeat(space[stack_key].low, k, axis=self.stack_axis)
+            high_pov = np.repeat(space[stack_key].high, k, axis=self.stack_axis)
+            pov_space = gym.spaces.Box(low=low_pov, high=high_pov, dtype=space[stack_key].dtype)
+            space[stack_key] = pov_space
+            self.observation_space = gym.spaces.Dict(space)
+        else:
+            pov_space = env.observation_space
+            low_pov = np.repeat(pov_space.low, k, axis=self.stack_axis)
+            high_pov = np.repeat(pov_space.high, k, axis=self.stack_axis)
+            self.observation_space = gym.spaces.Box(low=low_pov, high=high_pov, dtype=pov_space.dtype)
+        self.stack_key = stack_key
 
     def reset(self):
         ob = self.env.reset()
+        to_stack = self._to_stack(ob)
         for _ in range(self.k):
-            self.observations.append(ob)
-        return self._get_ob()
+            self.observations.append(to_stack)
+        return self._get_ob(ob)
 
     def step(self, action):
         ob, reward, done, info = self.env.step(action)
-        self.observations.append(ob)
-        return self._get_ob(), reward, done, info
+        to_stack = self._to_stack(ob)
+        self.observations.append(to_stack)
+        return self._get_ob(ob), reward, done, info
 
-    def _get_ob(self):
+    def _to_stack(self, ob):
+        if self.stack_key:
+            to_stack = ob[self.stack_key]
+        else:
+            to_stack = ob
+        return to_stack
+
+    def _get_ob(self, ob):
         assert len(self.observations) == self.k
-        return LazyFrames(list(self.observations), stack_axis=self.stack_axis)
+        if self.stack_key:
+            state = ob.copy()
+            state[self.stack_key] = LazyFrames(list(self.observations), stack_axis=self.stack_axis)
+        else:
+            state = LazyFrames(list(self.observations), stack_axis=self.stack_axis)
+        return state
 
 
 class DiscreteWrapper(gym.Wrapper):
@@ -78,7 +99,7 @@ class DiscreteWrapper(gym.Wrapper):
 class SaveVideoWrapper(gym.Wrapper):
     current_episode = 0
 
-    def __init__(self, env, path='train/', resize=1):
+    def __init__(self, env, path='train/', resize=1, key=None):
         """
         :param env: wrapped environment
         :param path: path to save videos
@@ -90,6 +111,7 @@ class SaveVideoWrapper(gym.Wrapper):
         self.rewards = [0]
         self.resize = resize
         self.env.always_render = True
+        self.key = key
 
     def step(self, action):
         """
@@ -99,7 +121,7 @@ class SaveVideoWrapper(gym.Wrapper):
         """
         observation, reward, done, info = self.env.step(action)
         self.rewards.append(reward)
-        self.recording.append(self.bgr_to_rgb(observation))
+        self._recording_append(observation)
         return observation, reward, done, info
 
     def reset(self, **kwargs):
@@ -117,8 +139,15 @@ class SaveVideoWrapper(gym.Wrapper):
         self.rewards = [0]
         self.recording = []
         observation = self.env.reset(**kwargs)
-        self.recording.append(self.bgr_to_rgb(observation))
+        self._recording_append(observation)
         return observation
+
+    def _recording_append(self, observation):
+        if self.key:
+            pov = self.bgr_to_rgb(observation['pov'])
+        else:
+            pov = self.bgr_to_rgb(observation)
+        self.recording.append(pov)
 
     @staticmethod
     def upscale_image(image, resize):

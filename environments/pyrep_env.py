@@ -38,7 +38,9 @@ class RozumEnv(gym.Env):
         self.action_space = gym.spaces.Box(shape=(self.rozum.num_joints,),
                                            low=-180,
                                            high=180)
-        self.observation_space = gym.spaces.Box(shape=self.camera.resolution + [3], low=0, high=255)
+        pov_space = gym.spaces.Box(shape=self.camera.resolution + [3], low=0, high=255)
+        angles_space = gym.spaces.Box(shape=(self.rozum.num_joints,), low=-2*np.pi, high=2*np.pi)
+        self.observation_space = gym.spaces.Dict({'pov': pov_space, 'angles': angles_space})
         self.reward_range = None
         self.current_step = 0
         self.step_limit = 400
@@ -92,7 +94,10 @@ class RozumEnv(gym.Env):
     def render(self, mode='human'):
         img = self.camera.capture_rgb()
         img *= 255
-        return img.astype('uint8')
+        img = img.astype('uint8')
+        angles = self.rozum.get_joint_positions()
+        state = {'pov': img, 'angles': angles}
+        return state
 
     def close(self):
         self.pr.stop()
