@@ -37,16 +37,6 @@ class DQN:
         self.n_deque = deque([], maxlen=n_step)
         self.replay_buff = replay_buffer
 
-        self.dtype_dict = {'state': 'float32',
-                           'action': 'int32',
-                           'reward': 'float32',
-                           'next_state': 'float32',
-                           'done': 'bool',
-                           'n_state': 'float32',
-                           'n_reward': 'float32',
-                           'n_done': 'bool',
-                           'actual_n': 'float32',
-                           'weights': 'float32'}
         self._update_frequency = 0
         self._run_time_deque = deque(maxlen=log_freq)
         self._schedule_dict = dict()
@@ -142,12 +132,13 @@ class DQN:
         for key, value in sample.items():
             casted_sample[key] = tf.cast(value, dtype=self.dtype_dict[key])
             if 'state' in key:
-                casted_sample[key] /= 255
+                casted_sample[key] = self.preprocess_state(casted_sample[key])
         return casted_sample
 
     def choose_act(self, state, epsilon, action_sampler):
-        inputs = (np.array(state) / 255).astype('float32')
-        q_value = self.online_model(inputs[None], training=False)[0]
+        inputs = {key: np.array(value).astype('float32')[None] for key, value in state.items()}
+        inputs = self.preprocess_state(inputs)
+        q_value = self.online_model(inputs, training=False)[0]
         if random.random() > epsilon:
             action = np.argmax(q_value).astype('int32')
         else:
@@ -238,6 +229,10 @@ class DQN:
             if tf.equal(self.optimizer.iterations % value, 0):
                 return_dict[key] = key()
         return return_dict
+
+    def preprocess_state(self, state):
+        state['pov'] /= 255
+        return state
 
     def update_log(self):
         update_frequency = sum(self._run_time_deque) / len(self._run_time_deque)

@@ -1,6 +1,6 @@
 from algorithms.dqn import DQN
 from replay_buffers.replay_buffers import PrioritizedReplayBuffer
-from algorithms.model import ClassicCnn, DuelingModel
+from algorithms.model import ClassicCnn, DuelingModel, MLP
 from environments.pyrep_env import RozumEnv
 from utils.wrappers import *
 import tensorflow as tf
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     env = RozumEnv()
     # env = SaveVideoWrapper(env)
     env = FrameSkip(env)
-    env = FrameStack(env, 2)
+    env = FrameStack(env, 2, stack_key='pov')
     env = AccuracyLogWrapper(env, 10)
     discrete_dict = dict()
     robot_dof = env.action_space.shape[0]
@@ -40,10 +40,13 @@ if __name__ == '__main__':
     replay_buffer = PrioritizedReplayBuffer(50000)
 
     def make_model(name, obs_shape, action_shape):
-        base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])
-        head = DuelingModel([1024], action_shape)
-        model = tf.keras.Sequential([base, head], name)
-        model.build((None, ) + obs_shape)
+        pov = tf.keras.Input(shape=(None, obs_shape['pov']))
+        angles = tf.keras.Input(shape=(None, obs_shape['angles']))
+        pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(pov)
+        angles_base = MLP([512, 256])(angles)
+        base = tf.keras.layers.concatenate([pov_base, angles_base])
+        head = DuelingModel([1024], action_shape)(base)
+        model = tf.keras.Model(inputs={'pov': pov, 'angles': angles}, outputs=head, name=name)
         return model
     agent = DQN(replay_buffer, make_model, env.observation_space.shape, env.action_space.n)
     summary_writer = tf.summary.create_file_writer('train/')
