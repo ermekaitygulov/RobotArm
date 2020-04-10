@@ -40,8 +40,8 @@ if __name__ == '__main__':
     replay_buffer = PrioritizedReplayBuffer(50000)
 
     def make_model(name, obs_shape, action_shape):
-        pov = tf.keras.Input(shape=(None, obs_shape['pov']))
-        angles = tf.keras.Input(shape=(None, obs_shape['angles']))
+        pov = tf.keras.Input(shape=obs_shape['pov'])
+        angles = tf.keras.Input(shape=obs_shape['angles'])
         pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(pov)
         angles_base = MLP([512, 256])(angles)
         base = tf.keras.layers.concatenate([pov_base, angles_base])
