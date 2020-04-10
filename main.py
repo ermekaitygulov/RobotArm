@@ -39,16 +39,16 @@ if __name__ == '__main__':
     env = DiscreteWrapper(env, discrete_dict)
     replay_buffer = PrioritizedReplayBuffer(50000)
 
-    def make_model(name, obs_shape, action_shape):
-        pov = tf.keras.Input(shape=obs_shape['pov'])
-        angles = tf.keras.Input(shape=obs_shape['angles'])
+    def make_model(name, obs_space, action_space):
+        pov = tf.keras.Input(shape=obs_space['pov'].shape)
+        angles = tf.keras.Input(shape=obs_space['angles'].shape)
         pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(pov)
         angles_base = MLP([512, 256])(angles)
         base = tf.keras.layers.concatenate([pov_base, angles_base])
-        head = DuelingModel([1024], action_shape)(base)
+        head = DuelingModel([1024], action_space.n)(base)
         model = tf.keras.Model(inputs={'pov': pov, 'angles': angles}, outputs=head, name=name)
         return model
-    agent = DQN(replay_buffer, make_model, env.observation_space.shape, env.action_space.n)
+    agent = DQN(replay_buffer, make_model, env.observation_space, env.action_space)
     summary_writer = tf.summary.create_file_writer('train/')
     with summary_writer.as_default():
         agent.train(env, 1000)

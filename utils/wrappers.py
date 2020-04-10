@@ -42,14 +42,14 @@ class FrameStack(gym.Wrapper):
             space = env.observation_space.spaces.copy()
             low_pov = np.repeat(space[stack_key].low, k, axis=self.stack_axis)
             high_pov = np.repeat(space[stack_key].high, k, axis=self.stack_axis)
-            pov_space = gym.spaces.Box(low=low_pov, high=high_pov, dtype=space[stack_key].dtype)
-            space[stack_key] = pov_space
+            stack_space = gym.spaces.Box(low=low_pov, high=high_pov, dtype=space[stack_key].dtype)
+            space[stack_key] = stack_space
             self.observation_space = gym.spaces.Dict(space)
         else:
-            pov_space = env.observation_space
-            low_pov = np.repeat(pov_space.low, k, axis=self.stack_axis)
-            high_pov = np.repeat(pov_space.high, k, axis=self.stack_axis)
-            self.observation_space = gym.spaces.Box(low=low_pov, high=high_pov, dtype=pov_space.dtype)
+            stack_space = env.observation_space
+            low_pov = np.repeat(stack_space.low, k, axis=self.stack_axis)
+            high_pov = np.repeat(stack_space.high, k, axis=self.stack_axis)
+            self.observation_space = gym.spaces.Box(low=low_pov, high=high_pov, dtype=stack_space.dtype)
         self.stack_key = stack_key
 
     def reset(self):
