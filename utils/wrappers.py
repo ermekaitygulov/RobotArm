@@ -39,7 +39,7 @@ class FrameStack(gym.Wrapper):
         self.observations = deque([], maxlen=k)
         self.stack_axis = {'hwc': 2, 'chw': 0}[channel_order]
         if stack_key:
-            space = env.observation_space.space.copy()
+            space = env.observation_space.copy()
             low_pov = np.repeat(space[stack_key].low, k, axis=self.stack_axis)
             high_pov = np.repeat(space[stack_key].high, k, axis=self.stack_axis)
             pov_space = gym.spaces.Box(low=low_pov, high=high_pov, dtype=space[stack_key].dtype)
