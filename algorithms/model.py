@@ -41,6 +41,7 @@ class ClassicCnn(tf.keras.Model):
 class MLP(tf.keras.Model):
     def __init__(self, units, reg=1e-6):
         super(MLP, self).__init__()
+        reg = l2(reg)
         self.model = Sequential([Dense(l, 'relu', kernel_regularizer=reg) for l in units])
 
     @tf.function
