@@ -32,7 +32,7 @@ class ReplayBuffer(object):
 
     @property
     def first_transition(self):
-        return self._storage
+        return self._storage[0]
 
     def _encode_sample(self, idxes):
         #TODO add ignore keys
