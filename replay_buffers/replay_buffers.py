@@ -1,7 +1,8 @@
 import random
-
+from utils.nested_dict import *
 import numpy as np
 from replay_buffers.sum_tree import SumSegmentTree, MinSegmentTree
+
 
 
 class ReplayBuffer(object):
@@ -30,18 +31,17 @@ class ReplayBuffer(object):
         self._next_idx = (self._next_idx + 1) % self._maxsize
 
     @property
-    def transition_keys(self):
-        return self._storage[0].keys()
+    def first_transition(self):
+        return self._storage
 
     def _encode_sample(self, idxes):
         #TODO add ignore keys
-        batch = {key: [] for key in self.transition_keys if key != 'q_value'}
+        ignore_keys = 'q_value'
+        batch = dict_op(self.first_transition, lambda _: list(), ignore_keys)
         for i in idxes:
-            data = self._storage[i]
-            for key, value in data.items():
-                if key != 'q_value':
-                    batch[key].append(np.array(value, copy=False))
-        batch = {key: np.array(value) for key, value in batch.items()}
+            data = dict_op(self._storage[i], np.array, ignore_keys)
+            batch = dict_append(batch, data)
+        batch = dict_op(batch, np.array)
         return batch
 
     def sample(self, batch_size, *args, **kwargs):

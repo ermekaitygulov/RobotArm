@@ -48,7 +48,7 @@ if __name__ == '__main__':
         head = DuelingModel([1024], action_space.n)(base)
         model = tf.keras.Model(inputs={'pov': pov, 'angles': angles}, outputs=head, name=name)
         return model
-    agent = DQN(replay_buffer, make_model, env.observation_space, env.action_space)
+    agent = DQN(replay_buffer, make_model, env.observation_space, env.action_space, replay_start_size=100)
     summary_writer = tf.summary.create_file_writer('train/')
     with summary_writer.as_default():
         agent.train(env, 1000)

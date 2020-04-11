@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+
 def huber_loss(x, delta=1.0):
     """Reference: https://en.wikipedia.org/wiki/Huber_loss"""
     return tf.where(
@@ -7,6 +8,7 @@ def huber_loss(x, delta=1.0):
         tf.square(x) * 0.5,
         delta * (tf.abs(x) - 0.5 * delta)
     )
+
 
 def take_vector_elements(vectors, indices):
     """
@@ -19,6 +21,7 @@ def take_vector_elements(vectors, indices):
       A Tensor with `batch` entries, one for each vector.
     """
     return tf.gather_nd(vectors, tf.stack([tf.range(tf.shape(vectors)[0]), indices], axis=1))
+
 
 def config_gpu():
     tf.debugging.set_log_device_placement(False)
@@ -34,13 +37,3 @@ def config_gpu():
         except RuntimeError as e:
             # Memory growth must be set before GPUs have been initialized
             print(e)
-
-
-def extract_from_dict(dictionary, left, right):
-    result = dict()
-    for key, value in dictionary.items():
-        if isinstance(value, dict):
-            result[key] = extract_from_dict(value, left, right)
-        else:
-            result[key] = value[left:right]
-    return result
