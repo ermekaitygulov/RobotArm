@@ -4,7 +4,6 @@ import numpy as np
 from replay_buffers.sum_tree import SumSegmentTree, MinSegmentTree
 
 
-
 class ReplayBuffer(object):
     def __init__(self, size):
         """Create Replay buffer.
@@ -118,14 +117,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             res.append(idx)
         return res
 
-    def _sample_asynch(self, batch_size, workers_number=2):
-        p_total = self._it_sum.sum(0, len(self._storage) - 1)
-        every_range_len = p_total / batch_size
-        prefixsums = np.random.random(batch_size) * every_range_len + np.arange(batch_size) * every_range_len
-        res = self._it_sum.find_asynch_prefixsum_idx(prefixsums, workers_number)
-        return res
-
-    def sample(self, batch_size, workers_number=2, *args, **kwargs):
+    def sample(self, batch_size, *args, **kwargs):
         """Sample a batch of experiences.
         compared to ReplayBuffer.sample
         it also returns importance weights and idxes
@@ -146,7 +138,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             idexes in buffer of sampled experiences
         """
         self._beta = np.min([1., self._beta + self._beta_increment])
-        idxes = self._sample_asynch(batch_size, workers_number)
+        idxes = self._sample_proportional(batch_size)
         it_sum = self._it_sum.sum()
         it_min = self._it_min.min()
         p_min = it_min / it_sum

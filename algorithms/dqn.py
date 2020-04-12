@@ -113,7 +113,7 @@ class DQN:
 
     def update(self, steps):
         start_time = timeit.default_timer()
-        tree_idxes, ds = self.replay_buff.sample(self.batch_size*steps, workers_number=8)
+        tree_idxes, ds = self.replay_buff.sample(self.batch_size*steps)
         loss_list = list()
         ds = tf.data.Dataset.from_tensor_slices(ds)
         ds = ds.map(self.preprocess_ds)

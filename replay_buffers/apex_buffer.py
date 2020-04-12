@@ -9,8 +9,8 @@ class ApeXBuffer(PrioritizedReplayBuffer):
         return super().sample(*args, **kwargs)
 
     @ray.method(num_return_vals=2)
-    def sample_ds(self, number_of_batchs=10, batch_size=128, workers_number=2):
-        idxes, ds = super().sample(batch_size*number_of_batchs, workers_number)
+    def sample_ds(self, number_of_batchs=10, batch_size=128):
+        idxes, ds = super().sample(batch_size*number_of_batchs)
         return idxes, ds
 
     def len(self):

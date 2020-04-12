@@ -1,5 +1,4 @@
 import operator
-from multiprocessing import Manager, Process
 
 
 class SegmentTree(object):
@@ -120,47 +119,6 @@ class SumSegmentTree(SegmentTree):
                 prefixsum -= self._value[2 * idx]
                 idx = 2 * idx + 1
         return idx - self._capacity
-
-
-    def find_asynch_prefixsum_idx(self, prefixsums, workers_number=2):
-        """Find the highest index `i` in the array such that
-            sum(arr[0] + arr[1] + ... + arr[i - i]) <= prefixsum
-        if array values are probabilities, this function
-        allows to sample indexes according to the discrete
-        probability efficiently.
-        Parameters
-        ----------
-        prefixsum: float
-            upperbound on the sum of array prefix
-        Returns
-        -------
-        idx: int
-            highest index satisfying the prefixsum constraint
-        """
-        def find_and_append(l, slice, value, capacity):
-            for prefixsum in slice:
-                idx = 1
-                while idx < capacity:  # while non-leaf
-                    if value[2 * idx] > prefixsum:
-                        idx = 2 * idx
-                    else:
-                        prefixsum -= value[2 * idx]
-                        idx = 2 * idx + 1
-                l.append(idx - capacity)
-
-        with Manager() as manager:
-            res = manager.list()
-            task_size = len(prefixsums) // workers_number
-            processes = list()
-            for i in range(workers_number):
-                slice = prefixsums[i * task_size: (i + 1) * task_size]
-                p = Process(target=find_and_append, args=(res, slice, self._value, self._capacity))
-                p.start()
-                processes.append(p)
-            for p in processes:
-                p.join()
-            return list(res)
-
 
 
 class MinSegmentTree(SegmentTree):

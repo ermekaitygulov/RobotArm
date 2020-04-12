@@ -47,7 +47,6 @@ if __name__ == '__main__':
     sync_nn_mod = 100
     rollout_size = 100
     number_of_batchs = 16
-    workers_for_batching = 16
 
     test_env = make_env('test_name')
     obs_shape = test_env.observation_space.shape
@@ -79,12 +78,10 @@ if __name__ == '__main__':
         first_id = ready_ids[0]
         first = rollouts.pop(first_id)
         if first == 'learner_waiter':
-            ready_tree_ids, ds = replay_buffer.sample_ds.remote(number_of_batchs, batch_size,
-                                                                workers_for_batching)
+            ready_tree_ids, ds = replay_buffer.sample_ds.remote(number_of_batchs, batch_size)
             start_time = timeit.default_timer()
             rollouts[learner.update_from_ds.remote(ds, start_time, batch_size)] = learner
-            proc_tree_ids, ds = replay_buffer.sample_ds.remote(number_of_batchs, batch_size,
-                                                               workers_for_batching)
+            proc_tree_ids, ds = replay_buffer.sample_ds.remote(number_of_batchs, batch_size)
         elif first == learner:
             optimization_step += 1
             start_time = timeit.default_timer()
@@ -94,8 +91,7 @@ if __name__ == '__main__':
             if optimization_step % sync_nn_mod == 0:
                 online_weights, target_weights = first.get_weights.remote()
             rollouts[first.update_from_ds.remote(ds, start_time, batch_size)] = first
-            proc_tree_ids, ds = replay_buffer.sample_ds.remote(number_of_batchs, batch_size,
-                                                               workers_for_batching)
+            proc_tree_ids, ds = replay_buffer.sample_ds.remote(number_of_batchs, batch_size)
         else:
             replay_buffer.receive_batch.remote(first_id)
             rollouts[first.rollout.remote(online_weights, target_weights, rollout_size)] = first
