@@ -1,5 +1,7 @@
 import random
 from collections import deque
+from copy import deepcopy
+
 import numpy as np
 import tensorflow as tf
 import timeit
@@ -8,12 +10,12 @@ from utils.util import take_vector_elements, huber_loss
 
 
 class DQN:
-    dtype_dict = {'state': 'float32',
+    dtype_dict = {'state': {'pov': 'float32', 'angles': 'float32'},
                   'action': 'int32',
                   'reward': 'float32',
-                  'next_state': 'float32',
+                  'next_state': {'pov': 'float32', 'angles': 'float32'},
                   'done': 'bool',
-                  'n_state': 'float32',
+                  'n_state': {'pov': 'float32', 'angles': 'float32'},
                   'n_reward': 'float32',
                   'n_done': 'bool',
                   'actual_n': 'float32',
@@ -128,12 +130,19 @@ class DQN:
         self.replay_buff.update_priorities(tree_idxes, np.concatenate(loss_list))
 
     def preprocess_ds(self, sample):
-        casted_sample = dict()
-        for key, value in sample.items():
-            casted_sample[key] = tf.cast(value, dtype=self.dtype_dict[key])
-            if 'state' in key:
-                casted_sample[key] = self.preprocess_state(casted_sample[key])
+        casted_sample = self.dict_cast(sample, self.dtype_dict)
         return casted_sample
+
+    def dict_cast(self, dictionary, dtype_dict):
+        result = deepcopy(dictionary)
+        for key, value in dictionary.items():
+            if isinstance(value, dict):
+                result[key] = self.dict_cast(value, dtype_dict[key])
+            else:
+                result[key] = tf.cast(value, dtype=dtype_dict[key])
+            if 'state' in key:
+                result[key] = self.preprocess_state(result[key])
+        return result
 
     def choose_act(self, state, epsilon, action_sampler):
         inputs = {key: np.array(value).astype('float32')[None] for key, value in state.items()}
