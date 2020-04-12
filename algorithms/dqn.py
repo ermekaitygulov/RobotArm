@@ -134,15 +134,14 @@ class DQN:
         return casted_sample
 
     def dict_cast(self, dictionary, dtype_dict):
-        result = deepcopy(dictionary)
         for key, value in dictionary.items():
             if isinstance(value, dict):
-                result[key] = self.dict_cast(value, dtype_dict[key])
+                dictionary[key] = self.dict_cast(value, dtype_dict[key])
             else:
-                result[key] = tf.cast(value, dtype=dtype_dict[key])
+                dictionary[key] = tf.cast(value, dtype=dtype_dict[key])
             if 'state' in key:
-                result[key] = self.preprocess_state(result[key])
-        return result
+                dictionary[key] = self.preprocess_state(dictionary[key])
+        return dictionary
 
     def choose_act(self, state, epsilon, action_sampler):
         inputs = {key: np.array(value).astype('float32')[None] for key, value in state.items()}
