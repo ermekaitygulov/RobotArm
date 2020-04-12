@@ -49,7 +49,7 @@ if __name__ == '__main__':
         model = tf.keras.Model(inputs={'pov': pov, 'angles': angles}, outputs=head, name=name)
         return model
     agent = DQN(replay_buffer, make_model, env.observation_space, env.action_space, replay_start_size=50,
-                train_quantity=1, train_freq=50)
+                train_quantity=30, train_freq=50, log_freq=30)
     summary_writer = tf.summary.create_file_writer('train/')
     with summary_writer.as_default():
         agent.train(env, 1000)
