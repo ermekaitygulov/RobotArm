@@ -1,5 +1,3 @@
-from collections import deque
-
 import ray
 
 
@@ -7,6 +5,7 @@ import numpy as np
 import timeit
 
 from algorithms.dqn import DQN
+from utils.nested_dict import dict_op, dict_append
 
 
 @ray.remote(num_gpus=0.3)
@@ -107,7 +106,10 @@ class Actor(DQN):
 
     def priority_err(self, rollout):
         import tensorflow as tf
-        ds = tf.data.Dataset.from_tensor_slices(rollout)
+        batch_keys = ['n_state', 'q_values', 'n_done', 'n_reward', 'actual_n']
+        ds = {key: value for key, value in rollout.keys() if key in batch_keys}
+        ds = self._encode_rollout(ds)
+        ds = tf.data.Dataset.from_tensor_slices(ds)
         ds = ds.map(self.preprocess_ds)
         ds = ds.batch(self.batch_size)
         ds = ds.cache()
@@ -123,6 +125,15 @@ class Actor(DQN):
             priorities.append(ntd)
         return np.abs(np.concatenate(priorities))
 
+    @staticmethod
+    def _encode_rollout(rollout):
+        batch = dict_op(rollout[0], lambda _: list())
+        for b in rollout:
+            data = dict_op(b, np.array)
+            batch = dict_append(batch, data)
+        batch = dict_op(batch, np.array)
+        return batch
+
 
 @ray.remote
 class Counter(object):
@@ -135,4 +146,3 @@ class Counter(object):
 
     def get_value(self):
         return self.value
-
