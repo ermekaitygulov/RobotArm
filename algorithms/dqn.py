@@ -123,7 +123,7 @@ class DQN:
         for batch in ds:
             _, ntd_loss, _, _ = self.q_network_update(gamma=self.gamma, **batch)
             stop_time = timeit.default_timer()
-            self._run_time_deque.append(1 / (stop_time - start_time))
+            self._run_time_deque.append(stop_time - start_time)
             self.schedule()
             loss_list.append(np.abs(ntd_loss.numpy()))
             start_time = timeit.default_timer()
@@ -243,7 +243,7 @@ class DQN:
         return state
 
     def update_log(self):
-        update_frequency = sum(self._run_time_deque) / len(self._run_time_deque)
+        update_frequency = len(self._run_time_deque) / sum(self._run_time_deque)
         print("LearnerEpoch({:.2f}it/sec): ".format(update_frequency), self.optimizer.iterations.numpy())
         for key, metric in self.avg_metrics.items():
             tf.summary.scalar(key, metric.result(), step=self.optimizer.iterations)

@@ -20,42 +20,18 @@ class Learner(DQN):
                          log_freq=log_freq)
         self.summary_writer = tf.summary.create_file_writer('train/learner/')
 
-    def update_asynch(self, minibatch, start_time):
-        with self.summary_writer.as_default():
-            casted_batch = {key: minibatch[key].astype(self.dtype_dict[key]) for key in self.dtype_dict.keys()}
-            casted_batch['state'] = (casted_batch['state'] / 255).astype('float32')
-            casted_batch['next_state'] = (casted_batch['next_state'] / 255).astype('float32')
-            casted_batch['n_state'] = (casted_batch['n_state'] / 255).astype('float32')
-            _, ntd_loss, _, _ = self.q_network_update(casted_batch['state'], casted_batch['action'],
-                                                      casted_batch['reward'], casted_batch['next_state'],
-                                                      casted_batch['done'], casted_batch['n_state'],
-                                                      casted_batch['n_reward'], casted_batch['n_done'],
-                                                      casted_batch['actual_n'], casted_batch['weights'], self.gamma)
-
-            stop_time = timeit.default_timer()
-            self._run_time_deque.append(1/(stop_time - start_time))
-            self.schedule()
-            return ntd_loss.numpy()
-
     def update_from_ds(self, ds, start_time, batch_size):
         import tensorflow as tf
         loss_list = list()
         ds = tf.data.Dataset.from_tensor_slices(ds)
-        def preprocess_ds(sample):
-            casted_sample = dict()
-            for key, value in sample.items():
-                casted_sample[key] = tf.cast(value, dtype=self.dtype_dict[key])
-                if 'state' in key:
-                    casted_sample[key] /= 255
-            return casted_sample
-        ds = ds.map(preprocess_ds)
+        ds = ds.map(self.preprocess_ds)
         ds = ds.batch(batch_size)
         ds = ds.cache()
         ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
         for batch in ds:
             _, ntd_loss, _, _ = self.q_network_update(gamma=self.gamma, **batch)
             stop_time = timeit.default_timer()
-            self._run_time_deque.append(1 / (stop_time - start_time))
+            self._run_time_deque.append(stop_time - start_time)
             self.schedule()
             loss_list.append(np.abs(ntd_loss))
             start_time = timeit.default_timer()
@@ -130,14 +106,22 @@ class Actor(DQN):
                 global_ep = ray.get(self.parameter_server.get_eps_done.remote())
 
     def priority_err(self, rollout):
-        q_values = np.array([data['q_value'] for data in rollout], dtype='float32')
-        n_state = np.array([(np.array(data['n_state'])/255) for data in rollout], dtype='float32')
-        n_reward = np.array([data['n_reward'] for data in rollout], dtype='float32')
-        n_done = np.array([data['n_done'] for data in rollout])
-        actual_n = np.array([data['actual_n'] for data in rollout], dtype='float32')
-
-        ntd = self.td_loss(n_state, q_values, n_done, n_reward, actual_n, self.gamma)
-        return np.abs(ntd)
+        import tensorflow as tf
+        ds = tf.data.Dataset.from_tensor_slices(rollout)
+        ds = ds.map(self.preprocess_ds)
+        ds = ds.batch(self.batch_size)
+        ds = ds.cache()
+        ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
+        priorities = list()
+        for batch in ds:
+            ntd = self.td_loss(batch['n_state'],
+                               batch['q_values'],
+                               batch['n_done'],
+                               batch['n_reward'],
+                               batch['actual_n'],
+                               self.gamma)
+            priorities.append(ntd)
+        return np.abs(np.concatenate(priorities))
 
 
 @ray.remote
