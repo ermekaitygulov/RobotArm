@@ -14,7 +14,7 @@ import time
 def make_env(name):
     env = RozumEnv()
     env = FrameSkip(env)
-    env = FrameStack(env, 2)
+    env = FrameStack(env, 2, stack_key='pov')
     env = AccuracyLogWrapper(env, 10, name)
     discrete_dict = dict()
     robot_dof = env.action_space.shape[0]
