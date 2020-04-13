@@ -43,6 +43,18 @@ class Learner(DQN):
 
 @ray.remote(num_gpus=0, num_cpus=2)
 class Actor(DQN):
+    dtype_dict = {'state': {'pov': 'float32', 'angles': 'float32'},
+                  'action': 'int32',
+                  'reward': 'float32',
+                  'next_state': {'pov': 'float32', 'angles': 'float32'},
+                  'done': 'bool',
+                  'n_state': {'pov': 'float32', 'angles': 'float32'},
+                  'n_reward': 'float32',
+                  'n_done': 'bool',
+                  'actual_n': 'float32',
+                  'weights': 'float32',
+                  'q_value': 'float32'}
+
     def __init__(self, thread_id, build_model, obs_shape, action_shape,
                  make_env, remote_counter, gamma=0.99, n_step=10):
         import tensorflow as tf
