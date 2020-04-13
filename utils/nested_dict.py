@@ -1,6 +1,3 @@
-from copy import deepcopy
-
-
 def dict_append(dictionary, appending, ignore_keys=None):
     if ignore_keys is None:
         ignore_keys = list()
@@ -15,7 +12,7 @@ def dict_append(dictionary, appending, ignore_keys=None):
 
 
 def dict_op(dictionary, operation, ignore_keys=None):
-    result = deepcopy(dictionary)
+    result = dict()
     if ignore_keys is None:
         ignore_keys = list()
     for key, value in dictionary.items():
@@ -34,6 +31,6 @@ if __name__ == '__main__':
     b = dict_op(a, lambda x: list())
     print(b)
     b = dict_append(b, a)
-    # b = dict_append(b, a)
+    b = dict_append(b, a)
     b = dict_op(b, np.array)
     print(b)
