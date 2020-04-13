@@ -106,7 +106,7 @@ class Actor(DQN):
 
     def priority_err(self, rollout):
         import tensorflow as tf
-        batch_keys = ['n_state', 'q_values', 'n_done', 'n_reward', 'actual_n']
+        batch_keys = ['n_state', 'q_value', 'n_done', 'n_reward', 'actual_n']
         ignore_keys = [key for key in rollout[0].keys() if key not in batch_keys]
         ds = self._encode_rollout(rollout, ignore_keys)
         ds = tf.data.Dataset.from_tensor_slices(ds)
@@ -117,7 +117,7 @@ class Actor(DQN):
         priorities = list()
         for batch in ds:
             ntd = self.td_loss(batch['n_state'],
-                               batch['q_values'],
+                               batch['q_value'],
                                batch['n_done'],
                                batch['n_reward'],
                                batch['actual_n'],
