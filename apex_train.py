@@ -4,7 +4,7 @@ import ray
 
 from algorithms.apex import Learner, Counter, Actor
 from replay_buffers.apex_buffer import ApeXBuffer
-from algorithms.model import ClassicCnn, DuelingModel
+from algorithms.model import ClassicCnn, DuelingModel, MLP
 from environments.pyrep_env import RozumEnv
 from utils.wrappers import *
 import os
@@ -25,14 +25,17 @@ def make_env(name):
     return env
 
 
-def make_model(name, input_shape, output_shape, reg=1e-8):
+def make_model(name, obs_space, action_space):
     import tensorflow as tf
     from utils.util import config_gpu
     config_gpu()
-    base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2], reg)
-    head = DuelingModel([1024], output_shape, reg)
-    model = tf.keras.Sequential([base, head], name)
-    model.build((None, ) + input_shape)
+    pov = tf.keras.Input(shape=obs_space['pov'].shape)
+    angles = tf.keras.Input(shape=obs_space['angles'].shape)
+    pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(pov)
+    angles_base = MLP([512, 256])(angles)
+    base = tf.keras.layers.concatenate([pov_base, angles_base])
+    head = DuelingModel([1024], action_space.n)(base)
+    model = tf.keras.Model(inputs={'pov': pov, 'angles': angles}, outputs=head, name=name)
     return model
 
 
