@@ -107,8 +107,8 @@ class Actor(DQN):
     def priority_err(self, rollout):
         import tensorflow as tf
         batch_keys = ['n_state', 'q_values', 'n_done', 'n_reward', 'actual_n']
-        ds = {key: value for key, value in rollout.keys() if key in batch_keys}
-        ds = self._encode_rollout(ds)
+        ignore_keys = [key for key in rollout[0].keys() if key not in batch_keys]
+        ds = self._encode_rollout(rollout, ignore_keys)
         ds = tf.data.Dataset.from_tensor_slices(ds)
         ds = ds.map(self.preprocess_ds)
         ds = ds.batch(self.batch_size)
@@ -126,10 +126,10 @@ class Actor(DQN):
         return np.abs(np.concatenate(priorities))
 
     @staticmethod
-    def _encode_rollout(rollout):
-        batch = dict_op(rollout[0], lambda _: list())
+    def _encode_rollout(rollout, ignore_keys):
+        batch = dict_op(rollout[0], lambda _: list(), ignore_keys)
         for b in rollout:
-            data = dict_op(b, np.array)
+            data = dict_op(b, np.array, ignore_keys)
             batch = dict_append(batch, data)
         batch = dict_op(batch, np.array)
         return batch
