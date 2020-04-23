@@ -230,7 +230,7 @@ class DQN:
                 self.n_deque[0]['n_reward'] = n_step_r
                 self.n_deque[0]['n_done'] = n_step_done
                 self.n_deque[0]['actual_n'] = len(self.n_deque) + 1
-                self.replay_buff.add(self.n_deque.popleft())
+                self.replay_buff.add(**self.n_deque.popleft())
                 if not n_step_done:
                     break
 
