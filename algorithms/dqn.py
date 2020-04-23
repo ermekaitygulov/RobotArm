@@ -51,7 +51,7 @@ class DQN:
         for e in range(episodes):
             start_time = timeit.default_timer()
             score, counter = self._train_episode(env, counter, epsilon)
-            if len(self.replay_buff) > self.replay_start_size:
+            if self.replay_buff.get_buffer_size() > self.replay_start_size:
                 epsilon = max(final_epsilon, epsilon * eps_decay)
             if score >= max_reward:
                 max_reward = score
