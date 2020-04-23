@@ -77,7 +77,7 @@ class DQN:
             self.perceive(state, action, reward, next_state, done)
             counter += 1
             state = next_state
-            if len(self.replay_buff) > self.replay_start_size and counter % self.train_freq == 0:
+            if self.replay_buff.get_buffer_size() > self.replay_start_size and counter % self.train_freq == 0:
                 self.update(self.train_quantity)
         return score, counter
 
