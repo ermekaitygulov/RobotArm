@@ -20,7 +20,7 @@ class ReplayBuffer(object):
     def __len__(self):
         return len(self._storage)
 
-    def append(self, transition):
+    def add(self, transition):
         data = transition
 
         if self._next_idx >= len(self._storage):
@@ -100,10 +100,10 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         self._it_min = MinSegmentTree(it_capacity)
         self._max_priority = 1.0
 
-    def append(self, *args, **kwargs):
+    def add(self, *args, **kwargs):
         """See ReplayBuffer.store_effect"""
         idx = self._next_idx
-        super().append(*args, **kwargs)
+        super().add(*args, **kwargs)
         self._it_sum[idx] = self._max_priority ** self._alpha
         self._it_min[idx] = self._max_priority ** self._alpha
 

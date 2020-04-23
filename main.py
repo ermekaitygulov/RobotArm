@@ -1,5 +1,5 @@
 from algorithms.dqn import DQN
-from replay_buffers.replay_buffers import PrioritizedReplayBuffer
+from replay_buffers.cpprb_wrapper import PER
 from algorithms.model import ClassicCnn, DuelingModel, MLP
 from environments.pyrep_env import RozumEnv
 from utils.wrappers import *
@@ -37,7 +37,21 @@ if __name__ == '__main__':
         discrete_dict[i] = [5 if j == i else 0 for j in range(robot_dof)]
         discrete_dict[i + robot_dof] = [-5 if j == i else 0 for j in range(robot_dof)]
     env = DiscreteWrapper(env, discrete_dict)
-    replay_buffer = PrioritizedReplayBuffer(50000)
+    env_dict = {'action': {'dtype': 'int32'},
+                'reward': {'dtype': 'float32'},
+                'done': {'dtype': 'bool'},
+                'n_reward': {'dtype': 'float32'},
+                'n_done': {'dtype': 'bool'},
+                'actual_n': {'dtype': 'float32'},
+                'weights': {'dtype': 'float32'}
+                }
+    for prefix in ('', 'next_', 'n_'):
+        env_dict[prefix+'pov'] = {'shape': env.observation_space['pov'].shape,
+                                  'dtype': 'uint8'}
+        env_dict[prefix+'angles'] = {'dtype': 'float32'}
+
+    replay_buffer = PER(50000, state_prefix=('', 'next_', 'n_'),
+                        state_keys=('pov', 'angles'), env_dict=env_dict)
 
     def make_model(name, obs_space, action_space):
         pov = tf.keras.Input(shape=obs_space['pov'].shape)
@@ -48,8 +62,8 @@ if __name__ == '__main__':
         head = DuelingModel([1024], action_space.n)(base)
         model = tf.keras.Model(inputs={'pov': pov, 'angles': angles}, outputs=head, name=name)
         return model
-    agent = DQN(replay_buffer, make_model, env.observation_space, env.action_space, replay_start_size=50,
-                train_quantity=30, train_freq=50, log_freq=30)
+    agent = DQN(replay_buffer, make_model, env.observation_space, env.action_space, replay_start_size=100,
+                train_quantity=100, train_freq=100, log_freq=20)
     summary_writer = tf.summary.create_file_writer('train/')
     with summary_writer.as_default():
         agent.train(env, 1000)

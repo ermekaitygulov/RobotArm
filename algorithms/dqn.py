@@ -113,7 +113,8 @@ class DQN:
 
     def update(self, steps):
         start_time = timeit.default_timer()
-        tree_idxes, ds = self.replay_buff.sample(self.batch_size*steps)
+        ds = self.replay_buff.sample(self.batch_size*steps)
+        indexes = ds.pop('indexes')
         loss_list = list()
         ds = tf.data.Dataset.from_tensor_slices(ds)
         ds = ds.map(self.preprocess_ds)
@@ -127,11 +128,13 @@ class DQN:
             self.schedule()
             loss_list.append(np.abs(ntd_loss.numpy()))
             start_time = timeit.default_timer()
-        self.replay_buff.update_priorities(tree_idxes, np.concatenate(loss_list))
+        self.replay_buff.update_priorities(indexes, np.concatenate(loss_list))
 
     def preprocess_ds(self, sample):
-        casted_sample = self.dict_cast(sample, self.dtype_dict)
-        return casted_sample
+        sample['state'] = self.preprocess_state(sample['state'])
+        sample['next_state'] = self.preprocess_state(sample['next_state'])
+        sample['n_state'] = self.preprocess_state(sample['n_state'])
+        return sample
 
     def dict_cast(self, dictionary, dtype_dict):
         for key, value in dictionary.items():
@@ -227,7 +230,7 @@ class DQN:
                 self.n_deque[0]['n_reward'] = n_step_r
                 self.n_deque[0]['n_done'] = n_step_done
                 self.n_deque[0]['actual_n'] = len(self.n_deque) + 1
-                self.replay_buff.append(self.n_deque.popleft())
+                self.replay_buff.add(self.n_deque.popleft())
                 if not n_step_done:
                     break
 

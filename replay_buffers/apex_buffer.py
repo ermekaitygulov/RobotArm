@@ -16,13 +16,13 @@ class ApeXBuffer(PrioritizedReplayBuffer):
     def len(self):
         return self.__len__()
 
-    def append(self, transition, priority):
+    def add(self, transition, priority):
         """See ReplayBuffer.store_effect"""
         idx = self._next_idx
-        super(PrioritizedReplayBuffer, self).append(transition)
+        super(PrioritizedReplayBuffer, self).add(transition)
         self._it_sum[idx] = (priority + self._eps) ** self._alpha
         self._it_min[idx] = (priority + self._eps) ** self._alpha
 
     def receive_batch(self, transition_and_priorities):
         for t, p in zip(*transition_and_priorities):
-            self.append(t, p)
+            self.add(t, p)
