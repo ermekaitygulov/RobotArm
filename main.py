@@ -47,7 +47,8 @@ if __name__ == '__main__':
     for prefix in ('', 'next_', 'n_'):
         env_dict[prefix+'pov'] = {'shape': env.observation_space['pov'].shape,
                                   'dtype': 'uint8'}
-        env_dict[prefix+'angles'] = {'dtype': 'float32'}
+        env_dict[prefix+'angles'] = {'shape': env.observation_space['angles'].shape,
+                                     'dtype': 'float32'}
 
     replay_buffer = PER(size=50000, state_prefix=('', 'next_', 'n_'),
                         state_keys=('pov', 'angles'), env_dict=env_dict)
