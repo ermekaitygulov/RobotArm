@@ -9,7 +9,7 @@ class PER(PrioritizedReplayBuffer):
         self.state_keys = state_keys
 
     def sample(self, *args, **kwargs):
-        batch = super(PER, self).add(*args, **kwargs)
+        batch = super(PER, self).sample(*args, **kwargs)
         for prefix in self.state_prefix:
             batch[prefix+'state'] = {key: batch.pop(prefix+key) for key in self.state_keys}
         return batch
