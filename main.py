@@ -9,7 +9,7 @@ import os
 
 if __name__ == '__main__':
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
     tf.debugging.set_log_device_placement(False)
     tf.config.optimizer.set_jit(True)
@@ -50,7 +50,7 @@ if __name__ == '__main__':
                                   'dtype': 'uint8'}
         env_dict[prefix+'angles'] = {'dtype': 'float32'}
 
-    replay_buffer = PER(50000, state_prefix=('', 'next_', 'n_'),
+    replay_buffer = PER(size=50000, state_prefix=('', 'next_', 'n_'),
                         state_keys=('pov', 'angles'), env_dict=env_dict)
 
     def make_model(name, obs_space, action_space):
