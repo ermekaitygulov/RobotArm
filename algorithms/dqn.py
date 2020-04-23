@@ -134,6 +134,9 @@ class DQN:
         sample['state'] = self.preprocess_state(sample['state'])
         sample['next_state'] = self.preprocess_state(sample['next_state'])
         sample['n_state'] = self.preprocess_state(sample['n_state'])
+        for key in ('action', 'reward', 'done', 'n_reward',
+                    'n_done', 'actual_n', 'weights'):
+            sample[key] = tf.squeeze(sample[key])
         return sample
 
     def dict_cast(self, dictionary, dtype_dict):
@@ -163,6 +166,13 @@ class DQN:
         online_variables = self.online_model.trainable_variables
         with tf.GradientTape() as tape:
             tape.watch(online_variables)
+            action = tf.squeeze(action)
+            reward = tf.squeeze(reward)
+            done = tf.squeeze(done)
+            n_reward = tf.squeeze(n_reward)
+            n_done = tf.squeeze(n_done)
+            actual_n = tf.squeeze(actual_n)
+            weights = tf.squeeze(weights)
             q_values = self.online_model(state, training=True)
             q_values = take_vector_elements(q_values, action)
             td_loss = self.td_loss(next_state, q_values, done, reward, 1, gamma)
