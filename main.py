@@ -42,8 +42,7 @@ if __name__ == '__main__':
                 'done': {'dtype': 'bool'},
                 'n_reward': {'dtype': 'float32'},
                 'n_done': {'dtype': 'bool'},
-                'actual_n': {'dtype': 'float32'},
-                'weights': {'dtype': 'float32'}
+                'actual_n': {'dtype': 'float32'}
                 }
     for prefix in ('', 'next_', 'n_'):
         env_dict[prefix+'pov'] = {'shape': env.observation_space['pov'].shape,
