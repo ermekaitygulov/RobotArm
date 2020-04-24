@@ -72,7 +72,7 @@ class Actor(DQN):
                                         'dtype': 'uint8'}
             env_dict[prefix + 'angles'] = {'shape': obs_space['angles'].shape,
                                            'dtype': 'float32'}
-        buffer = RB(buffer_size, env_dict=env_dict,
+        buffer = RB(size=buffer_size, env_dict=env_dict,
                     state_prefix=('', 'next_', 'n_'), state_keys=('pov', 'angles',))
         super().__init__(buffer, build_model, obs_space, action_space,
                          gamma=gamma, n_step=n_step)
