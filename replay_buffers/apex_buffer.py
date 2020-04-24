@@ -16,8 +16,8 @@ class ApeXBuffer():
     def add(self, kwargs):
         self.buffer.add(**kwargs)
 
-    def get_buffer_size(self):
-        return self.buffer.get_buffer_size()
+    def get_stored_size(self):
+        return self.buffer.get_stored_size()
 
     def update_priorities(self, indexes, priorities):
         self.buffer.update_priorities(indexes, priorities)

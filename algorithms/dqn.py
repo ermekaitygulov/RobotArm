@@ -51,7 +51,7 @@ class DQN:
         for e in range(episodes):
             start_time = timeit.default_timer()
             score, counter = self._train_episode(env, counter, epsilon)
-            if self.replay_buff.get_buffer_size() > self.replay_start_size:
+            if self.replay_buff.get_stored_size() > self.replay_start_size:
                 epsilon = max(final_epsilon, epsilon * eps_decay)
             if score >= max_reward:
                 max_reward = score
@@ -77,7 +77,7 @@ class DQN:
             self.perceive(state, action, reward, next_state, done)
             counter += 1
             state = next_state
-            if self.replay_buff.get_buffer_size() > self.replay_start_size and counter % self.train_freq == 0:
+            if self.replay_buff.get_stored_size() > self.replay_start_size and counter % self.train_freq == 0:
                 self.update(self.train_quantity)
         return score, counter
 

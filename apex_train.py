@@ -79,7 +79,7 @@ if __name__ == '__main__':
 
     @ray.remote
     def remote_sleep():
-        while ray.get(replay_buffer.get_buffer_size.remote()) < replay_start_size:
+        while ray.get(replay_buffer.get_stored_size.remote()) < replay_start_size:
             time.sleep(60)
 
     rollouts = {}
