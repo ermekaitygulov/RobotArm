@@ -1,11 +1,10 @@
 import ray
-
+from replay_buffers.cpprb_wrapper import RB
 
 import numpy as np
 import timeit
 
 from algorithms.dqn import DQN
-from utils.nested_dict import dict_op, dict_append
 
 
 @ray.remote(num_gpus=0.3)
@@ -56,10 +55,26 @@ class Actor(DQN):
                   'q_value': 'float32'}
 
     def __init__(self, thread_id, build_model, obs_shape, action_shape,
-                 make_env, remote_counter, gamma=0.99, n_step=10):
+                 make_env, remote_counter, buffer_size, gamma=0.99, n_step=10):
         import tensorflow as tf
         self.env = make_env('{}_thread'.format(thread_id))
-        super().__init__(list(), build_model, obs_shape, action_shape,
+        env_dict = {'action': {'dtype': 'int32'},
+                    'reward': {'dtype': 'float32'},
+                    'done': {'dtype': 'bool'},
+                    'n_reward': {'dtype': 'float32'},
+                    'n_done': {'dtype': 'bool'},
+                    'actual_n': {'dtype': 'float32'},
+                    'q_value': {'shape': action_shape,
+                                'dtype': 'float32'}
+                    }
+        for prefix in ('', 'next_', 'n_'):
+            env_dict[prefix + 'pov'] = {'shape': self.env.observation_space['pov'].shape,
+                                        'dtype': 'uint8'}
+            env_dict[prefix + 'angles'] = {'shape': self.env.observation_space['angles'].shape,
+                                           'dtype': 'float32'}
+        buffer = RB(buffer_size, env_dict=env_dict,
+                    state_prefix=('', 'next_', 'n_'), state_keys=('pov', 'angles',))
+        super().__init__(buffer, build_model, obs_shape, action_shape,
                          gamma=gamma, n_step=n_step)
         self.summary_writer = tf.summary.create_file_writer('train/{}_actor/'.format(thread_id))
         self.epsilon = 0.1
@@ -97,10 +112,12 @@ class Actor(DQN):
                     done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
                     self.epsilon = max(self.final_epsilon, self.epsilon * self.epsilon_decay)
             self.env_state = [done, score, state, start_time]
-            priorities = self.priority_err(self.replay_buff)
-            rollout = self.replay_buff.copy()
+            rollout = self.replay_buff.get_all_transitions()
+            priorities = self.priority_err(rollout)
+            rollout['priorities'] = priorities
+            rollout.pop('q_value')
             self.replay_buff.clear()
-            return rollout, priorities
+            return rollout
 
     def validate(self, test_mod=100, test_eps=10, max_eps=1e+6):
         import tensorflow as tf
@@ -117,35 +134,13 @@ class Actor(DQN):
                 global_ep = ray.get(self.parameter_server.get_eps_done.remote())
 
     def priority_err(self, rollout):
-        import tensorflow as tf
-        # TODO remove tf ds
-        batch_keys = ['n_state', 'q_value', 'n_done', 'n_reward', 'actual_n']
-        ignore_keys = [key for key in rollout[0].keys() if key not in batch_keys]
-        ds = self._encode_rollout(rollout, ignore_keys)
-        ds = tf.data.Dataset.from_tensor_slices(ds)
-        ds = ds.map(self.preprocess_ds)
-        ds = ds.batch(self.batch_size)
-        ds = ds.cache()
-        ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
-        priorities = list()
-        for batch in ds:
-            ntd = self.td_loss(batch['n_state'],
-                               batch['q_value'],
-                               batch['n_done'],
-                               batch['n_reward'],
-                               batch['actual_n'],
-                               self.gamma)
-            priorities.append(ntd)
-        return np.abs(np.concatenate(priorities))
-
-    @staticmethod
-    def _encode_rollout(rollout, ignore_keys):
-        batch = dict_op(rollout[0], lambda _: list(), ignore_keys)
-        for b in rollout:
-            data = dict_op(b, np.array, ignore_keys)
-            batch = dict_append(batch, data)
-        batch = dict_op(batch, np.array)
-        return batch
+        ntd = self.td_loss(self.preprocess_state(rollout['n_state']),
+                           np.squeeze(rollout['q_value']),
+                           np.squeeze(rollout['n_done']),
+                           np.squeeze(rollout['n_reward']),
+                           np.squeeze(rollout['actual_n']),
+                           self.gamma)
+        return np.abs(ntd)
 
 
 @ray.remote

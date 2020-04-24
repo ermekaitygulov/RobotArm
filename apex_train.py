@@ -55,18 +55,31 @@ if __name__ == '__main__':
     obs_space = test_env.observation_space
     action_space = test_env.action_space
     test_env.close()
+    env_dict = {'action': {'dtype': 'int32'},
+                'reward': {'dtype': 'float32'},
+                'done': {'dtype': 'bool'},
+                'n_reward': {'dtype': 'float32'},
+                'n_done': {'dtype': 'bool'},
+                'actual_n': {'dtype': 'float32'},
+                }
+    for prefix in ('', 'next_', 'n_'):
+        env_dict[prefix + 'pov'] = {'shape': obs_space['pov'].shape,
+                                    'dtype': 'uint8'}
+        env_dict[prefix + 'angles'] = {'shape': obs_space['angles'].shape,
+                                       'dtype': 'float32'}
 
     counter = Counter.remote()
-    replay_buffer = ApeXBuffer.remote(int(1e5))
+    replay_buffer = ApeXBuffer.remote(int(1e5), env_dict=env_dict,
+                                      state_prefix=('', 'next_', 'n_'), state_keys=('pov', 'angles',))
     learner = Learner.remote(make_model, obs_space, action_space, update_target_nn_mod=1000,
                              gamma=0.9, learning_rate=1e-4, log_freq=100)
-    actors = [Actor.remote(i, make_model, obs_space, action_space, make_env, counter, gamma=0.99, n_step=5)
-              for i in range(n_actors)]
+    actors = [Actor.remote(i, make_model, obs_space, action_space, make_env, counter,
+                           buffer_size=rollout_size, gamma=0.99, n_step=5) for i in range(n_actors)]
     online_weights, target_weights = learner.get_weights.remote()
 
     @ray.remote
     def remote_sleep():
-        while ray.get(replay_buffer.len.remote()) < replay_start_size:
+        while ray.get(replay_buffer.get_buffer_size.remote()) < replay_start_size:
             time.sleep(60)
 
     rollouts = {}
@@ -81,10 +94,10 @@ if __name__ == '__main__':
         first_id = ready_ids[0]
         first = rollouts.pop(first_id)
         if first == 'learner_waiter':
-            ready_tree_ids, ds = replay_buffer.sample_ds.remote(number_of_batchs, batch_size)
+            ready_tree_ids, ds = replay_buffer.sample.remote(number_of_batchs*batch_size)
             start_time = timeit.default_timer()
             rollouts[learner.update_from_ds.remote(ds, start_time, batch_size)] = learner
-            proc_tree_ids, ds = replay_buffer.sample_ds.remote(number_of_batchs, batch_size)
+            proc_tree_ids, ds = replay_buffer.sample.remote(number_of_batchs*batch_size)
         elif first == learner:
             optimization_step += 1
             start_time = timeit.default_timer()
@@ -94,9 +107,9 @@ if __name__ == '__main__':
             if optimization_step % sync_nn_mod == 0:
                 online_weights, target_weights = first.get_weights.remote()
             rollouts[first.update_from_ds.remote(ds, start_time, batch_size)] = first
-            proc_tree_ids, ds = replay_buffer.sample_ds.remote(number_of_batchs, batch_size)
+            proc_tree_ids, ds = replay_buffer.sample.remote(number_of_batchs * batch_size)
         else:
-            replay_buffer.receive_batch.remote(first_id)
+            replay_buffer.add.remote(first_id)
             rollouts[first.rollout.remote(online_weights, target_weights, rollout_size)] = first
         episodes_done = ray.get(counter.get_value.remote())
     ray.timeline()
