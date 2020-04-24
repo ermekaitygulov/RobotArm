@@ -69,7 +69,7 @@ if __name__ == '__main__':
                                        'dtype': 'float32'}
 
     counter = Counter.remote()
-    replay_buffer = ApeXBuffer.remote(int(1e5), env_dict=env_dict,
+    replay_buffer = ApeXBuffer.remote(size=int(1e5), env_dict=env_dict,
                                       state_prefix=('', 'next_', 'n_'), state_keys=('pov', 'angles',))
     learner = Learner.remote(make_model, obs_space, action_space, update_target_nn_mod=1000,
                              gamma=0.9, learning_rate=1e-4, log_freq=100)
