@@ -252,7 +252,7 @@ class DQN:
         return return_dict
 
     def preprocess_state(self, state):
-        state['pov'] /= 255
+        state['pov'] = state['pov'] / 255
         return state
 
     def update_log(self):
