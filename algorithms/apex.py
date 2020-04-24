@@ -133,9 +133,12 @@ class Actor(DQN):
                 global_ep = ray.get(self.parameter_server.get_eps_done.remote())
 
     def priority_err(self, rollout):
-        batch = {key: np.squeeze(rollout[key]) for key in ['n_state', 'q_value', 'n_done',
-                                                  'n_reward', 'actual_n']}
+        batch = {key: rollout[key] for key in ['n_state', 'q_value', 'n_done',
+                                               'n_reward', 'actual_n']}
+        for key in ['q_value', 'n_done', 'n_reward', 'actual_n']:
+            batch[key] = np.squeeze(batch[key])
         batch['n_state'] = self.preprocess_state(batch['n_state'])
+        assert rollout['n_state']['pov'].dtype == 'uint8'
         ntd = self.td_loss(gamma=self.gamma, **batch)
         return np.abs(ntd)
 
