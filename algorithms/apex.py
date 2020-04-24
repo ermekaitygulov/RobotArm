@@ -21,6 +21,7 @@ class Learner(DQN):
     def update_from_ds(self, ds, start_time, batch_size):
         import tensorflow as tf
         loss_list = list()
+        indexes = ds.pop('indexes')
         ds = tf.data.Dataset.from_tensor_slices(ds)
         ds = ds.map(self.preprocess_ds)
         ds = ds.batch(batch_size)
@@ -33,7 +34,7 @@ class Learner(DQN):
             self.schedule()
             loss_list.append(np.abs(ntd_loss))
             start_time = timeit.default_timer()
-        return np.concatenate(loss_list)
+        return {'indexes': indexes, 'priorities': np.concatenate(loss_list)}
 
     @ray.method(num_return_vals=2)
     def get_weights(self):
@@ -52,7 +53,7 @@ class Actor(DQN):
                   'n_done': 'bool',
                   'actual_n': 'float32',
                   'weights': 'float32',
-                  'q_values': 'float32'}
+                  'q_value': 'float32'}
 
     def __init__(self, thread_id, build_model, obs_space, action_space,
                  make_env, remote_counter, buffer_size, gamma=0.99, n_step=10):
@@ -64,7 +65,7 @@ class Actor(DQN):
                     'n_reward': {'dtype': 'float32'},
                     'n_done': {'dtype': 'bool'},
                     'actual_n': {'dtype': 'float32'},
-                    'q_values': {'dtype': 'float32'}
+                    'q_value': {'dtype': 'float32'}
                     }
         for prefix in ('', 'next_', 'n_'):
             env_dict[prefix + 'pov'] = {'shape': obs_space['pov'].shape,
@@ -96,7 +97,7 @@ class Actor(DQN):
                 action, q = self.choose_act(state, self.epsilon, self.env.sample_action)
                 next_state, reward, done, _ = self.env.step(action)
                 score += reward
-                self.perceive(state, action, reward, next_state, done, q_values=q)
+                self.perceive(state, action, reward, next_state, done, q_value=q)
                 state = next_state
                 if done:
                     global_ep = ray.get(self.remote_counter.increment.remote())
@@ -114,7 +115,7 @@ class Actor(DQN):
             rollout = self.replay_buff.get_all_transitions()
             priorities = self.priority_err(rollout)
             rollout['priorities'] = priorities
-            rollout.pop('q_values')
+            rollout.pop('q_value')
             self.replay_buff.clear()
             return rollout
 
@@ -133,9 +134,9 @@ class Actor(DQN):
                 global_ep = ray.get(self.parameter_server.get_eps_done.remote())
 
     def priority_err(self, rollout):
-        batch = {key: rollout[key].copy() for key in ['n_state', 'q_values', 'n_done',
+        batch = {key: rollout[key].copy() for key in ['n_state', 'q_value', 'n_done',
                                                'n_reward', 'actual_n']}
-        for key in ['q_values', 'n_done', 'n_reward', 'actual_n']:
+        for key in ['q_value', 'n_done', 'n_reward', 'actual_n']:
             batch[key] = np.squeeze(batch[key])
         batch['n_state'] = self.preprocess_state(batch['n_state'])
         assert rollout['n_state']['pov'].dtype == 'uint8'
