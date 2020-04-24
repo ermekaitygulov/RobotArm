@@ -9,11 +9,11 @@ from algorithms.dqn import DQN
 
 @ray.remote(num_gpus=0.3)
 class Learner(DQN):
-    def __init__(self, build_model, obs_shape, action_shape, update_target_nn_mod=1000,
+    def __init__(self, build_model, obs_shape, action_space, update_target_nn_mod=1000,
                  gamma=0.99, learning_rate=1e-4, log_freq=100):
         import tensorflow as tf
         tf.config.optimizer.set_jit(True)
-        super().__init__(None, build_model, obs_shape, action_shape,
+        super().__init__(None, build_model, obs_shape, action_space,
                          gamma=gamma, learning_rate=learning_rate, update_target_nn_mod=update_target_nn_mod,
                          log_freq=log_freq)
         self.summary_writer = tf.summary.create_file_writer('train/learner/')
@@ -54,7 +54,7 @@ class Actor(DQN):
                   'weights': 'float32',
                   'q_value': 'float32'}
 
-    def __init__(self, thread_id, build_model, obs_shape, action_shape,
+    def __init__(self, thread_id, build_model, obs_space, action_space,
                  make_env, remote_counter, buffer_size, gamma=0.99, n_step=10):
         import tensorflow as tf
         self.env = make_env('{}_thread'.format(thread_id))
@@ -64,17 +64,17 @@ class Actor(DQN):
                     'n_reward': {'dtype': 'float32'},
                     'n_done': {'dtype': 'bool'},
                     'actual_n': {'dtype': 'float32'},
-                    'q_value': {'shape': action_shape,
+                    'q_value': {'shape': action_space.n,
                                 'dtype': 'float32'}
                     }
         for prefix in ('', 'next_', 'n_'):
-            env_dict[prefix + 'pov'] = {'shape': self.env.observation_space['pov'].shape,
+            env_dict[prefix + 'pov'] = {'shape': obs_space['pov'].shape,
                                         'dtype': 'uint8'}
-            env_dict[prefix + 'angles'] = {'shape': self.env.observation_space['angles'].shape,
+            env_dict[prefix + 'angles'] = {'shape': obs_space['angles'].shape,
                                            'dtype': 'float32'}
         buffer = RB(buffer_size, env_dict=env_dict,
                     state_prefix=('', 'next_', 'n_'), state_keys=('pov', 'angles',))
-        super().__init__(buffer, build_model, obs_shape, action_shape,
+        super().__init__(buffer, build_model, obs_space, action_space,
                          gamma=gamma, n_step=n_step)
         self.summary_writer = tf.summary.create_file_writer('train/{}_actor/'.format(thread_id))
         self.epsilon = 0.1

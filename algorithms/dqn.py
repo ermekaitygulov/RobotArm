@@ -21,13 +21,13 @@ class DQN:
                   'actual_n': 'float32',
                   'weights': 'float32'}
 
-    def __init__(self, replay_buffer, build_model, obs_shape, action_shape, train_freq=100, train_quantity=100,
+    def __init__(self, replay_buffer, build_model, obs_space, action_space, train_freq=100, train_quantity=100,
                  log_freq=50, update_target_nn_mod=500, batch_size=32, replay_start_size=500, gamma=0.99,
                  learning_rate=1e-4, n_step=10, custom_loss=None):
 
         self.gamma = np.array(gamma, dtype='float32')
-        self.online_model = build_model('Online', obs_shape, action_shape)
-        self.target_model = build_model('Target', obs_shape, action_shape)
+        self.online_model = build_model('Online', obs_space, action_space)
+        self.target_model = build_model('Target', obs_space, action_space)
         self.custom_loss = custom_loss
         self.optimizer = tf.keras.optimizers.Adam(learning_rate)
         self.huber_loss = tf.keras.losses.Huber(1.0, tf.keras.losses.Reduction.NONE)
