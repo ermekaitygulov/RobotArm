@@ -93,7 +93,7 @@ class Actor(DQN):
                 done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
             else:
                 done, score, state, start_time = self.env_state
-            while len(self.replay_buff) < rollout_size:
+            while self.replay_buff.get_stored_size() < rollout_size:
                 action, q = self.choose_act(state, self.epsilon, self.env.sample_action)
                 next_state, reward, done, _ = self.env.step(action)
                 score += reward
