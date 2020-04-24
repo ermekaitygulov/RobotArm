@@ -64,8 +64,7 @@ class Actor(DQN):
                     'n_reward': {'dtype': 'float32'},
                     'n_done': {'dtype': 'bool'},
                     'actual_n': {'dtype': 'float32'},
-                    'q_value': {'shape': action_space.n,
-                                'dtype': 'float32'}
+                    'q_value': {'dtype': 'float32'}
                     }
         for prefix in ('', 'next_', 'n_'):
             env_dict[prefix + 'pov'] = {'shape': obs_space['pov'].shape,
