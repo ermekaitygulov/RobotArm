@@ -133,7 +133,7 @@ class Actor(DQN):
                 global_ep = ray.get(self.parameter_server.get_eps_done.remote())
 
     def priority_err(self, rollout):
-        ntd = self.td_loss(self.preprocess_state(rollout['n_state']),
+        ntd = self.td_loss(self.preprocess_state(rollout['n_state'].astype('float32')),
                            np.squeeze(rollout['q_value']),
                            np.squeeze(rollout['n_done']),
                            np.squeeze(rollout['n_reward']),
