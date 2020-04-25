@@ -26,15 +26,15 @@ class Learner(DQN):
         ds = ds.map(self.preprocess_ds)
         ds = ds.batch(batch_size)
         ds = ds.cache()
-        ds = ds.prefetch(4)
+        ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
         for batch in ds:
             _, ntd_loss, _, _ = self.q_network_update(gamma=self.gamma, **batch)
             stop_time = timeit.default_timer()
             self._run_time_deque.append(stop_time - start_time)
             self.schedule()
-            loss_list.append(np.abs(ntd_loss))
+            loss_list.append(ntd_loss)
             start_time = timeit.default_timer()
-        return indexes, np.concatenate(loss_list)
+        return indexes, np.abs(np.concatenate(loss_list))
 
     @ray.method(num_return_vals=2)
     def get_weights(self):
