@@ -34,7 +34,7 @@ class Learner(DQN):
             self.schedule()
             loss_list.append(np.abs(ntd_loss))
             start_time = timeit.default_timer()
-        return {'indexes': indexes, 'priorities': np.concatenate(loss_list)}
+        return indexes, np.concatenate(loss_list)
 
     @ray.method(num_return_vals=2)
     def get_weights(self):
@@ -116,7 +116,7 @@ class Actor(DQN):
             priorities = self.priority_err(rollout)
             rollout.pop('q_value')
             self.replay_buff.clear()
-            return (rollout, priorities)
+            return rollout, priorities
 
     def validate(self, test_mod=100, test_eps=10, max_eps=1e+6):
         import tensorflow as tf
