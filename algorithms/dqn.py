@@ -134,9 +134,9 @@ class DQN:
         sample['state'] = self.preprocess_state(sample['state'])
         sample['next_state'] = self.preprocess_state(sample['next_state'])
         sample['n_state'] = self.preprocess_state(sample['n_state'])
-        for key in ('action', 'reward', 'done', 'n_reward',
-                    'n_done', 'actual_n', 'weights'):
-            sample[key] = tf.squeeze(sample[key])
+        # for key in ('action', 'reward', 'done', 'n_reward',
+        #             'n_done', 'actual_n', 'weights'):
+        #     sample[key] = tf.squeeze(sample[key])
         return sample
 
     def dict_cast(self, dictionary, dtype_dict):
