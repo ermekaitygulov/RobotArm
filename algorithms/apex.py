@@ -113,11 +113,10 @@ class Actor(DQN):
                     self.epsilon = max(self.final_epsilon, self.epsilon * self.epsilon_decay)
             self.env_state = [done, score, state, start_time]
             rollout = self.replay_buff.get_all_transitions()
-            # priorities = self.priority_err(rollout)
-            # rollout['priorities'] = priorities
+            priorities = self.priority_err(rollout)
             rollout.pop('q_value')
             self.replay_buff.clear()
-            return rollout
+            return (rollout, priorities)
 
     def validate(self, test_mod=100, test_eps=10, max_eps=1e+6):
         import tensorflow as tf
