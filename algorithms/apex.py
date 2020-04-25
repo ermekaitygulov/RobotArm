@@ -34,6 +34,7 @@ class Learner(DQN):
             self.schedule()
             loss_list.append(np.abs(ntd_loss))
             start_time = timeit.default_timer()
+        print(self._run_time_deque)
         return indexes, np.concatenate(loss_list)
 
     @ray.method(num_return_vals=2)
