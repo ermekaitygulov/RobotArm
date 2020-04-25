@@ -23,7 +23,6 @@ class Learner(DQN):
         loss_list = list()
         indexes = ds.pop('indexes')
         ds = tf.data.Dataset.from_tensor_slices(ds)
-        ds = ds.map(self.preprocess_ds)
         ds = ds.batch(batch_size)
         ds = ds.cache()
         ds = ds.prefetch(tf.data.experimental.AUTOTUNE)

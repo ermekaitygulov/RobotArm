@@ -1,6 +1,7 @@
 from cpprb import PrioritizedReplayBuffer, ReplayBuffer
 import timeit
 from collections import deque
+import numpy as np
 
 
 class PER(PrioritizedReplayBuffer):
@@ -16,6 +17,10 @@ class PER(PrioritizedReplayBuffer):
     def sample(self, *args, **kwargs):
         start_time = timeit.default_timer()
         batch = super(PER, self).sample(*args, **kwargs)
+        for key, value in batch:
+            batch[key] = np.squeeze()
+            if 'pov' in key:
+                batch[key] /= 255
         for prefix in self.state_prefix:
             batch[prefix+'state'] = {key: batch.pop(prefix+key) for key in self.state_keys}
         stop_time = timeit.default_timer()
