@@ -26,7 +26,7 @@ class Learner(DQN):
         ds = ds.map(self.preprocess_ds)
         ds = ds.batch(batch_size)
         ds = ds.cache()
-        ds = ds.prefetch(2)
+        ds = ds.prefetch(4)
         for batch in ds:
             _, ntd_loss, _, _ = self.q_network_update(gamma=self.gamma, **batch)
             stop_time = timeit.default_timer()
