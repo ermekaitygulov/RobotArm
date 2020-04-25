@@ -26,7 +26,7 @@ class Learner(DQN):
         ds = ds.map(self.preprocess_ds)
         ds = ds.batch(batch_size)
         ds = ds.cache()
-        ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
+        ds = ds.prefetch(2)
         for batch in ds:
             _, ntd_loss, _, _ = self.q_network_update(gamma=self.gamma, **batch)
             stop_time = timeit.default_timer()
@@ -34,7 +34,6 @@ class Learner(DQN):
             self.schedule()
             loss_list.append(np.abs(ntd_loss))
             start_time = timeit.default_timer()
-        print(self._run_time_deque)
         return indexes, np.concatenate(loss_list)
 
     @ray.method(num_return_vals=2)
