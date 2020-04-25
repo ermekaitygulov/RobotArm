@@ -98,6 +98,7 @@ if __name__ == '__main__':
         else:
             rollouts[first.rollout.remote(online_weights, target_weights, rollout_size)] = first
             data, priorities = ray.get(first_id)
+            priorities = priorities.copy()
             replay_buffer.add(priorities=priorities, **data)
         if replay_buffer.get_stored_size() > replay_start_size and not start_learner:
             start_time = timeit.default_timer()
