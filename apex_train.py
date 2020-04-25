@@ -8,7 +8,6 @@ from algorithms.model import ClassicCnn, DuelingModel, MLP
 from environments.pyrep_env import RozumEnv
 from utils.wrappers import *
 import os
-import time
 
 
 def make_env(name):
@@ -96,7 +95,7 @@ if __name__ == '__main__':
             priority_dict = ray.get(first_id)
             replay_buffer.update_priorities(**priority_dict)
             ds = replay_buffer.sample(number_of_batchs * batch_size)
-        elif first in actors:
+        else:
             data = ray.get(first_id)
             rollouts[first.rollout.remote(online_weights, target_weights, rollout_size)] = first
             replay_buffer.add(**data)
