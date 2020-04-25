@@ -3,7 +3,7 @@ import timeit
 import ray
 
 from algorithms.apex import Learner, Counter, Actor
-from replay_buffers.apex_buffer import ApeXBuffer
+from replay_buffers.cpprb_wrapper import PER
 from algorithms.model import ClassicCnn, DuelingModel, MLP
 from environments.pyrep_env import RozumEnv
 from utils.wrappers import *
@@ -69,47 +69,42 @@ if __name__ == '__main__':
                                        'dtype': 'float32'}
 
     counter = Counter.remote()
-    rb_class = ray.remote(ApeXBuffer)
-    replay_buffer = rb_class.remote(size=int(1e5), env_dict=env_dict,
-                                    state_prefix=('', 'next_', 'n_'), state_keys=('pov', 'angles',))
+    replay_buffer = PER(size=int(1e5), env_dict=env_dict,
+                        state_prefix=('', 'next_', 'n_'), state_keys=('pov', 'angles',))
     learner = Learner.remote(make_model, obs_space, action_space, update_target_nn_mod=1000,
                              gamma=0.9, learning_rate=1e-4, log_freq=100)
     actors = [Actor.remote(i, make_model, obs_space, action_space, make_env, counter,
                            buffer_size=rollout_size, gamma=0.99, n_step=5) for i in range(n_actors)]
     online_weights, target_weights = learner.get_weights.remote()
-
-    @ray.remote
-    def remote_sleep():
-        while ray.get(replay_buffer.get_stored_size.remote()) < replay_start_size:
-            time.sleep(60)
-
+    start_learner = False
     rollouts = {}
     for a in actors:
         rollouts[a.rollout.remote(online_weights, target_weights, rollout_size)] = a
-    rollouts[remote_sleep.remote()] = 'learner_waiter'
     episodes_done = ray.get(counter.get_value.remote())
-    ready_tree_ids, ds, proc_tree_ids = None, None, None
     optimization_step = 0
+    priority_dict, ds = None, None
     while episodes_done < max_eps:
         ready_ids, _ = ray.wait(list(rollouts))
         first_id = ready_ids[0]
         first = rollouts.pop(first_id)
-        if first == 'learner_waiter':
-            ds = replay_buffer.sample.remote(number_of_batchs*batch_size)
-            start_time = timeit.default_timer()
-            rollouts[learner.update_from_ds.remote(ds, start_time, batch_size)] = learner
-            ds = replay_buffer.sample.remote(number_of_batchs*batch_size)
-        elif first == learner:
+        if first == learner:
             optimization_step += 1
             start_time = timeit.default_timer()
-            priority_dict = first_id
-            replay_buffer.update_priorities.remote(priority_dict)
             if optimization_step % sync_nn_mod == 0:
                 online_weights, target_weights = first.get_weights.remote()
             rollouts[first.update_from_ds.remote(ds, start_time, batch_size)] = first
-            ds = replay_buffer.sample.remote(number_of_batchs * batch_size)
-        else:
-            replay_buffer.add.remote(first_id)
+            priority_dict = ray.get(first_id)
+            replay_buffer.update_priorities(**priority_dict)
+            ds = replay_buffer.sample(number_of_batchs * batch_size)
+        elif first in actors:
+            data = ray.get(first_id)
             rollouts[first.rollout.remote(online_weights, target_weights, rollout_size)] = first
+            replay_buffer.add(**data)
+        if replay_buffer.get_stored_size() < replay_start_size and not start_learner:
+            start_time = timeit.default_timer()
+            ds = replay_buffer.sample(number_of_batchs * batch_size)
+            rollouts[learner.update_from_ds.remote(ds, start_time, batch_size)] = learner
+            ds = replay_buffer.sample(number_of_batchs * batch_size)
+            start_learner = True
         episodes_done = ray.get(counter.get_value.remote())
     ray.timeline()
