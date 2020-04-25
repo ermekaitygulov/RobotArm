@@ -45,10 +45,10 @@ if __name__ == '__main__':
     n_actors = 3
     max_eps = 1000
     replay_start_size = 1000
-    batch_size = 128
+    batch_size = 64
     sync_nn_mod = 100
     rollout_size = 100
-    number_of_batchs = 16
+    number_of_batchs = 32
 
     test_env = make_env('test_name')
     obs_space = test_env.observation_space
