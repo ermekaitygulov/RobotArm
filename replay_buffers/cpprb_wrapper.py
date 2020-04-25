@@ -17,7 +17,7 @@ class PER(PrioritizedReplayBuffer):
     def sample(self, *args, **kwargs):
         start_time = timeit.default_timer()
         batch = super(PER, self).sample(*args, **kwargs)
-        for key, value in batch:
+        for key, value in batch.items():
             batch[key] = np.squeeze()
             if 'pov' in key:
                 batch[key] /= 255
