@@ -93,6 +93,7 @@ if __name__ == '__main__':
                 online_weights, target_weights = first.get_weights.remote()
             rollouts[first.update_from_ds.remote(ds, start_time, batch_size)] = first
             indexes, priorities = ray.get(first_id)
+            indexes = indexes.copy()
             priorities = priorities.copy()
             replay_buffer.update_priorities(indexes=indexes, priorities=priorities)
             ds = replay_buffer.sample(number_of_batchs * batch_size)
