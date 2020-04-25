@@ -14,12 +14,12 @@ class PER(PrioritizedReplayBuffer):
             batch[prefix+'state'] = {key: batch.pop(prefix+key) for key in self.state_keys}
         return batch
 
-    def add(self, *args, **kwargs):
+    def add(self, **kwargs):
         for prefix in self.state_prefix:
             state = kwargs.pop(prefix+'state')
             for key, value in state.items():
                 kwargs[prefix + key] = value
-        super(PER, self).add(*args, **kwargs)
+        super(PER, self).add(**kwargs)
 
     def get_all_transitions(self):
         batch = super(PER, self).get_all_transitions()

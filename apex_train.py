@@ -96,9 +96,9 @@ if __name__ == '__main__':
             replay_buffer.update_priorities(**priority_dict)
             ds = replay_buffer.sample(number_of_batchs * batch_size)
         else:
-            data = ray.get(first_id)
             rollouts[first.rollout.remote(online_weights, target_weights, rollout_size)] = first
-            replay_buffer.add(**data)
+            data = ray.get(first_id)
+            replay_buffer.add(**data.copy())
         if replay_buffer.get_stored_size() < replay_start_size and not start_learner:
             start_time = timeit.default_timer()
             ds = replay_buffer.sample(number_of_batchs * batch_size)
