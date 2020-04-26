@@ -1,8 +1,9 @@
 # Robot arm project
 **Done**:
-* DDDQN with PER with use of tf.data
-* APEX-DQN implementation with Ray
-* support of complex states (dict of dicts)
+* DDDQN (use tf.data for speed up updates)
+* APEX-DQN implementation with [Ray](https://docs.ray.io/en/latest/)
+* Use of [ccprb](https://ymd_h.gitlab.io/cpprb/) (C++ realization of replay buffers) 
+* Wrapper for cpprb-buffers to support dict observation spaces
 * PyRep environment for Rozum robot
 
 **TODO**:

@@ -25,6 +25,7 @@ class Learner(DQN):
         ds = tf.data.Dataset.from_tensor_slices(ds)
         ds = ds.map(self.preprocess_ds)
         ds = ds.batch(batch_size)
+        ds = ds.map(self.precompute_target)
         ds = ds.cache()
         ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
         for batch in ds:

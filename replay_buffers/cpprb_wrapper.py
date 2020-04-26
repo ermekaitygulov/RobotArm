@@ -1,6 +1,4 @@
 from cpprb import PrioritizedReplayBuffer, ReplayBuffer
-import timeit
-from collections import deque
 import numpy as np
 
 
@@ -10,9 +8,6 @@ class PER(PrioritizedReplayBuffer):
         super(PER, self).__init__(*args, **kwargs)
         self.state_prefix = state_prefix
         self.state_keys = state_keys
-        self.add_deque = deque(maxlen=10)
-        self.sample_deque = deque(maxlen=10)
-        self.update_deque = deque(maxlen=10)
 
     def sample(self, *args, **kwargs):
         batch = super(PER, self).sample(*args, **kwargs)
