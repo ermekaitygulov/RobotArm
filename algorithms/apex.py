@@ -29,7 +29,7 @@ class Learner(DQN):
         ds = ds.cache()
         ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
         for batch in ds:
-            _, ntd_loss, _, _ = self.q_network_update(gamma=self.gamma, **batch)
+            _, ntd_loss, _, _ = self.q_network_update(**batch)
             stop_time = timeit.default_timer()
             self._run_time_deque.append(stop_time - start_time)
             self.schedule()

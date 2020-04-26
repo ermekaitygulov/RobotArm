@@ -250,7 +250,7 @@ class DQN:
         next_state = sample.pop('next_state')
         done = sample.pop('done')
         reward = sample.pop('reward')
-        gamma = sample.pop('gamma')
+        gamma = self.gamma
         n_state = sample.pop('n_state')
         n_done = sample.pop('n_done')
         n_reward = sample.pop('n_reward')
