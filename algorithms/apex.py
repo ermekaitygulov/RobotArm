@@ -25,9 +25,8 @@ class Learner(DQN):
         indexes = ds.pop('indexes')
         ds = tf.data.Dataset.from_tensor_slices(ds)
         ds = ds.batch(batch_size)
-        ds = ds.map(self.preprocess_ds)
-        ds = ds.cache()
         ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
+        ds = ds.map(self.preprocess_ds)
         for batch in ds:
             _, ntd_loss, _, _ = self.q_network_update(gamma=self.gamma, **batch)
             stop_time = timeit.default_timer()
