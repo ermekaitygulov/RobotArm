@@ -257,6 +257,7 @@ class DQN:
         actual_n = sample.pop('actual_n')
         sample['target'] = self.compute_target(next_state, done, reward, 1, gamma)
         sample['n_target'] = self.compute_target(n_state, n_done, n_reward, actual_n, gamma)
+        return sample
 
     def update_log(self):
         update_frequency = len(self._run_time_deque) / sum(self._run_time_deque)
