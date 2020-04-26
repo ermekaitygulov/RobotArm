@@ -166,13 +166,6 @@ class DQN:
         online_variables = self.online_model.trainable_variables
         with tf.GradientTape() as tape:
             tape.watch(online_variables)
-            action = tf.squeeze(action)
-            reward = tf.squeeze(reward)
-            done = tf.squeeze(done)
-            n_reward = tf.squeeze(n_reward)
-            n_done = tf.squeeze(n_done)
-            actual_n = tf.squeeze(actual_n)
-            weights = tf.squeeze(weights)
             q_value = self.online_model(state, training=True)
             q_value = take_vector_elements(q_value, action)
             td_loss = self.td_loss(next_state, q_value, done, reward, 1, gamma)
