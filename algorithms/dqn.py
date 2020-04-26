@@ -134,9 +134,6 @@ class DQN:
         sample['state'] = self.preprocess_state(sample['state'])
         sample['next_state'] = self.preprocess_state(sample['next_state'])
         sample['n_state'] = self.preprocess_state(sample['n_state'])
-        # for key in ('action', 'reward', 'done', 'n_reward',
-        #             'n_done', 'actual_n', 'weights'):
-        #     sample[key] = tf.squeeze(sample[key])
         return sample
 
     def dict_cast(self, dictionary, dtype_dict):
@@ -160,18 +157,22 @@ class DQN:
         return action, q_value[action]
 
     @tf.function
-    def q_network_update(self, state, action, target, n_target, weights):
+    def q_network_update(self, state, action, next_state, done, reward,
+                         n_state, n_done, n_reward, actual_n, weights,
+                         gamma):
         print("Q-nn_update tracing")
         online_variables = self.online_model.trainable_variables
         with tf.GradientTape() as tape:
             tape.watch(online_variables)
             q_value = self.online_model(state, training=True)
             q_value = take_vector_elements(q_value, action)
+            target = self.compute_target(next_state, done, reward, 1, gamma)
             td_loss = self.td_loss(target, q_value)
             huber_td = huber_loss(td_loss)
             mean_td = tf.reduce_mean(huber_td * weights)
             self.update_metrics('TD', mean_td)
 
+            n_target = self.compute_target(n_state, n_done, n_reward, actual_n, gamma)
             ntd_loss = self.td_loss(n_target, q_value)
             huber_ntd = huber_loss(ntd_loss)
             mean_ntd = tf.reduce_mean(huber_ntd * weights)
@@ -245,19 +246,6 @@ class DQN:
     def preprocess_state(state):
         state['pov'] = state['pov'] / 255
         return state
-
-    def precompute_target(self, sample):
-        next_state = sample.pop('next_state')
-        done = sample.pop('done')
-        reward = sample.pop('reward')
-        gamma = self.gamma
-        n_state = sample.pop('n_state')
-        n_done = sample.pop('n_done')
-        n_reward = sample.pop('n_reward')
-        actual_n = sample.pop('actual_n')
-        sample['target'] = self.compute_target(next_state, done, reward, 1, gamma)
-        sample['n_target'] = self.compute_target(n_state, n_done, n_reward, actual_n, gamma)
-        return sample
 
     def update_log(self):
         update_frequency = len(self._run_time_deque) / sum(self._run_time_deque)
