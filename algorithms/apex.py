@@ -140,8 +140,12 @@ class Actor(DQN):
         for key in ['q_value', 'n_done', 'n_reward', 'actual_n']:
             batch[key] = np.squeeze(batch[key])
         batch['n_state'] = self.preprocess_state(batch['n_state'])
-        assert rollout['n_state']['pov'].dtype == 'uint8'
-        ntd = self.td_loss(gamma=self.gamma, **batch)
+        n_target = self.compute_target(next_state=batch['n_state'],
+                                       done=batch['n_done'],
+                                       reward=batch['n_reward'],
+                                       actual_n=batch['actual_n'],
+                                       gamma=self.gamma)
+        ntd = self.td_loss(q_value=batch['q_value'], n_target=n_target)
         return np.abs(ntd)
 
 
