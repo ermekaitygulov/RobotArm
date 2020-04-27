@@ -57,8 +57,8 @@ class TestAgent(DQN):
 def make_model(name, obs_space, action_space):
     pov = tf.keras.Input(shape=(256, 256, 12))
     angles = tf.keras.Input(shape=6)
-    pov /= 255
-    pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(pov)
+    normalized_pov = pov/255
+    pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(normalized_pov)
     angles_base = MLP([512, 256])(angles)
     base = tf.keras.layers.concatenate([pov_base, angles_base])
     head = DuelingModel([1024], 6)(base)
