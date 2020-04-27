@@ -1,8 +1,9 @@
 import timeit
 
 from algorithms.dqn import DQN
-from algorithms.model import ClassicCnn, DuelingModel
+from algorithms.model import ClassicCnn, DuelingModel, MLP
 from numpy import random
+import numpy as np
 import os
 import tensorflow as tf
 
@@ -10,62 +11,62 @@ import tensorflow as tf
 class Dataset:
     def __init__(self, steps, batch_size):
         self.data = dict()
-        self.data['state'] = random.randint(0, 255, size=(steps*batch_size, 256, 256, 12), dtype='uint8')
-        self.data['action'] = random.randint(0, 5, size=(steps*batch_size))
-        self.data['reward'] = random.randint(0, 10, size=(steps*batch_size))
-        self.data['next_state'] = random.randint(0, 255, size=(steps*batch_size, 256, 256, 12), dtype='uint8')
-        self.data['done'] = random.randint(0, 1, size=(steps*batch_size))
-        self.data['n_state'] = random.randint(0, 255, size=(steps*batch_size, 256, 256, 12), dtype='uint8')
-        self.data['n_reward'] = random.randint(0, 10, size=(steps*batch_size))
-        self.data['n_done'] = random.randint(0, 1, size=(steps*batch_size))
-        self.data['actual_n'] = random.randint(0, 5, size=(steps*batch_size))
-        self.data['weights'] = random.uniform(size=[steps*batch_size])
-        self.dtype_dict = {'state': 'float32',
-                           'action': 'int32',
-                           'reward': 'float32',
-                           'next_state': 'float32',
-                           'done': 'bool',
-                           'n_state': 'float32',
-                           'n_reward': 'float32',
-                           'n_done': 'bool',
-                           'actual_n': 'float32',
-                           'weights': 'float32'}
+        self.data['state'] = {'pov': random.randint(0, 255, size=(steps*batch_size, 256, 256, 12), dtype='uint8'),
+                              'angles': random.uniform(-2*np.pi, -2*np.pi, size=(steps*batch_size, 6))}
+        self.data['action'] = np.ones(steps*batch_size, dtype='int32')
+        self.data['reward'] = np.ones(steps*batch_size, dtype='float32')
+        self.data['done'] = np.ones(steps*batch_size, dtype='bool')
+        self.data['n_reward'] = np.ones(steps*batch_size, dtype='float32')
+        self.data['n_done'] = np.ones(steps*batch_size, dtype='bool')
+        self.data['actual_n'] = 5*np.ones(steps*batch_size, dtype='float32')
+        self.data['weights'] = np.ones(steps*batch_size, dtype='float32')
         self.step = 0
 
     def sample(self, batch_size):
-        minibatch = {key: value[self.step:(self.step+batch_size)] for key, value in self.data.items()}
-        casted_batch = {key: minibatch[key].astype(self.dtype_dict[key]) for key in self.dtype_dict.keys()}
-        idx = None
-        return idx, casted_batch
+        minibatch = {key: value[self.step:(self.step+batch_size)] for key, value in self.data.items()
+                     if 'state' not in key}
+        minibatch['state'] = {key: value[self.step:(self.step+batch_size)] for key, value in self.data['state'].items()}
+        minibatch['next_state'] = {key: value[self.step:(self.step + batch_size)] for key, value in
+                              self.data['state'].items()}
+        minibatch['n_state'] = {key: value[self.step:(self.step + batch_size)] for key, value in
+                                   self.data['state'].items()}
+        return minibatch
 
-    def update_priorities(self, *args, **kwargs):
-        pass
 
 
 class TestAgent(DQN):
-    def batch_update(self, batch):
-        _, ntd_loss, _, _ = self.q_network_update(batch['state'], batch['action'],
-                                                  batch['reward'], batch['next_state'],
-                                                  batch['done'], batch['n_state'],
-                                                  batch['n_reward'], batch['n_done'],
-                                                  batch['actual_n'], batch['weights'], self.gamma)
+    def update(self, steps):
+        start_time = timeit.default_timer()
+        ds = self.replay_buff.sample(self.batch_size * steps)
+        loss_list = list()
+        ds = tf.data.Dataset.from_tensor_slices(ds)
+        ds = ds.batch(self.batch_size)
+        ds = ds.map(self.preprocess_ds)
+        ds = ds.cache()
+        ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
+        for batch in ds:
+            _, ntd_loss, _, _ = self.q_network_update(gamma=self.gamma, **batch)
+            stop_time = timeit.default_timer()
+            self._run_time_deque.append(stop_time - start_time)
+            self.schedule()
+            loss_list.append(np.abs(ntd_loss.numpy()))
+            start_time = timeit.default_timer()
 
-        self.schedule()
-        return ntd_loss
 
 
-def make_model(name, input_shape, output_shape):
-    base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])
-    head = DuelingModel([1024], output_shape)
-    model = tf.keras.Sequential([base, head], name)
-    model.build((None, ) + input_shape)
+def make_model(name, obs_space, action_space):
+    pov = tf.keras.Input(shape=(256, 256, 12))
+    angles = tf.keras.Input(shape=6)
+    pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(pov)
+    angles_base = MLP([512, 256])(angles)
+    base = tf.keras.layers.concatenate([pov_base, angles_base])
+    head = DuelingModel([1024], 6)(base)
+    model = tf.keras.Model(inputs={'pov': pov, 'angles': angles}, outputs=head, name=name)
     return model
 
 
 def profiling_simple_dqn(update_number=100, batch_size=32):
-    tf.debugging.set_log_device_placement(False)
     tf.config.optimizer.set_jit(True)
-
     gpus = tf.config.experimental.list_physical_devices('GPU')
     if gpus:
         try:
@@ -79,16 +80,10 @@ def profiling_simple_dqn(update_number=100, batch_size=32):
             print(e)
 
     dataset = Dataset(update_number, batch_size=batch_size)
-
-    agent = TestAgent(None, make_model, (256, 256, 12), 6, log_freq=10, batch_size=batch_size)
+    agent = TestAgent(dataset, make_model, (256, 256, 12), 6, log_freq=10, batch_size=batch_size)
     print("Starting Profiling")
     with tf.profiler.experimental.Profile('train/'):
-        for i in range(update_number):
-            start_time = timeit.default_timer()
-            _, batch = dataset.sample(batch_size)
-            agent.batch_update(batch)
-            stop_time = timeit.default_timer()
-            agent._run_time_deque.append(1/(stop_time - start_time))
+        agent.update(update_number)
     while True:
         continue
 
@@ -138,4 +133,4 @@ def profiling_data_dqn(update_number=15, batch_size=32):
 if __name__ == '__main__':
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    profiling_data_dqn(100, 32)
+    profiling_simple_dqn(100, 32)
