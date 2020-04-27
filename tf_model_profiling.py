@@ -11,24 +11,24 @@ import tensorflow as tf
 class Dataset:
     def __init__(self, steps, batch_size):
         self.data = dict()
-        self.data['state'] = {'pov': random.randint(0, 255, size=(steps*batch_size, 256, 256, 12)),
-                              'angles': random.uniform(-2*np.pi, -2*np.pi, size=(steps*batch_size, 6))}
-        self.data['action'] = np.ones(steps*batch_size, dtype='int32')
-        self.data['reward'] = np.ones(steps*batch_size, dtype='float32')
-        self.data['done'] = np.ones(steps*batch_size, dtype='bool')
-        self.data['n_reward'] = np.ones(steps*batch_size, dtype='float32')
-        self.data['n_done'] = np.ones(steps*batch_size, dtype='bool')
-        self.data['actual_n'] = 5*np.ones(steps*batch_size, dtype='float32')
-        self.data['weights'] = np.ones(steps*batch_size, dtype='float32')
+        self.data['state'] = {'pov': random.randint(0, 255, size=(31*batch_size, 256, 256, 12)).astype('uint8'),
+                              'angles': random.uniform(-2*np.pi, -2*np.pi, size=(31*batch_size, 6))}
+        self.data['action'] = np.ones(31*batch_size, dtype='int32')
+        self.data['reward'] = np.ones(31*batch_size, dtype='float32')
+        self.data['done'] = np.ones(31*batch_size, dtype='bool')
+        self.data['n_reward'] = np.ones(31*batch_size, dtype='float32')
+        self.data['n_done'] = np.ones(31*batch_size, dtype='bool')
+        self.data['actual_n'] = 5*np.ones(31*batch_size, dtype='float32')
+        self.data['weights'] = np.ones(31*batch_size, dtype='float32')
         self.step = 0
 
     def sample(self, batch_size):
-        minibatch = {key: value[self.step:(self.step+batch_size)] for key, value in self.data.items()
+        minibatch = {key: value[:+batch_size] for key, value in self.data.items()
                      if 'state' not in key}
-        minibatch['state'] = {key: value[self.step:(self.step+batch_size)] for key, value in self.data['state'].items()}
-        minibatch['next_state'] = {key: value[self.step:(self.step + batch_size)] for key, value in
+        minibatch['state'] = {key: value[:batch_size] for key, value in self.data['state'].items()}
+        minibatch['next_state'] = {key: value[:batch_size] for key, value in
                               self.data['state'].items()}
-        minibatch['n_state'] = {key: value[self.step:(self.step + batch_size)] for key, value in
+        minibatch['n_state'] = {key: value[:batch_size] for key, value in
                                    self.data['state'].items()}
         return minibatch
 
