@@ -117,7 +117,6 @@ class DQN:
         indexes = ds.pop('indexes')
         loss_list = list()
         ds = tf.data.Dataset.from_tensor_slices(ds)
-        ds = ds.map(self.preprocess_ds)
         ds = ds.batch(self.batch_size)
         ds = ds.cache()
         ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
@@ -148,7 +147,6 @@ class DQN:
 
     def choose_act(self, state, epsilon, action_sampler):
         inputs = {key: np.array(value).astype('float32')[None] for key, value in state.items()}
-        inputs = self.preprocess_state(inputs)
         q_value = self.online_model(inputs, training=False)[0]
         if random.random() > epsilon:
             action = np.argmax(q_value).astype('int32')

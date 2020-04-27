@@ -56,7 +56,8 @@ if __name__ == '__main__':
     def make_model(name, obs_space, action_space):
         pov = tf.keras.Input(shape=obs_space['pov'].shape)
         angles = tf.keras.Input(shape=obs_space['angles'].shape)
-        pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(pov)
+        normalized_pov = pov/255
+        pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(normalized_pov)
         angles_base = MLP([512, 256])(angles)
         base = tf.keras.layers.concatenate([pov_base, angles_base])
         head = DuelingModel([1024], action_space.n)(base)
