@@ -53,47 +53,11 @@ class TestAgent(DQN):
             loss_list.append(np.abs(ntd_loss.numpy()))
             start_time = timeit.default_timer()
 
-    @tf.function
-    def q_network_update(self, state, action, next_state, done, reward,
-                         n_state, n_done, n_reward, actual_n, weights,
-                         gamma):
-        state['pov'] /= 255
-        next_state['pov'] /= 255
-        n_state['pov'] /= 255
-        print("Q-nn_update tracing")
-        online_variables = self.online_model.trainable_variables
-        with tf.GradientTape() as tape:
-            tape.watch(online_variables)
-            q_value = self.online_model(state, training=True)
-            q_value = take_vector_elements(q_value, action)
-            target = self.compute_target(next_state, done, reward, 1, gamma)
-            td_loss = self.td_loss(target, q_value)
-            huber_td = huber_loss(td_loss)
-            mean_td = tf.reduce_mean(huber_td * weights)
-            self.update_metrics('TD', mean_td)
-
-            n_target = self.compute_target(n_state, n_done, n_reward, actual_n, gamma)
-            ntd_loss = self.td_loss(n_target, q_value)
-            huber_ntd = huber_loss(ntd_loss)
-            mean_ntd = tf.reduce_mean(huber_ntd * weights)
-            self.update_metrics('nTD', mean_ntd)
-
-            l2 = tf.add_n(self.online_model.losses)
-            self.update_metrics('l2', l2)
-
-            all_losses = mean_td + mean_ntd + l2
-            self.update_metrics('all_losses', all_losses)
-
-        gradients = tape.gradient(all_losses, online_variables)
-        for i, g in enumerate(gradients):
-            gradients[i] = tf.clip_by_norm(g, 10)
-        self.optimizer.apply_gradients(zip(gradients, online_variables))
-        return td_loss, ntd_loss, l2, all_losses
-
 
 def make_model(name, obs_space, action_space):
     pov = tf.keras.Input(shape=(256, 256, 12))
     angles = tf.keras.Input(shape=6)
+    pov /= 255
     pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(pov)
     angles_base = MLP([512, 256])(angles)
     base = tf.keras.layers.concatenate([pov_base, angles_base])
