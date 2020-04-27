@@ -40,7 +40,7 @@ class TestAgent(DQN):
         loss_list = list()
         ds = tf.data.Dataset.from_tensor_slices(ds)
         ds = ds.batch(self.batch_size)
-        ds = ds.map(self.preprocess_ds, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        ds = ds.map(self.preprocess_ds)
         ds = ds.cache()
         ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
         for batch in ds:
@@ -82,7 +82,8 @@ def profiling_simple_dqn(update_number=100, batch_size=32):
     agent = TestAgent(dataset, make_model, (256, 256, 12), 6, log_freq=10, batch_size=batch_size)
     print("Starting Profiling")
     with tf.profiler.experimental.Profile('train/'):
-        agent.update(update_number)
+        for i in range(update_number//30):
+            agent.update(30)
     while True:
         continue
 
