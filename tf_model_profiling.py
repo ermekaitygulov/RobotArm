@@ -39,9 +39,6 @@ class TestAgent(DQN):
     def update(self, steps):
         start_time = timeit.default_timer()
         ds = self.replay_buff.sample(self.batch_size * steps)
-        ds['state'] = self.preprocess_state(ds['state'])
-        ds['next_state'] = self.preprocess_state(ds['next_state'])
-        ds['n_state'] = self.preprocess_state(ds['n_state'])
         loss_list = list()
         ds = tf.data.Dataset.from_tensor_slices(ds)
         ds = ds.batch(self.batch_size)
@@ -56,8 +53,42 @@ class TestAgent(DQN):
             loss_list.append(np.abs(ntd_loss.numpy()))
             start_time = timeit.default_timer()
 
+    @tf.function
+    def q_network_update(self, state, action, next_state, done, reward,
+                         n_state, n_done, n_reward, actual_n, weights,
+                         gamma):
+        state['pov'] /= 255
+        next_state['pov'] /= 255
+        n_state['pov'] /= 255
+        print("Q-nn_update tracing")
+        online_variables = self.online_model.trainable_variables
+        with tf.GradientTape() as tape:
+            tape.watch(online_variables)
+            q_value = self.online_model(state, training=True)
+            q_value = take_vector_elements(q_value, action)
+            target = self.compute_target(next_state, done, reward, 1, gamma)
+            td_loss = self.td_loss(target, q_value)
+            huber_td = huber_loss(td_loss)
+            mean_td = tf.reduce_mean(huber_td * weights)
+            self.update_metrics('TD', mean_td)
 
+            n_target = self.compute_target(n_state, n_done, n_reward, actual_n, gamma)
+            ntd_loss = self.td_loss(n_target, q_value)
+            huber_ntd = huber_loss(ntd_loss)
+            mean_ntd = tf.reduce_mean(huber_ntd * weights)
+            self.update_metrics('nTD', mean_ntd)
 
+            l2 = tf.add_n(self.online_model.losses)
+            self.update_metrics('l2', l2)
+
+            all_losses = mean_td + mean_ntd + l2
+            self.update_metrics('all_losses', all_losses)
+
+        gradients = tape.gradient(all_losses, online_variables)
+        for i, g in enumerate(gradients):
+            gradients[i] = tf.clip_by_norm(g, 10)
+        self.optimizer.apply_gradients(zip(gradients, online_variables))
+        return td_loss, ntd_loss, l2, all_losses
 
 
 def make_model(name, obs_space, action_space):
