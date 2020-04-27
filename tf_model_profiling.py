@@ -11,7 +11,7 @@ import tensorflow as tf
 class Dataset:
     def __init__(self, steps, batch_size):
         self.data = dict()
-        self.data['state'] = {'pov': random.randint(0, 255, size=(steps*batch_size, 256, 256, 12)).astype('float32'),
+        self.data['state'] = {'pov': random.randint(0, 255, size=(steps*batch_size, 256, 256, 12)),
                               'angles': random.uniform(-2*np.pi, -2*np.pi, size=(steps*batch_size, 6))}
         self.data['action'] = np.ones(steps*batch_size, dtype='int32')
         self.data['reward'] = np.ones(steps*batch_size, dtype='float32')
@@ -33,7 +33,6 @@ class Dataset:
         return minibatch
 
 
-
 class TestAgent(DQN):
     def update(self, steps):
         start_time = timeit.default_timer()
@@ -41,7 +40,7 @@ class TestAgent(DQN):
         loss_list = list()
         ds = tf.data.Dataset.from_tensor_slices(ds)
         ds = ds.batch(self.batch_size)
-        ds = ds.map(self.preprocess_ds)
+        ds = ds.map(self.preprocess_ds, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         ds = ds.cache()
         ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
         for batch in ds:
