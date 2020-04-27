@@ -7,6 +7,8 @@ import numpy as np
 import os
 import tensorflow as tf
 
+from utils.util import take_vector_elements, huber_loss
+
 
 class Dataset:
     def __init__(self, steps, batch_size):
@@ -37,10 +39,13 @@ class TestAgent(DQN):
     def update(self, steps):
         start_time = timeit.default_timer()
         ds = self.replay_buff.sample(self.batch_size * steps)
+        ds['state'] = self.preprocess_state(ds['state'])
+        ds['next_state'] = self.preprocess_state(ds['next_state'])
+        ds['n_state'] = self.preprocess_state(ds['n_state'])
         loss_list = list()
         ds = tf.data.Dataset.from_tensor_slices(ds)
         ds = ds.batch(self.batch_size)
-        ds = ds.map(self.preprocess_ds)
+        # ds = ds.map(self.preprocess_ds)
         ds = ds.cache()
         ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
         for batch in ds:
@@ -50,6 +55,8 @@ class TestAgent(DQN):
             self.schedule()
             loss_list.append(np.abs(ntd_loss.numpy()))
             start_time = timeit.default_timer()
+
+
 
 
 
