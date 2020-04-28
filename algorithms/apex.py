@@ -25,7 +25,6 @@ class Learner(DQN):
         indexes = ds.pop('indexes')
         ds = tf.data.Dataset.from_tensor_slices(ds)
         ds = ds.batch(batch_size)
-        ds = ds.map(self.preprocess_ds, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         ds = ds.cache()
         ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
         for batch in ds:
@@ -44,18 +43,6 @@ class Learner(DQN):
 
 @ray.remote(num_gpus=0, num_cpus=2)
 class Actor(DQN):
-    dtype_dict = {'state': {'pov': 'float32', 'angles': 'float32'},
-                  'action': 'int32',
-                  'reward': 'float32',
-                  'next_state': {'pov': 'float32', 'angles': 'float32'},
-                  'done': 'bool',
-                  'n_state': {'pov': 'float32', 'angles': 'float32'},
-                  'n_reward': 'float32',
-                  'n_done': 'bool',
-                  'actual_n': 'float32',
-                  'weights': 'float32',
-                  'q_value': 'float32'}
-
     def __init__(self, thread_id, build_model, obs_space, action_space,
                  make_env, remote_counter, buffer_size, gamma=0.99, n_step=10):
         import tensorflow as tf
@@ -135,17 +122,15 @@ class Actor(DQN):
 
     def priority_err(self, rollout):
         batch = {key: rollout[key] for key in ['q_value', 'n_done',
-                                               'n_reward', 'actual_n']}
-        batch['n_state'] = rollout['n_state'].copy()
+                                               'n_reward', 'actual_n', 'n_state']}
         for key in ['q_value', 'n_done', 'n_reward', 'actual_n']:
             batch[key] = np.squeeze(batch[key])
-        batch['n_state'] = self.preprocess_state(batch['n_state'])
         n_target = self.compute_target(next_state=batch['n_state'],
                                        done=batch['n_done'],
                                        reward=batch['n_reward'],
                                        actual_n=batch['actual_n'],
                                        gamma=self.gamma)
-        ntd = self.td_loss(q_value=batch['q_value'], n_target=n_target)
+        ntd = batch['q_value'] - n_target
         return np.abs(ntd)
 
 
