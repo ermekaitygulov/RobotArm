@@ -44,14 +44,14 @@ if __name__ == '__main__':
                 'n_done': {'dtype': 'bool'},
                 'actual_n': {'dtype': 'float32'}
                 }
-    for prefix in ('', 'next_', 'n_'):
+    for prefix in ('', 'n_'):
         env_dict[prefix+'pov'] = {'shape': env.observation_space['pov'].shape,
                                   'dtype': 'uint8'}
         env_dict[prefix+'angles'] = {'shape': env.observation_space['angles'].shape,
                                      'dtype': 'float32'}
 
     replay_buffer = PER(size=50000, state_prefix=('', 'next_', 'n_'),
-                        state_keys=('pov', 'angles'), env_dict=env_dict)
+                        state_keys=('pov', 'angles'), env_dict=env_dict, next_of=('pov', 'angles'))
 
     def make_model(name, obs_space, action_space):
         pov = tf.keras.Input(shape=obs_space['pov'].shape)
