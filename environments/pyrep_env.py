@@ -57,9 +57,9 @@ class RozumEnv(gym.Env):
         info = None
 
         position = np.array([j + a for j, a in zip(self.rozum.get_joint_positions_degrees(), action)])
-        if all(self.action_space.low < position) and all(position < self.action_space.high):
-            self.rozum.set_joint_positions_degrees(position)
-            self.pr.step()
+        position = np.clip(position, self.action_space.low, self.action_space.high)
+        self.rozum.set_joint_positions_degrees(position)
+        self.pr.step()
         x, y, z = self.rozum_tip.get_position()
 
         tx, ty, tz = self.cube.get_position()

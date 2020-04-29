@@ -97,6 +97,14 @@ class DDPG:
         action = self.online_actor(inputs, training=False)[0]
         return action
 
+    def target_update(self):
+        target_actor_weights = self.target_actor.get_weights() * self.polyak + \
+                               (1 - self.polyak) * self.online_actor.get_weights()
+        target_critic_weights = self.target_critic.get_weights() * self.polyak + \
+                               (1 - self.polyak) * self.online_critic.get_weights()
+        self.target_actor.set_weights(target_actor_weights)
+        self.target_critic.set_weights(target_critic_weights)
+
     @tf.function
     def ac_update(self, state, action, next_state, done, reward,
                   n_state, n_done, n_reward, actual_n, weights,
@@ -105,6 +113,7 @@ class DDPG:
                   n_state, n_done, n_reward, actual_n, weights,
                   gamma)
         self.actor_update(state)
+        self.target_update()
         return priorities
 
     @tf.function
@@ -115,7 +124,11 @@ class DDPG:
             tape.watch(actor_variables)
             action = self.online_actor(state, training=True)
             q_value = self.online_critic(state, action, training=True)
-        gradients = tape.gradient(-q_value, actor_variables)
+            self.update_metrics('actor_loss', q_value)
+            l2 = tf.add_n(self.online_actor.losses)
+            self.update_metrics('actor_l2', l2)
+            loss = -q_value + l2
+        gradients = tape.gradient(loss, actor_variables)
         for i, g in enumerate(gradients):
             gradients[i] = tf.clip_by_norm(g, 10)
         self.actor_optimizer.apply_gradients(zip(gradients, actor_variables))
@@ -142,7 +155,7 @@ class DDPG:
             self.update_metrics('nTD', mean_ntd)
 
             l2 = tf.add_n(self.online_critic.losses)
-            self.update_metrics('l2', l2)
+            self.update_metrics('critic_l2', l2)
 
             critic_loss = mean_td + mean_ntd + l2
             self.update_metrics('critic_loss', critic_loss)

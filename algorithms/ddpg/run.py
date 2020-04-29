@@ -44,13 +44,12 @@ def ddpg_run():
         normalized_action = action / 180
         feature_input = tf.keras.layers.concatenate([angles, normalized_action])
         pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(normalized_pov)
-        feature_base = MLP([512, 256])(feature_input)
+        feature_base = MLP([64, 64], 'tanh')(feature_input)
         base = tf.keras.layers.concatenate([pov_base, feature_base])
-        head = tf.keras.layers.Dense(512, activation=tf.keras.activations.relu)(base)
-        head = tf.keras.layers.Dense(512, activation=tf.keras.activations.relu)(head)
-        head = tf.keras.layers.Dense(1)(head)
+        fc = MLP([512, 512], 'relu')(base)
+        out = tf.keras.layers.Dense(1)(fc)
         model = tf.keras.Model(inputs={'pov': pov, 'angles': angles, 'action': action},
-                               outputs=head, name=name)
+                               outputs=out, name=name)
         return model
 
     def make_actor(name, obs_space, action_space):
@@ -58,13 +57,12 @@ def ddpg_run():
         angles = tf.keras.Input(shape=obs_space['angles'].shape)
         normalized_pov = pov / 255
         pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(normalized_pov)
-        angles_base = MLP([512, 256])(angles)
+        angles_base = MLP([512, 256], 'tanh')(angles)
         base = tf.keras.layers.concatenate([pov_base, angles_base])
-        head = tf.keras.layers.Dense(512, activation=tf.keras.activations.relu)(base)
-        head = tf.keras.layers.Dense(512, activation=tf.keras.activations.relu)(head)
-        head = tf.keras.layers.Dense(action_space.shape[0])(head)
-        head *= 180
-        model = tf.keras.Model(inputs={'pov': pov, 'angles': angles}, outputs=head, name=name)
+        fc = MLP([512, 512], 'relu')(base)
+        out = tf.keras.layers.Dense(action_space.shape[0])(fc)
+        out *= 180
+        model = tf.keras.Model(inputs={'pov': pov, 'angles': angles}, outputs=out, name=name)
         return model
 
     agent = DDPG(replay_buffer, make_critic, make_actor, env.observation_space, env.action_space, replay_start_size=100,
@@ -73,7 +71,3 @@ def ddpg_run():
     with summary_writer.as_default():
         agent.train(env, 1000)
     env.close()
-
-
-if __name__ == '__main__':
-    dqn_run()
