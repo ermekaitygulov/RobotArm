@@ -2,12 +2,11 @@ import timeit
 
 import ray
 
-from algorithms.apex import Learner, Counter, Actor
-from replay_buffers.cpprb_wrapper import PER
+from algorithms.apex.apex import Learner, Counter, Actor
+from common.cpprb_wrapper import PER
 from algorithms.model import ClassicCnn, DuelingModel, MLP
 from environments.pyrep_env import RozumEnv
-from utils.wrappers import *
-import os
+from common.wrappers import *
 
 
 def make_env(name):
@@ -26,7 +25,7 @@ def make_env(name):
 
 def make_model(name, obs_space, action_space):
     import tensorflow as tf
-    from utils.util import config_gpu
+    from common.util import config_gpu
     config_gpu()
     pov = tf.keras.Input(shape=obs_space['pov'].shape)
     angles = tf.keras.Input(shape=obs_space['angles'].shape)
@@ -38,9 +37,7 @@ def make_model(name, obs_space, action_space):
     return model
 
 
-if __name__ == '__main__':
-    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+def apex_run():
     ray.init(webui_host='0.0.0.0', num_gpus=1)
     n_actors = 3
     max_eps = 1000
@@ -110,3 +107,7 @@ if __name__ == '__main__':
             start_learner = True
         episodes_done = ray.get(counter.get_value.remote())
     ray.timeline()
+
+
+if __name__ == '__main__':
+    apex_run()

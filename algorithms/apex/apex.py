@@ -1,10 +1,10 @@
 import ray
-from replay_buffers.cpprb_wrapper import RB
+from common.cpprb_wrapper import RB
 
 import numpy as np
 import timeit
 
-from algorithms.dqn import DQN
+from algorithms.dqn.dqn import DQN
 
 
 @ray.remote(num_gpus=0.5)
@@ -12,21 +12,21 @@ class Learner(DQN):
     def __init__(self, build_model, obs_shape, action_space, update_target_nn_mod=1000,
                  gamma=0.99, learning_rate=1e-4, log_freq=100):
         import tensorflow as tf
-        tf.config.optimizer.set_jit(True)
+        self.tf = tf
+        self.tf.config.optimizer.set_jit(True)
         super().__init__(None, build_model, obs_shape, action_space,
                          gamma=gamma, learning_rate=learning_rate, update_target_nn_mod=update_target_nn_mod,
                          log_freq=log_freq)
         self.summary_writer = tf.summary.create_file_writer('train/learner/')
 
     def update_from_ds(self, ds, start_time, batch_size):
-        import tensorflow as tf
 
         loss_list = list()
         indexes = ds.pop('indexes')
-        ds = tf.data.Dataset.from_tensor_slices(ds)
+        ds = self.tf.data.Dataset.from_tensor_slices(ds)
         ds = ds.batch(batch_size)
         ds = ds.cache()
-        ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
+        ds = ds.prefetch(self.tf.data.experimental.AUTOTUNE)
         for batch in ds:
             _, ntd_loss, _, _ = self.q_network_update(gamma=self.gamma, **batch)
             stop_time = timeit.default_timer()
@@ -46,6 +46,7 @@ class Actor(DQN):
     def __init__(self, thread_id, build_model, obs_space, action_space,
                  make_env, remote_counter, buffer_size, gamma=0.99, n_step=10):
         import tensorflow as tf
+        self.tf = tf
         self.env = make_env('{}_thread'.format(thread_id))
         env_dict = {'action': {'dtype': 'int32'},
                     'reward': {'dtype': 'float32'},
@@ -73,7 +74,6 @@ class Actor(DQN):
         self.remote_counter = remote_counter
 
     def rollout(self, online_weights, target_weights, rollout_size=300):
-        import tensorflow as tf
         with self.summary_writer.as_default():
             self.online_model.set_weights(online_weights)
             self.target_model.set_weights(target_weights)
@@ -95,8 +95,8 @@ class Actor(DQN):
                     print("episode: {}  score: {:.3f}  epsilon: {:.3f}  max: {:.3f}"
                           .format(global_ep-1, score, self.epsilon, self.max_reward))
                     print("RunTime: {:.3f}".format(stop_time - start_time))
-                    tf.summary.scalar("reward", score, step=global_ep-1)
-                    tf.summary.flush()
+                    self.tf.summary.scalar("reward", score, step=global_ep-1)
+                    self.tf.summary.flush()
                     done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
                     self.epsilon = max(self.final_epsilon, self.epsilon * self.epsilon_decay)
             self.env_state = [done, score, state, start_time]
@@ -107,7 +107,6 @@ class Actor(DQN):
             return rollout, priorities
 
     def validate(self, test_mod=100, test_eps=10, max_eps=1e+6):
-        import tensorflow as tf
         with self.summary_writer.as_default():
             global_ep = ray.get(self.parameter_server.get_eps_done.remote())
             while global_ep < max_eps:
@@ -116,8 +115,8 @@ class Actor(DQN):
                     total_reward = self.test(self.env, None, test_eps, False)
                     total_reward /= test_eps
                     print("validation_reward (mean): {}".format(total_reward))
-                    tf.summary.scalar("validation", total_reward, step=global_ep)
-                    tf.summary.flush()
+                    self.tf.summary.scalar("validation", total_reward, step=global_ep)
+                    self.tf.summary.flush()
                 global_ep = ray.get(self.parameter_server.get_eps_done.remote())
 
     def priority_err(self, rollout):

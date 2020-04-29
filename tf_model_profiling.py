@@ -1,13 +1,13 @@
 import timeit
 
-from algorithms.dqn import DQN
+from algorithms.dqn.dqn import DQN
 from algorithms.model import ClassicCnn, DuelingModel, MLP
 from numpy import random
 import numpy as np
 import os
 import tensorflow as tf
 
-from utils.util import take_vector_elements, huber_loss
+from common.util import take_vector_elements, huber_loss
 
 
 class Dataset:

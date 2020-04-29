@@ -1,6 +1,6 @@
 from environments.pyrep_env import RozumEnv
 import timeit
-from utils.wrappers import DiscreteWrapper, SaveVideoWrapper, FrameSkip
+from common.wrappers import DiscreteWrapper, SaveVideoWrapper, FrameSkip
 
 env = RozumEnv()
 env = SaveVideoWrapper(env)

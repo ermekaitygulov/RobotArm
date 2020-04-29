@@ -5,7 +5,7 @@ from pyrep.robots.end_effectors.baxter_gripper import BaxterGripper
 from pyrep.objects.vision_sensor import VisionSensor
 from pyrep.objects import Shape
 import numpy as np
-from utils.rewards import tolerance
+from common.rewards import tolerance
 
 
 class Rozum(Arm):

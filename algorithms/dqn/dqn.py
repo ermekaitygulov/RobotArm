@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 import timeit
 
-from utils.util import take_vector_elements, huber_loss
+from common.util import take_vector_elements, huber_loss
 
 
 class DQN:
@@ -196,11 +196,9 @@ class DQN:
                     break
 
     def schedule(self):
-        return_dict = {key: None for key in self._schedule_dict.keys()}
         for key, value in self._schedule_dict.items():
             if tf.equal(self.optimizer.iterations % value, 0):
-                return_dict[key] = key()
-        return return_dict
+                key()
 
     def update_log(self):
         update_frequency = len(self._run_time_deque) / sum(self._run_time_deque)

@@ -4,8 +4,7 @@ import numpy as np
 import tensorflow as tf
 import timeit
 
-from utils.util import huber_loss
-
+from common.util import huber_loss
 
 
 class DDPG:
@@ -102,25 +101,30 @@ class DDPG:
     def ac_update(self, state, action, next_state, done, reward,
                   n_state, n_done, n_reward, actual_n, weights,
                   gamma):
-        _, ntd_loss, _, _ = self.q_network_update(state, action, next_state, done, reward,
+        priorities = self.q_network_update(state, action, next_state, done, reward,
                   n_state, n_done, n_reward, actual_n, weights,
                   gamma)
-        self.actor_update(state, action, next_state, done, reward,
-                  n_state, n_done, n_reward, actual_n, weights,
-                  gamma)
-        return ntd_loss
+        self.actor_update(state)
+        return priorities
 
     @tf.function
-    def actor_update(self, state, action, next_state, done, reward,
-                     n_state, n_done, n_reward, actual_n, weights,
-                     gamma):
-        pass
+    def actor_update(self, state):
+        print("Actor update tracing")
+        actor_variables = self.online_actor.trainable_variables
+        with tf.GradientTape() as tape:
+            tape.watch(actor_variables)
+            action = self.online_actor(state, training=True)
+            q_value = self.online_critic(state, action, training=True)
+        gradients = tape.gradient(-q_value, actor_variables)
+        for i, g in enumerate(gradients):
+            gradients[i] = tf.clip_by_norm(g, 10)
+        self.actor_optimizer.apply_gradients(zip(gradients, actor_variables))
 
     @tf.function
     def q_network_update(self, state, action, next_state, done, reward,
                          n_state, n_done, n_reward, actual_n, weights,
                          gamma):
-        print("Q-nn_update tracing")
+        print("Critic update tracing")
         critic_variables = self.online_critic.trainable_variables
         with tf.GradientTape() as tape:
             tape.watch(critic_variables)
@@ -147,7 +151,8 @@ class DDPG:
         for i, g in enumerate(gradients):
             gradients[i] = tf.clip_by_norm(g, 10)
         self.critic_optimizer.apply_gradients(zip(gradients, critic_variables))
-        return td_loss, ntd_loss, l2, critic_loss
+        priorities = tf.abs(ntd_loss)
+        return priorities
 
     @tf.function
     def compute_target(self, next_state, done, reward, actual_n, gamma):
@@ -182,11 +187,9 @@ class DDPG:
                     break
 
     def schedule(self):
-        return_dict = {key: None for key in self._schedule_dict.keys()}
         for key, value in self._schedule_dict.items():
             if tf.equal(self.critic_optimizer.iterations % value, 0):
-                return_dict[key] = key()
-        return return_dict
+                key()
 
     def update_log(self):
         update_frequency = len(self._run_time_deque) / sum(self._run_time_deque)
