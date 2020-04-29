@@ -20,7 +20,8 @@ def ddpg_run():
     env = FrameSkip(env)
     env = FrameStack(env, 2, stack_key='pov')
     env = AccuracyLogWrapper(env, 10)
-    env_dict = {'action': {'dtype': 'float32'},
+    env_dict = {'action': {'dtype': 'float32',
+                           'shape': env.action_space.shape[0]},
                 'reward': {'dtype': 'float32'},
                 'done': {'dtype': 'bool'},
                 'n_reward': {'dtype': 'float32'},
