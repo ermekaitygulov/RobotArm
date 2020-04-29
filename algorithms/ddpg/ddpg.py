@@ -123,7 +123,7 @@ class DDPG:
         with tf.GradientTape() as tape:
             tape.watch(actor_variables)
             action = self.online_actor(state, training=True)
-            q_value = self.online_critic(state, action, training=True)
+            q_value = self.online_critic({**state, **action}, training=True)
             self.update_metrics('actor_loss', q_value)
             l2 = tf.add_n(self.online_actor.losses)
             self.update_metrics('actor_l2', l2)
@@ -141,7 +141,7 @@ class DDPG:
         critic_variables = self.online_critic.trainable_variables
         with tf.GradientTape() as tape:
             tape.watch(critic_variables)
-            q_value = self.online_critic(state, action, training=True)
+            q_value = self.online_critic({**state, **action}, training=True)
             target = self.compute_target(next_state, done, reward, 1, gamma)
             td_loss = q_value - target
             huber_td = huber_loss(td_loss)
@@ -171,7 +171,7 @@ class DDPG:
     def compute_target(self, next_state, done, reward, actual_n, gamma):
         print("Compute_target tracing")
         action = self.target_actor(next_state, training=True)
-        target = self.target_critic(next_state, action, training=True)
+        target = self.target_critic({**next_state, **action}, training=True)
         target = tf.where(done, tf.zeros_like(target), target)
         target = target * gamma ** actual_n
         target = target + reward
