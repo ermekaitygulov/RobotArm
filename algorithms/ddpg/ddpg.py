@@ -98,13 +98,16 @@ class DDPG:
         action = self.online_actor(inputs, training=False)[0]
         return action
 
+    def _polyak_avg(self, target_weights, online_weights):
+        return target_weights * self.polyak + (1 - self.polyak) * online_weights
+
     def target_update(self):
-        target_actor_weights = self.target_actor.get_weights() * self.polyak + \
-                               (1 - self.polyak) * self.online_actor.get_weights()
-        target_critic_weights = self.target_critic.get_weights() * self.polyak + \
-                               (1 - self.polyak) * self.online_critic.get_weights()
-        self.target_actor.set_weights(target_actor_weights)
-        self.target_critic.set_weights(target_critic_weights)
+        online_models = [self.online_actor.get_weights(), self.online_critic.get_weights()]
+        target_models = [self.target_actor.get_weights(), self.target_critic.get_weights()]
+        for online, target in zip(online_models, target_models):
+            new_weights = [self._polyak_avg(target_weights, online_weights)
+                           for target_weights, online_weights in zip(target, online)]
+            target.set_weights(new_weights)
 
     @tf.function
     def ac_update(self, state, action, next_state, done, reward,
