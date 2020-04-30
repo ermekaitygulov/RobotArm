@@ -85,6 +85,7 @@ class DDPG:
         ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
         for batch in ds:
             ntd_loss = self.ac_update(gamma=self.gamma, **batch)
+            self.target_update()
             stop_time = timeit.default_timer()
             self._run_time_deque.append(stop_time - start_time)
             self.schedule()
@@ -113,7 +114,6 @@ class DDPG:
                                         n_state, n_done, n_reward, actual_n, weights,
                                         gamma)
         self.actor_update(state)
-        self.target_update()
         return priorities
 
     @tf.function
