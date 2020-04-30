@@ -10,6 +10,23 @@ def huber_loss(x, delta=1.0):
     )
 
 
+def update_target_variables(target_variables,
+                            source_variables,
+                            tau=1.0,
+                            use_locking=False):
+    def update_op(target_variable, source_variable, tau):
+        if tau == 1.0:
+            return target_variable.assign(source_variable, use_locking)
+        else:
+            return target_variable.assign(
+                tau * source_variable + (1.0 - tau) * target_variable, use_locking)
+
+    update_ops = [update_op(target_var, source_var, tau)
+                  for target_var, source_var
+                  in zip(target_variables, source_variables)]
+    return tf.group(name="update_all_variables", *update_ops)
+
+
 def take_vector_elements(vectors, indices):
     """
     For a batch of vectors, take a single vector component

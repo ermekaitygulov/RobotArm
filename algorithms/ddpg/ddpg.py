@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 import timeit
 
-from common.util import huber_loss
+from common.util import huber_loss, update_target_variables
 
 
 class DDPG:
@@ -15,8 +15,10 @@ class DDPG:
         self.gamma = np.array(gamma, dtype='float32')
         self.online_critic = build_critic('Online_Q', obs_space, action_space)
         self.target_critic = build_critic('Target_Q', obs_space, action_space)
+        update_target_variables(self.target_critic.weights, self.online_critic.weights)
         self.online_actor = build_actor('Online_actor', obs_space, action_space)
         self.target_actor = build_actor('Target_actor', obs_space, action_space)
+        update_target_variables(self.target_actor.weights, self.online_actor.weights)
         self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate)
         self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate)
         self.avg_metrics = dict()
@@ -85,7 +87,6 @@ class DDPG:
         ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
         for batch in ds:
             ntd_loss = self.ac_update(gamma=self.gamma, **batch)
-            self.target_update()
             stop_time = timeit.default_timer()
             self._run_time_deque.append(stop_time - start_time)
             self.schedule()
@@ -98,19 +99,6 @@ class DDPG:
         action = self.online_actor(inputs, training=False)[0]
         return action
 
-    def _polyak_avg(self, target_weights, online_weights):
-        return target_weights * self.polyak + (1 - self.polyak) * online_weights
-
-    def target_update(self):
-        online_models = [self.online_actor, self.online_critic]
-        target_models = [self.target_actor, self.target_critic]
-        for online_model, target_model in zip(online_models, target_models):
-            online = online_model.get_weights()
-            target = target_model.get_weights()
-            new_weights = [self._polyak_avg(target_weights, online_weights)
-                           for target_weights, online_weights in zip(target, online)]
-            target_model.set_weights(new_weights)
-
     @tf.function
     def ac_update(self, state, action, next_state, done, reward,
                   n_state, n_done, n_reward, actual_n, weights,
@@ -119,6 +107,8 @@ class DDPG:
                                         n_state, n_done, n_reward, actual_n, weights,
                                         gamma)
         self.actor_update(state)
+        update_target_variables(self.target_critic.weights, self.online_critic.weights, self.polyak)
+        update_target_variables(self.target_actor.weights, self.online_actor.weights, self.polyak)
         return priorities
 
     @tf.function
