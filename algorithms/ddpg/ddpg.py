@@ -31,8 +31,12 @@ class DDPG:
         self.polyak = polyak
 
         self.priorities_store = list()
-        ds = tf.data.Dataset.from_generator(self.ds_generator, output_types=dtype_dict)
-        self.ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
+        if dtype_dict is not None:
+            ds = tf.data.Dataset.from_generator(self.sample_generator, output_types=dtype_dict)
+            ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
+            self.sampler = ds.take
+        else:
+            self.sampler = self.sample_generator
 
         self._run_time_deque = deque(maxlen=log_freq)
         self._schedule_dict = dict()
@@ -81,7 +85,7 @@ class DDPG:
 
     def update(self, steps):
         start_time = timeit.default_timer()
-        for batch in self.ds.take(steps):
+        for batch in self.sampler(steps):
             indexes = batch.pop('indexes')
             priorities = self.ac_update(gamma=self.gamma, **batch)
             self.priorities_store.append({'indexes': indexes.numpy(),
@@ -94,12 +98,16 @@ class DDPG:
             priorities = self.priorities_store.pop(0)
             self.replay_buff.update_priorities(**priorities)
 
-    def ds_generator(self):
-        while True:
+    def sample_generator(self, steps=None):
+        steps_done = 0
+        finite_loop = bool(steps)
+        steps = steps if finite_loop else 1
+        while steps_done < steps:
             yield self.replay_buff.sample(self.batch_size)
             if len(self.priorities_store) > 0:
                 priorities = self.priorities_store.pop(0)
                 self.replay_buff.update_priorities(**priorities)
+            steps += int(finite_loop)
 
     def choose_act(self, state):
         inputs = {key: np.array(value)[None] for key, value in state.items()}

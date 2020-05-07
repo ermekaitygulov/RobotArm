@@ -1,5 +1,5 @@
 import ray
-from replay_buffers.util import DictWrapper
+from replay_buffers.util import DictWrapper, get_dtype_dict
 from cpprb import ReplayBuffer
 
 import numpy as np
@@ -48,19 +48,7 @@ class Actor(DQN):
         import tensorflow as tf
         self.tf = tf
         self.env = make_env('{}_thread'.format(thread_id))
-        env_dict = {'action': {'dtype': 'int32'},
-                    'reward': {'dtype': 'float32'},
-                    'done': {'dtype': 'bool'},
-                    'n_reward': {'dtype': 'float32'},
-                    'n_done': {'dtype': 'bool'},
-                    'actual_n': {'dtype': 'float32'},
-                    'q_value': {'dtype': 'float32'}
-                    }
-        for prefix in ('', 'next_', 'n_'):
-            env_dict[prefix + 'pov'] = {'shape': obs_space['pov'].shape,
-                                        'dtype': 'uint8'}
-            env_dict[prefix + 'angles'] = {'shape': obs_space['angles'].shape,
-                                           'dtype': 'float32'}
+        env_dict, _ = get_dtype_dict(self.env)
         buffer = ReplayBuffer(size=buffer_size, env_dict=env_dict)
         buffer = DictWrapper(buffer, state_prefix=('', 'next_', 'n_'), state_keys=('pov', 'angles',))
         super().__init__(buffer, build_model, obs_space, action_space,

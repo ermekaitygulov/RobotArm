@@ -1,7 +1,7 @@
 import timeit
 import ray
 from algorithms.apex.apex import Learner, Counter, Actor
-from replay_buffers.util import DictWrapper
+from replay_buffers.util import DictWrapper, get_dtype_dict
 from cpprb import PrioritizedReplayBuffer
 from algorithms.model import get_network_builder
 from environments.pyrep_env import RozumEnv
@@ -36,24 +36,14 @@ def apex_run():
     test_env = make_env('test_name')
     obs_space = test_env.observation_space
     action_space = test_env.action_space
+    env_dict, dtype_dict = get_dtype_dict(test_env)
     test_env.close()
-    env_dict = {'action': {'dtype': 'int32'},
-                'reward': {'dtype': 'float32'},
-                'done': {'dtype': 'bool'},
-                'n_reward': {'dtype': 'float32'},
-                'n_done': {'dtype': 'bool'},
-                'actual_n': {'dtype': 'float32'},
-                }
-    for prefix in ('', 'next_', 'n_'):
-        env_dict[prefix + 'pov'] = {'shape': obs_space['pov'].shape,
-                                    'dtype': 'uint8'}
-        env_dict[prefix + 'angles'] = {'shape': obs_space['angles'].shape,
-                                       'dtype': 'float32'}
 
     counter = Counter.remote()
     make_model = get_network_builder("DuelingDQN_pov_angle")
     replay_buffer = PrioritizedReplayBuffer(size=buffer_size, env_dict=env_dict)
-    replay_buffer = DictWrapper(replay_buffer, state_prefix=('', 'next_', 'n_'), state_keys=('pov', 'angles',))
+    replay_buffer = DictWrapper(replay_buffer, state_prefix=('', 'next_', 'n_'),
+                                state_keys=('pov', 'angles',))
     learner = Learner.remote(make_model, obs_space, action_space, update_target_nn_mod=1000,
                              gamma=0.9, learning_rate=1e-4, log_freq=100)
     actors = [Actor.remote(i, make_model, obs_space, action_space, make_env, counter,

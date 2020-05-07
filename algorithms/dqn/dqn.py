@@ -9,7 +9,7 @@ from common.tf_util import take_vector_elements, huber_loss
 
 
 class DQN:
-    def __init__(self, replay_buffer, build_model, obs_space, action_space, dtype_dict,
+    def __init__(self, replay_buffer, build_model, obs_space, action_space, dtype_dict=None,
                  train_freq=100, train_quantity=100, log_freq=50, update_target_nn_mod=500,
                  batch_size=32, replay_start_size=500, gamma=0.99, learning_rate=1e-4, n_step=10):
 
@@ -26,8 +26,12 @@ class DQN:
         self.replay_buff = replay_buffer
 
         self.priorities_store = list()
-        ds = tf.data.Dataset.from_generator(self.ds_generator, output_types=dtype_dict)
-        self.ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
+        if dtype_dict is not None:
+            ds = tf.data.Dataset.from_generator(self.sample_generator, output_types=dtype_dict)
+            ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
+            self.sampler = ds.take
+        else:
+            self.sampler = self.sample_generator
 
         self._update_frequency = 0
         self._run_time_deque = deque(maxlen=log_freq)
@@ -103,7 +107,7 @@ class DQN:
 
     def update(self, steps):
         start_time = timeit.default_timer()
-        for batch in self.ds.take(steps):
+        for batch in self.sampler(steps):
             indexes = batch.pop('indexes')
             priorities = self.q_network_update(gamma=self.gamma, **batch)
             self.priorities_store.append({'indexes': indexes.numpy(),
@@ -116,12 +120,16 @@ class DQN:
             priorities = self.priorities_store.pop(0)
             self.replay_buff.update_priorities(**priorities)
 
-    def ds_generator(self):
-        while True:
+    def sample_generator(self, steps=None):
+        steps_done = 0
+        finite_loop = bool(steps)
+        steps = steps if finite_loop else 1
+        while steps_done < steps:
             yield self.replay_buff.sample(self.batch_size)
             if len(self.priorities_store) > 0:
                 priorities = self.priorities_store.pop(0)
                 self.replay_buff.update_priorities(**priorities)
+            steps += int(finite_loop)
 
     def choose_act(self, state, epsilon, action_sampler):
         inputs = {key: np.array(value)[None] for key, value in state.items()}
