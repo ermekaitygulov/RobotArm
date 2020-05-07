@@ -6,7 +6,7 @@
 * Use of [ccprb](https://ymd_h.gitlab.io/cpprb/) (C++ realization of replay buffers) 
 * Wrapper for cpprb-buffers and stablebaselines buffers
  supports dict observation spaces
-* PyRep environment for Rozum robot
+* PyRep environment for Rozum robot (with rewards from DeepMind ControlSuite)
 
 **TODO**:
 * APEX-DDPG (asynchronus DDPG)
