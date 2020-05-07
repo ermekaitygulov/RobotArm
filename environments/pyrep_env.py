@@ -38,8 +38,8 @@ class RozumEnv(gym.Env):
         self.action_space = gym.spaces.Box(shape=(self.rozum.num_joints,),
                                            low=-180,
                                            high=180)
-        pov_space = gym.spaces.Box(shape=self.camera.resolution + [3], low=0, high=255)
-        angles_space = gym.spaces.Box(shape=(self.rozum.num_joints,), low=-2*np.pi, high=2*np.pi)
+        pov_space = gym.spaces.Box(shape=self.camera.resolution + [3], low=0, high=255, dtype=np.uint8)
+        angles_space = gym.spaces.Box(shape=(self.rozum.num_joints,), low=-2*np.pi, high=2*np.pi, dtype=np.float32)
         self.observation_space = gym.spaces.Dict({'pov': pov_space, 'angles': angles_space})
         self.reward_range = None
         self.current_step = 0

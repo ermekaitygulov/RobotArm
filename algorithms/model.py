@@ -3,6 +3,34 @@ from tensorflow.keras import Sequential
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.layers import Dense, Conv2D, Flatten
 
+mapping = {}
+
+
+def register(name):
+    def _thunk(func):
+        mapping[name] = func
+        return func
+    return _thunk
+
+
+def get_network_builder(name):
+    """
+    If you want to register your own network outside model.py, you just need:
+    Usage Example:
+    -------------
+    from algorithms.model import register
+    @register("your_network_name")
+    def your_network_define(**net_kwargs):
+        ...
+        return network_fn
+    """
+    if callable(name):
+        return name
+    elif name in mapping:
+        return mapping[name]
+    else:
+        raise ValueError('Unknown network type: {}'.format(name))
+
 
 class DuelingModel(tf.keras.Model):
     def __init__(self, units, action_dim, reg=1e-6):
@@ -47,3 +75,50 @@ class MLP(tf.keras.Model):
     @tf.function
     def call(self, inputs):
         return self.model(inputs)
+
+
+@register("DuelingDQN_pov_angle")
+def make_model(name, obs_space, action_space):
+    pov = tf.keras.Input(shape=obs_space['pov'].shape)
+    angles = tf.keras.Input(shape=obs_space['angles'].shape)
+    normalized_pov = pov / 255
+    pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(normalized_pov)
+    angles_base = MLP([512, 256])(angles)
+    base = tf.keras.layers.concatenate([pov_base, angles_base])
+    head = DuelingModel([1024], action_space.n)(base)
+    model = tf.keras.Model(inputs={'pov': pov, 'angles': angles}, outputs=head, name=name)
+    return model
+
+
+@register("Critic_pov_angle")
+def make_critic(name, obs_space, action_space):
+    # TODO add reg
+    pov = tf.keras.Input(shape=obs_space['pov'].shape)
+    angles = tf.keras.Input(shape=obs_space['angles'].shape)
+    action = tf.keras.Input(shape=action_space.shape)
+    normalized_pov = pov / 255
+    normalized_action = action / 180
+    feature_input = tf.keras.layers.concatenate([angles, normalized_action])
+    pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(normalized_pov)
+    feature_base = MLP([64, 64], 'tanh')(feature_input)
+    base = tf.keras.layers.concatenate([pov_base, feature_base])
+    fc = MLP([512, 512], 'relu')(base)
+    out = tf.keras.layers.Dense(1)(fc)
+    model = tf.keras.Model(inputs={'pov': pov, 'angles': angles, 'action': action},
+                           outputs=out, name=name)
+    return model
+
+
+@register("Actor_pov_angle")
+def make_actor(name, obs_space, action_space):
+    pov = tf.keras.Input(shape=obs_space['pov'].shape)
+    angles = tf.keras.Input(shape=obs_space['angles'].shape)
+    normalized_pov = pov / 255
+    pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(normalized_pov)
+    angles_base = MLP([512, 256], 'tanh')(angles)
+    base = tf.keras.layers.concatenate([pov_base, angles_base])
+    fc = MLP([512, 512], 'relu')(base)
+    out = tf.keras.layers.Dense(action_space.shape[0])(fc)
+    out *= 180
+    model = tf.keras.Model(inputs={'pov': pov, 'angles': angles}, outputs=out, name=name)
+    return model

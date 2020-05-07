@@ -5,13 +5,13 @@ import numpy as np
 import tensorflow as tf
 import timeit
 
-from common.util import take_vector_elements, huber_loss
+from common.tf_util import take_vector_elements, huber_loss
 
 
 class DQN:
-    def __init__(self, replay_buffer, build_model, obs_space, action_space, train_freq=100, train_quantity=100,
-                 log_freq=50, update_target_nn_mod=500, batch_size=32, replay_start_size=500, gamma=0.99,
-                 learning_rate=1e-4, n_step=10):
+    def __init__(self, replay_buffer, build_model, obs_space, action_space, dtype_dict,
+                 train_freq=100, train_quantity=100, log_freq=50, update_target_nn_mod=500,
+                 batch_size=32, replay_start_size=500, gamma=0.99, learning_rate=1e-4, n_step=10):
 
         self.gamma = np.array(gamma, dtype='float32')
         self.online_model = build_model('Online', obs_space, action_space)
@@ -24,6 +24,10 @@ class DQN:
         self.replay_start_size = replay_start_size
         self.n_deque = deque([], maxlen=n_step)
         self.replay_buff = replay_buffer
+
+        self.priorities_store = list()
+        ds = tf.data.Dataset.from_generator(self.ds_generator, output_types=dtype_dict)
+        self.ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
 
         self._update_frequency = 0
         self._run_time_deque = deque(maxlen=log_freq)
@@ -99,21 +103,25 @@ class DQN:
 
     def update(self, steps):
         start_time = timeit.default_timer()
-        ds = self.replay_buff.sample(self.batch_size*steps)
-        indexes = ds.pop('indexes')
-        loss_list = list()
-        ds = tf.data.Dataset.from_tensor_slices(ds)
-        ds = ds.batch(self.batch_size)
-        ds = ds.cache()
-        ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
-        for batch in ds:
-            _, ntd_loss, _, _ = self.q_network_update(gamma=self.gamma, **batch)
+        for batch in self.ds.take(steps):
+            indexes = batch.pop('indexes')
+            priorities = self.q_network_update(gamma=self.gamma, **batch)
+            self.priorities_store.append({'indexes': indexes.numpy(),
+                                          'priorities': priorities.numpy()})
+            self.schedule()
             stop_time = timeit.default_timer()
             self._run_time_deque.append(stop_time - start_time)
-            self.schedule()
-            loss_list.append(np.abs(ntd_loss.numpy()))
             start_time = timeit.default_timer()
-        self.replay_buff.update_priorities(indexes, np.concatenate(loss_list))
+        while len(self.priorities_store) > 0:
+            priorities = self.priorities_store.pop(0)
+            self.replay_buff.update_priorities(**priorities)
+
+    def ds_generator(self):
+        while True:
+            yield self.replay_buff.sample(self.batch_size)
+            if len(self.priorities_store) > 0:
+                priorities = self.priorities_store.pop(0)
+                self.replay_buff.update_priorities(**priorities)
 
     def choose_act(self, state, epsilon, action_sampler):
         inputs = {key: np.array(value)[None] for key, value in state.items()}
@@ -156,7 +164,8 @@ class DQN:
         for i, g in enumerate(gradients):
             gradients[i] = tf.clip_by_norm(g, 10)
         self.optimizer.apply_gradients(zip(gradients, online_variables))
-        return td_loss, ntd_loss, l2, all_losses
+        priorities = tf.abs(ntd_loss)
+        return priorities
 
     @tf.function
     def compute_target(self, next_state, done, reward, actual_n, gamma):
@@ -186,11 +195,11 @@ class DQN:
             while len(self.n_deque) != 0:
                 n_step_state = self.n_deque[-1]['next_state']
                 n_step_done = self.n_deque[-1]['done']
-                n_step_r = sum([t['reward'] * self.gamma ** (i + 1) for i, t in enumerate(self.n_deque)])
+                n_step_r = sum([t['reward'] * self.gamma ** i for i, t in enumerate(self.n_deque)])
                 self.n_deque[0]['n_state'] = n_step_state
                 self.n_deque[0]['n_reward'] = n_step_r
                 self.n_deque[0]['n_done'] = n_step_done
-                self.n_deque[0]['actual_n'] = len(self.n_deque) + 1
+                self.n_deque[0]['actual_n'] = len(self.n_deque)
                 self.replay_buff.add(**self.n_deque.popleft())
                 if not n_step_done:
                     break

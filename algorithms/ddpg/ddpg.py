@@ -4,13 +4,13 @@ import numpy as np
 import tensorflow as tf
 import timeit
 
-from common.util import huber_loss, update_target_variables
+from common.tf_util import huber_loss, update_target_variables
 
 
 class DDPG:
-    def __init__(self, replay_buffer, build_critic, build_actor, obs_space, action_space, train_freq=100, train_quantity=100,
-                 log_freq=50, polyak=0.99, batch_size=32, replay_start_size=500, gamma=0.99,
-                 learning_rate=1e-4, n_step=10):
+    def __init__(self, replay_buffer, build_critic, build_actor, obs_space, action_space, dtype_dict,
+                 train_freq=100, train_quantity=100, log_freq=50, polyak=0.99, batch_size=32,
+                 replay_start_size=500, gamma=0.99, learning_rate=1e-4, n_step=10):
 
         self.gamma = np.array(gamma, dtype='float32')
         self.online_critic = build_critic('Online_Q', obs_space, action_space)
@@ -30,7 +30,10 @@ class DDPG:
         self.replay_buff = replay_buffer
         self.polyak = polyak
 
-        self._update_frequency = 0
+        self.priorities_store = list()
+        ds = tf.data.Dataset.from_generator(self.ds_generator, output_types=dtype_dict)
+        self.ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
+
         self._run_time_deque = deque(maxlen=log_freq)
         self._schedule_dict = dict()
         self._schedule_dict[self.update_log] = log_freq
@@ -78,21 +81,25 @@ class DDPG:
 
     def update(self, steps):
         start_time = timeit.default_timer()
-        ds = self.replay_buff.sample(self.batch_size*steps)
-        indexes = ds.pop('indexes')
-        loss_list = list()
-        ds = tf.data.Dataset.from_tensor_slices(ds)
-        ds = ds.batch(self.batch_size)
-        ds = ds.cache()
-        ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
-        for batch in ds:
-            ntd_loss = self.ac_update(gamma=self.gamma, **batch)
+        for batch in self.ds.take(steps):
+            indexes = batch.pop('indexes')
+            priorities = self.ac_update(gamma=self.gamma, **batch)
+            self.priorities_store.append({'indexes': indexes.numpy(),
+                                          'priorities': priorities.numpy()})
+            self.schedule()
             stop_time = timeit.default_timer()
             self._run_time_deque.append(stop_time - start_time)
-            self.schedule()
-            loss_list.append(np.abs(ntd_loss.numpy()))
             start_time = timeit.default_timer()
-        self.replay_buff.update_priorities(indexes, np.concatenate(loss_list))
+        while len(self.priorities_store) > 0:
+            priorities = self.priorities_store.pop(0)
+            self.replay_buff.update_priorities(**priorities)
+
+    def ds_generator(self):
+        while True:
+            yield self.replay_buff.sample(self.batch_size)
+            if len(self.priorities_store) > 0:
+                priorities = self.priorities_store.pop(0)
+                self.replay_buff.update_priorities(**priorities)
 
     def choose_act(self, state):
         inputs = {key: np.array(value)[None] for key, value in state.items()}
@@ -185,11 +192,11 @@ class DDPG:
             while len(self.n_deque) != 0:
                 n_step_state = self.n_deque[-1]['next_state']
                 n_step_done = self.n_deque[-1]['done']
-                n_step_r = sum([t['reward'] * self.gamma ** (i + 1) for i, t in enumerate(self.n_deque)])
+                n_step_r = sum([t['reward'] * self.gamma ** i for i, t in enumerate(self.n_deque)])
                 self.n_deque[0]['n_state'] = n_step_state
                 self.n_deque[0]['n_reward'] = n_step_r
                 self.n_deque[0]['n_done'] = n_step_done
-                self.n_deque[0]['actual_n'] = len(self.n_deque) + 1
+                self.n_deque[0]['actual_n'] = len(self.n_deque)
                 self.replay_buff.add(**self.n_deque.popleft())
                 if not n_step_done:
                     break

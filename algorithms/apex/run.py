@@ -1,10 +1,9 @@
 import timeit
-
 import ray
-
 from algorithms.apex.apex import Learner, Counter, Actor
-from common.cpprb_wrapper import PER
-from algorithms.model import ClassicCnn, DuelingModel, MLP
+from replay_buffers.util import DictWrapper
+from cpprb import PrioritizedReplayBuffer
+from algorithms.model import get_network_builder
 from environments.pyrep_env import RozumEnv
 from common.wrappers import *
 
@@ -23,20 +22,6 @@ def make_env(name):
     return env
 
 
-def make_model(name, obs_space, action_space):
-    import tensorflow as tf
-    from common.util import config_gpu
-    config_gpu()
-    pov = tf.keras.Input(shape=obs_space['pov'].shape)
-    angles = tf.keras.Input(shape=obs_space['angles'].shape)
-    pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(pov)
-    angles_base = MLP([512, 256])(angles)
-    base = tf.keras.layers.concatenate([pov_base, angles_base])
-    head = DuelingModel([1024], action_space.n)(base)
-    model = tf.keras.Model(inputs={'pov': pov, 'angles': angles}, outputs=head, name=name)
-    return model
-
-
 def apex_run():
     ray.init(webui_host='0.0.0.0', num_gpus=1)
     n_actors = 3
@@ -46,6 +31,7 @@ def apex_run():
     sync_nn_mod = 100
     rollout_size = 100
     number_of_batchs = 16
+    buffer_size = int(1e5)
 
     test_env = make_env('test_name')
     obs_space = test_env.observation_space
@@ -65,8 +51,9 @@ def apex_run():
                                        'dtype': 'float32'}
 
     counter = Counter.remote()
-    replay_buffer = PER(size=int(1e5), env_dict=env_dict,
-                        state_prefix=('', 'next_', 'n_'), state_keys=('pov', 'angles',))
+    make_model = get_network_builder("DuelingDQN_pov_angle")
+    replay_buffer = PrioritizedReplayBuffer(size=buffer_size, env_dict=env_dict)
+    replay_buffer = DictWrapper(replay_buffer, state_prefix=('', 'next_', 'n_'), state_keys=('pov', 'angles',))
     learner = Learner.remote(make_model, obs_space, action_space, update_target_nn_mod=1000,
                              gamma=0.9, learning_rate=1e-4, log_freq=100)
     actors = [Actor.remote(i, make_model, obs_space, action_space, make_env, counter,

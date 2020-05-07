@@ -1,5 +1,6 @@
 import ray
-from common.cpprb_wrapper import RB
+from replay_buffers.util import DictWrapper
+from cpprb import ReplayBuffer
 
 import numpy as np
 import timeit
@@ -20,7 +21,6 @@ class Learner(DQN):
         self.summary_writer = tf.summary.create_file_writer('train/learner/')
 
     def update_from_ds(self, ds, start_time, batch_size):
-
         loss_list = list()
         indexes = ds.pop('indexes')
         ds = self.tf.data.Dataset.from_tensor_slices(ds)
@@ -28,13 +28,13 @@ class Learner(DQN):
         ds = ds.cache()
         ds = ds.prefetch(self.tf.data.experimental.AUTOTUNE)
         for batch in ds:
-            _, ntd_loss, _, _ = self.q_network_update(gamma=self.gamma, **batch)
+            priorities = self.q_network_update(gamma=self.gamma, **batch)
             stop_time = timeit.default_timer()
             self._run_time_deque.append(stop_time - start_time)
             self.schedule()
-            loss_list.append(ntd_loss)
+            loss_list.append(priorities)
             start_time = timeit.default_timer()
-        return indexes, np.abs(np.concatenate(loss_list))
+        return indexes, np.concatenate(loss_list)
 
     @ray.method(num_return_vals=2)
     def get_weights(self):
@@ -61,11 +61,11 @@ class Actor(DQN):
                                         'dtype': 'uint8'}
             env_dict[prefix + 'angles'] = {'shape': obs_space['angles'].shape,
                                            'dtype': 'float32'}
-        buffer = RB(size=buffer_size, env_dict=env_dict,
-                    state_prefix=('', 'next_', 'n_'), state_keys=('pov', 'angles',))
+        buffer = ReplayBuffer(size=buffer_size, env_dict=env_dict)
+        buffer = DictWrapper(buffer, state_prefix=('', 'next_', 'n_'), state_keys=('pov', 'angles',))
         super().__init__(buffer, build_model, obs_space, action_space,
                          gamma=gamma, n_step=n_step)
-        self.summary_writer = tf.summary.create_file_writer('train/{}_actor/'.format(thread_id))
+        self.summary_writer = self.tf.summary.create_file_writer('train/{}_actor/'.format(thread_id))
         self.epsilon = 0.1
         self.epsilon_decay = 0.99
         self.final_epsilon = 0.01
