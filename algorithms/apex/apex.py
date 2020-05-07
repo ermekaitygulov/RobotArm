@@ -1,3 +1,4 @@
+import gym
 import ray
 from replay_buffers.util import DictWrapper, get_dtype_dict
 from cpprb import ReplayBuffer
@@ -50,7 +51,9 @@ class Actor(DQN):
         self.env = make_env('{}_thread'.format(thread_id))
         env_dict, _ = get_dtype_dict(self.env)
         buffer = ReplayBuffer(size=buffer_size, env_dict=env_dict)
-        buffer = DictWrapper(buffer, state_prefix=('', 'next_', 'n_'), state_keys=('pov', 'angles',))
+        if isinstance(self.env.observation_space, gym.spaces.Dict):
+            state_keys = self.env.observation_space.spaces.keys()
+            buffer = DictWrapper(buffer, state_prefix=('', 'next_', 'n_'), state_keys=state_keys)
         super().__init__(buffer, build_model, obs_space, action_space,
                          gamma=gamma, n_step=n_step)
         self.summary_writer = self.tf.summary.create_file_writer('train/{}_actor/'.format(thread_id))

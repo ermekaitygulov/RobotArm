@@ -23,8 +23,10 @@ def ddpg_run():
     env_dict, dtype_dict = get_dtype_dict(env)
 
     replay_buffer = PrioritizedReplayBuffer(size=50000, env_dict=env_dict)
-    replay_buffer = DictWrapper(replay_buffer, state_prefix=('', 'next_', 'n_'),
-                                state_keys=('pov', 'angles'))
+    if isinstance(env.observation_space, gym.spaces.Dict):
+        state_keys = env.observation_space.spaces.keys()
+        replay_buffer = DictWrapper(replay_buffer, state_prefix=('', 'next_', 'n_'),
+                                    state_keys=state_keys)
     make_critic = get_network_builder("Critic_pov_angle")
     make_actor = get_network_builder("Actor_pov_angle")
     agent = DDPG(replay_buffer, make_critic, make_actor, env.observation_space, env.action_space, dtype_dict,

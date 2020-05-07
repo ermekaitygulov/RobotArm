@@ -32,8 +32,10 @@ def dqn_run():
     env = make_env(env)
     env_dict, dtype_dict = get_dtype_dict(env)
     replay_buffer = PrioritizedReplayBuffer(size=100000, env_dict=env_dict)
-    replay_buffer = DictWrapper(replay_buffer, state_prefix=('', 'next_', 'n_'),
-                                state_keys=('pov', 'angles'))
+    if isinstance(env.observation_space, gym.spaces.Dict):
+        state_keys = env.observation_space.spaces.keys()
+        replay_buffer = DictWrapper(replay_buffer, state_prefix=('', 'next_', 'n_'),
+                                    state_keys=state_keys)
     make_model = get_network_builder("DuelingDQN_pov_angle")
     agent = DQN(replay_buffer, make_model, env.observation_space, env.action_space, dtype_dict,
                 replay_start_size=100, train_quantity=100, train_freq=100, log_freq=20)
