@@ -39,7 +39,7 @@ class ReplayBuffer(object):
             for key, value in data.items():
                 batch[key].append(np.array(value))
         for key, value in batch.items():
-            batch[key] = np.array(value)
+            batch[key] = np.array(value, dtype=self.env_dict[key]['dtype'])
         return batch
 
     def sample(self, batch_size):
@@ -112,7 +112,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             mass = random.random() * every_range_len + i * every_range_len
             idx = self._it_sum.find_prefixsum_idx(mass)
             res.append(idx)
-        return np.array(res, dtype='uint64')
+        return res
 
     def sample(self, batch_size, beta):
         """Sample a batch of experiences.
