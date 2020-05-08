@@ -49,14 +49,17 @@ def get_dtype_dict(env):
                 'n_done': {'dtype': 'bool'},
                 'actual_n': {'dtype': 'float32'}
                 }
+    dtype_dict = {key: value['dtype'] for key, value in env_dict.items()}
     for prefix in ('', 'next_', 'n_'):
         if isinstance(env.observation_space, gym.spaces.Dict):
+            dtype_dict[prefix+'state'] = dict()
             for name, space in env.observation_space.spaces.items():
                 env_dict[prefix + name] = {'shape': space.shape,
                                            'dtype': space.dtype}
+                dtype_dict[prefix+'state'][name] = space.dtype
         else:
             env_dict[prefix + 'state'] = {'shape': env.observation_space.shape,
                                           'dtype': env.observation_space.dtype}
-    dtype_dict = {key: value['dtype'] for key, value in env_dict.items()}
+            dtype_dict[prefix + 'state'] = env.observation_space.dtype
     dtype_dict.update(weights='float32', indexes='uint64')
     return env_dict, dtype_dict

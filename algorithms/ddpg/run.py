@@ -30,7 +30,7 @@ def ddpg_run():
     make_critic = get_network_builder("Critic_pov_angle")
     make_actor = get_network_builder("Actor_pov_angle")
     agent = DDPG(replay_buffer, make_critic, make_actor, env.observation_space, env.action_space, dtype_dict,
-                 replay_start_size=500, train_quantity=100, train_freq=100, log_freq=20)
+                 replay_start_size=100, train_quantity=100, train_freq=100, log_freq=20)
     summary_writer = tf.summary.create_file_writer('train/')
     with summary_writer.as_default():
         agent.train(env, 1000)
