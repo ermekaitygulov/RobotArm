@@ -22,7 +22,7 @@ def make_env(name):
     return env
 
 
-def apex_run():
+def apex_run(config_path):
     ray.init(webui_host='0.0.0.0', num_gpus=1)
     n_actors = 3
     max_eps = 1000

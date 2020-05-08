@@ -9,7 +9,7 @@ import os
 from common.tf_util import config_gpu
 
 
-def ddpg_run():
+def ddpg_run(config_path):
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 

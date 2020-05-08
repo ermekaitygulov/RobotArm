@@ -1,0 +1,11 @@
+env:
+  frame_skip: 4
+  frame_stack: 4
+buffer:
+  size: 100000
+nn_model: "DuelingDQN_pov_angle"
+agent:
+  update_target_nn_mod: 500
+train:
+  log_dir: "train/"
+  episodes: 200
