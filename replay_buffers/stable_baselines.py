@@ -112,7 +112,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             mass = random.random() * every_range_len + i * every_range_len
             idx = self._it_sum.find_prefixsum_idx(mass)
             res.append(idx)
-        return res
+        return np.array(res, dtype='uint64')
 
     def sample(self, batch_size, beta):
         """Sample a batch of experiences.

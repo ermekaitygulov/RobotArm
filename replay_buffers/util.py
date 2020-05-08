@@ -58,5 +58,5 @@ def get_dtype_dict(env):
             env_dict[prefix + 'state'] = {'shape': env.observation_space.shape,
                                           'dtype': env.observation_space.dtype}
     dtype_dict = {key: value['dtype'] for key, value in env_dict.items()}
-    dtype_dict.update(weights='float32', indexes='int32')
+    dtype_dict.update(weights='float32', indexes='uint64')
     return env_dict, dtype_dict
