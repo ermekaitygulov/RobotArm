@@ -15,7 +15,9 @@
 * Wrapper for cpprb-buffers and stablebaselines buffers
  supports dict observation spaces like:
  ```state = {'pov':{'shape':(64,64,3), 'dtype': 'uint8'}, 'angles': {'shape': (7), 'dtype':'float'}} ```
-* PyRep environment for Rozum robot (with rewards from DeepMind ControlSuite)
+* Vrep environment for Rozum robot uses [PyRep API](https://github.com/stepjam/PyRep)
+ (instead of original VREP API). Rewards uses tolerance function from [DeepMind ControlSuite](https://github.com/deepmind/dm_control)
+* If dtype_dict is specified, samplings in DQN and DDPG will be wrapped with tf.data.Dataset.from_generator, improving updates frequency
 
 **TODO**:
 * APEX-DDPG (asynchronus DDPG)
