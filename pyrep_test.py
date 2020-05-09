@@ -1,9 +1,10 @@
 from environments.pyrep_env import RozumEnv
 import timeit
-from common.wrappers import DiscreteWrapper, FrameSkip
+from common.wrappers import DiscreteWrapper, FrameSkip, SaveVideoWrapper
 from tqdm import tqdm
 
-env = RozumEnv(obs_space_keys=('angles', 'cube'))
+env = RozumEnv(obs_space_keys='pov')
+env = SaveVideoWrapper(env)
 env = FrameSkip(env)
 done = False
 start_time = timeit.default_timer()
