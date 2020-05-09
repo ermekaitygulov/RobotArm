@@ -4,7 +4,7 @@ env:
   frame_stack: 4
 buffer:
   size: 100000
-nn_model: "DuelingDQN_pov_angle"
+neural_network: "DuelingDQN_pov_angle"
 agent:
   update_target_nn_mod: 500
 train:

@@ -45,7 +45,7 @@ def dqn_run(config_path):
         state_keys = env.observation_space.spaces.keys()
         replay_buffer = DictWrapper(replay_buffer, state_prefix=('', 'next_', 'n_'),
                                     state_keys=state_keys)
-    make_model = get_network_builder(config['nn_model'])
+    make_model = get_network_builder(config['neural_network'])
     agent_config = config['agent']
     agent = DQN(replay_buffer, make_model, env.observation_space, env.action_space, dtype_dict,
                 **agent_config)
