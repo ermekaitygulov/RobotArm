@@ -2,8 +2,7 @@ from environments.pyrep_env import RozumEnv
 import timeit
 from common.wrappers import DiscreteWrapper, SaveVideoWrapper, FrameSkip
 
-env = RozumEnv()
-env = SaveVideoWrapper(env)
+env = RozumEnv(obs_space_keys=('angles', 'cube'))
 env = FrameSkip(env)
 done = False
 start_time = timeit.default_timer()
@@ -17,8 +16,8 @@ env = DiscreteWrapper(env, discrete_dict)
 for i in range(400):
     action = env.sample_action()
     state, reward, done, _ = env.step(action)
-    print("State shape: ", state.shape)
-    print("Reward: ", reward)
+    print("State shape:", ', '.join([value.shape for value in state.values()]))
+    print("Reward:", reward)
     if i % 100 == 0:
         env.reset()
 env.reset()
