@@ -1,3 +1,4 @@
+gpu: 1
 env:
   obs_space_keys: ["pov", "angles"]
   frame_skip: 4

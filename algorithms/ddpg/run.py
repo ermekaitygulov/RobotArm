@@ -22,13 +22,13 @@ def make_env(frame_skip, frame_stack, stack_key='pov', **kwargs):
 
 
 def ddpg_run(config_path):
+    with open(config_path, "r") as config_file:
+        config = yaml.load(config_file, Loader=yaml.FullLoader)
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(config['gpu'])
 
     tf.config.optimizer.set_jit(True)
     config_gpu()
-    with open(config_path, "r") as config_file:
-        config = yaml.load(config_file, Loader=yaml.FullLoader)
 
     env_config = config['env']
     env = make_env(**env_config)
