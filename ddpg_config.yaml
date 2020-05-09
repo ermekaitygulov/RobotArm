@@ -1,5 +1,5 @@
 env:
-  obs_space_keys: ("pov", "angles")
+  obs_space_keys: ["pov", "angles"]
   frame_skip: 4
   frame_stack: 4
 buffer:
