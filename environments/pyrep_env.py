@@ -13,13 +13,13 @@ class Rozum(Arm):
         super().__init__(count, 'Rozum', num_joints=6)
         self.num_joints = 6
 
-    def get_joint_positions_degrees(self):
-        angles = [a * 180 / np.pi for a in self.get_joint_positions()]
+    def get_joint_target_positions_degrees(self):
+        angles = [a * 180 / np.pi for a in self.get_joint_target_positions()]
         return angles
 
-    def set_joint_positions_degrees(self, position):
+    def set_joint_target_positions_degrees(self, position):
         angles = [a * np.pi / 180 for a in position]
-        self.set_joint_positions(angles)
+        self.set_joint_target_positions(angles)
 
 
 class RozumEnv(gym.Env):
@@ -48,7 +48,7 @@ class RozumEnv(gym.Env):
         self._available_obs_spaces['angles'] = gym.spaces.Box(shape=(self.rozum.num_joints,),
                                                               low=-2 * np.pi, high=2 * np.pi,
                                                               dtype=np.float32)
-        self._render_dict['angles'] = self.rozum.get_joint_positions
+        self._render_dict['angles'] = self.rozum.get_joint_target_positions
         self._available_obs_spaces['cube'] = gym.spaces.Box(shape=(3,),
                                                               low=0, high=100,
                                                               dtype=np.float32)
@@ -68,7 +68,7 @@ class RozumEnv(gym.Env):
         self.reward_range = None
         self.current_step = 0
         self.step_limit = 400
-        self.init_angles = self.rozum.get_joint_positions_degrees()
+        self.init_angles = self.rozum.get_joint_target_positions_degrees()
         self.init_cube_pose = self.cube.get_position()
         self.always_render = always_render
 
@@ -79,9 +79,9 @@ class RozumEnv(gym.Env):
         done = False
         info = None
 
-        position = np.array([j + a for j, a in zip(self.rozum.get_joint_positions_degrees(), action)])
+        position = np.array([j + a for j, a in zip(self.rozum.get_joint_target_positions_degrees(), action)])
         position = np.clip(position, self.action_space.low, self.action_space.high)
-        self.rozum.set_joint_positions_degrees(position)
+        self.rozum.set_joint_target_positions_degrees(position)
         self.pr.step()
         x, y, z = self.rozum_tip.get_position()
 
@@ -104,8 +104,6 @@ class RozumEnv(gym.Env):
         return state, reward, done, info
 
     def reset(self):
-        # self.rozum.set_joint_positions_degrees(self.init_angles)
-        # self.cube.set_position(self.init_cube_pose)
         self.pr.stop()
         self.pr.start()
         tx, ty, tz = self.cube.get_position()
