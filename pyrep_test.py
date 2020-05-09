@@ -1,6 +1,7 @@
 from environments.pyrep_env import RozumEnv
 import timeit
 from common.wrappers import DiscreteWrapper, FrameSkip
+from tqdm import tqdm
 
 env = RozumEnv(obs_space_keys=('angles', 'cube'))
 env = FrameSkip(env)
@@ -13,11 +14,9 @@ for i in range(robot_dof):
     discrete_dict[i + robot_dof] = [-5 if j == i else 0 for j in range(robot_dof)]
 env = DiscreteWrapper(env, discrete_dict)
 
-for i in range(400):
+for i in tqdm(range(400)):
     action = env.sample_action()
     state, reward, done, _ = env.step(action)
-    print("State: {}".format(state))
-    print("Reward:", reward)
     if i % 100 == 0:
         env.reset()
 env.reset()
