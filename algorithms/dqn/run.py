@@ -11,10 +11,12 @@ import os
 from common.tf_util import config_gpu
 
 
-def make_env(frame_skip, frame_stack, **kwargs):
+def make_env(frame_skip, frame_stack, stack_key='pov', **kwargs):
     env = RozumEnv(**kwargs)
-    env = FrameSkip(env, frame_skip)
-    env = FrameStack(env, frame_stack, stack_key='pov')
+    if frame_skip:
+        env = FrameSkip(env, frame_skip)
+    if frame_stack:
+        env = FrameStack(env, frame_stack, stack_key=stack_key)
     env = AccuracyLogWrapper(env, 10)
     discrete_dict = dict()
     robot_dof = env.action_space.shape[0]
