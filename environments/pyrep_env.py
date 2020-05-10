@@ -38,8 +38,8 @@ class RozumEnv(gym.Env):
         self.rozum_tip = self.rozum.get_tip()
 
         self.action_space = gym.spaces.Box(shape=(self.rozum.num_joints,),
-                                           low=-180,
-                                           high=180)
+                                           low=-360,
+                                           high=360)
         self._available_obs_spaces = dict()
         self._render_dict = dict()
         self._available_obs_spaces['pov'] = gym.spaces.Box(shape=self.camera.resolution + [3],
