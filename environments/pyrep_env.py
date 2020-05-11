@@ -67,9 +67,9 @@ class RozumEnv(gym.Env):
         self.always_render = always_render
 
     def get_arm_state(self):
-        joints = self.rozum.get_joint_target_positions()
-        gripper = self.gripper.get_open_amount()[0]
-        return joints + gripper
+        arm = self.rozum.get_joint_target_positions()
+        arm.append(self.gripper.get_open_amount()[0])
+        return arm
 
 
     def sample_action(self):
