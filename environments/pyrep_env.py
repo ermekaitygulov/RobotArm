@@ -88,8 +88,8 @@ class RozumEnv(gym.Env):
             joint_action *= self.angles_scale
             position = np.array([j + a for j, a in
                                  zip(self.rozum.get_joint_target_positions(), joint_action)])
-            position = np.clip(position, self.action_space.low * self.angles_scale,
-                               self.action_space.high * self.angles_scale)
+            position = np.clip(position, self.action_space.low[:-1] * self.angles_scale,
+                               self.action_space.high[:-1] * self.angles_scale)
             self.rozum.set_joint_target_positions(position)
             self._pyrep.step()
         x, y, z = self.rozum_tip.get_position()
