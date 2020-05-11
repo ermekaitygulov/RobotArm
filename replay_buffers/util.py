@@ -37,6 +37,9 @@ class DictWrapper:
     def update_priorities(self, *args, **kwargs):
         return self.replay_buffer.update_priorities(*args, **kwargs)
 
+    def clear(self):
+        return self.replay_buffer.clear()
+
 
 def get_dtype_dict(env):
     action_shape = env.action_space.shape

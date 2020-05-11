@@ -104,14 +104,11 @@ class RozumEnv(gym.Env):
         return state, reward, done, info
 
     def reset(self):
-        self._pyrep.stop()
-        self._pyrep.start()
-        tx, ty, tz = self.cube.get_position()
+        # self._pyrep.stop()
+        # self._pyrep.start()
+        self.rozum.set_joint_target_positions_degrees(self.init_angles)
+        tx, ty, tz = self.init_cube_pose
         self.cube.set_position([tx + np.random.uniform(-0.2, 0.2), ty, tz])
-        gripper_open=False
-        while not gripper_open:
-            gripper_open = self.gripper.actuate(1.0, velocity=0.2)
-            self._pyrep.step()
         state = self.render()
         self.current_step = 0
         return state
