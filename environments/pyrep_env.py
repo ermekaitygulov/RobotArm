@@ -13,14 +13,6 @@ class Rozum(Arm):
         super().__init__(count, 'Rozum', num_joints=6)
         self.num_joints = 6
 
-    def get_joint_target_positions_degrees(self):
-        angles = [a * 180 / np.pi for a in self.get_joint_target_positions()]
-        return angles
-
-    def set_joint_target_positions_degrees(self, position):
-        angles = [a * np.pi / 180 for a in position]
-        self.set_joint_target_positions(angles)
-
 
 class RozumEnv(gym.Env):
     metadata = {'render.modes': ['human']}
@@ -37,9 +29,11 @@ class RozumEnv(gym.Env):
         self.camera = VisionSensor("render")
         self.rozum_tip = self.rozum.get_tip()
 
-        self.action_space = gym.spaces.Box(shape=(self.rozum.num_joints,),
-                                           low=-360,
-                                           high=360)
+        low = np.array([-1. for _ in range(self.rozum.num_joints)] + [0.,])
+        high = np.array([1. for _ in range(self.rozum.num_joints)] + [1.,])
+        self.angles_scale = np.array([2 * np.pi for _ in range(self.rozum.num_joints)])
+        self.action_space = gym.spaces.Box(low=low,
+                                           high=high)
         self._available_obs_spaces = dict()
         self._render_dict = dict()
         self._available_obs_spaces['pov'] = gym.spaces.Box(shape=self.camera.resolution + [3],
@@ -68,7 +62,7 @@ class RozumEnv(gym.Env):
         self.reward_range = None
         self.current_step = 0
         self.step_limit = 400
-        self.init_angles = self.rozum.get_joint_target_positions_degrees()
+        self.init_angles = self.rozum.get_joint_target_positions()
         self.init_cube_pose = self.cube.get_position()
         self.always_render = always_render
 
@@ -78,11 +72,26 @@ class RozumEnv(gym.Env):
     def step(self, action: list):
         done = False
         info = None
-
-        position = np.array([j + a for j, a in zip(self.rozum.get_joint_target_positions_degrees(), action)])
-        position = np.clip(position, self.action_space.low, self.action_space.high)
-        self.rozum.set_joint_target_positions_degrees(position)
-        self._pyrep.step()
+        joint_action, ee_action = action[:-1], action[-1]
+        current_ee = (1.0 if self.gripper.get_open_amount()[0] > 0.9
+                      else 0.0)
+        if ee_action > 0.5:
+            ee_action = 1.0
+        elif ee_action < 0.5:
+            ee_action = 0.0
+        if current_ee != ee_action:
+            gripper_done = False
+            while not gripper_done:
+                gripper_done = self.gripper.actuate(ee_action, velocity=0.2)
+                self._pyrep.step()
+        else:
+            joint_action *= self.angles_scale
+            position = np.array([j + a for j, a in
+                                 zip(self.rozum.get_joint_target_positions(), joint_action)])
+            position = np.clip(position, self.action_space.low * self.angles_scale,
+                               self.action_space.high * self.angles_scale)
+            self.rozum.set_joint_target_positions(position)
+            self._pyrep.step()
         x, y, z = self.rozum_tip.get_position()
 
         tx, ty, tz = self.cube.get_position()
@@ -106,7 +115,7 @@ class RozumEnv(gym.Env):
     def reset(self):
         # self._pyrep.stop()
         # self._pyrep.start()
-        self.rozum.set_joint_target_positions_degrees(self.init_angles)
+        self.rozum.set_joint_target_positions(self.init_angles)
         tx, ty, tz = self.init_cube_pose
         self.cube.set_position([tx + np.random.uniform(-0.2, 0.2), ty, tz])
         state = self.render()

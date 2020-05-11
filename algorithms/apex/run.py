@@ -18,10 +18,16 @@ def make_env(name, obs_space_keys=('pov', 'angles'), frame_skip=4, frame_stack=4
         env = FrameStack(env, 2, stack_key='pov')
     env = AccuracyLogWrapper(env, 10, name)
     discrete_dict = dict()
-    robot_dof = env.action_space.shape[0]
+    robot_dof = env.action_space.shape[0] - 1
     for i in range(robot_dof):
-        discrete_dict[i] = [5 if j == i else 0 for j in range(robot_dof)]
-        discrete_dict[i + robot_dof] = [-5 if j == i else 0 for j in range(robot_dof)]
+        # joint actions
+        discrete_angle = 5 * np.pi / 180
+        discrete_dict[i] = [discrete_angle / env.angles_scale[j]
+                            if j == i else 0 for j in range(robot_dof)] + [0., ]
+        discrete_dict[i + robot_dof] = [-discrete_angle / env.angles_scale[j]
+                                        if j == i else 0 for j in range(robot_dof)] + [0., ]
+    # gripper action
+    discrete_dict[2 * robot_dof] = [0., ] * robot_dof + [1., ]
     env = DiscreteWrapper(env, discrete_dict)
     return env
 

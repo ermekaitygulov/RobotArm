@@ -97,7 +97,7 @@ def make_critic(name, obs_space, action_space):
     angles = tf.keras.Input(shape=obs_space['angles'].shape)
     action = tf.keras.Input(shape=action_space.shape)
     normalized_pov = pov / 255
-    normalized_action = action / 180
+    normalized_action = action
     feature_input = tf.keras.layers.concatenate([angles, normalized_action])
     pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(normalized_pov)
     feature_base = MLP([64, 64], 'tanh')(feature_input)
@@ -119,6 +119,5 @@ def make_actor(name, obs_space, action_space):
     base = tf.keras.layers.concatenate([pov_base, angles_base])
     fc = MLP([512, 512], 'relu')(base)
     out = tf.keras.layers.Dense(action_space.shape[0])(fc)
-    out *= 180
     model = tf.keras.Model(inputs={'pov': pov, 'angles': angles}, outputs=out, name=name)
     return model
