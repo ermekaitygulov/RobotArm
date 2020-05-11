@@ -23,11 +23,11 @@ def make_env(name, obs_space_keys=('pov', 'angles'), frame_skip=4, frame_stack=4
         # joint actions
         discrete_angle = 5 * np.pi / 180
         discrete_dict[i] = [discrete_angle / env.angles_scale[j]
-                            if j == i else 0 for j in range(robot_dof)] + [0., ]
+                            if j == i else 0 for j in range(robot_dof)] + [1., ]
         discrete_dict[i + robot_dof] = [-discrete_angle / env.angles_scale[j]
-                                        if j == i else 0 for j in range(robot_dof)] + [0., ]
+                                        if j == i else 0 for j in range(robot_dof)] + [1., ]
     # gripper action
-    discrete_dict[2 * robot_dof] = [0., ] * robot_dof + [1., ]
+    discrete_dict[2 * robot_dof] = [0., ] * (robot_dof + 1)
     env = DiscreteWrapper(env, discrete_dict)
     return env
 
