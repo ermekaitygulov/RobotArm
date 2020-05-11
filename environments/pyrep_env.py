@@ -121,8 +121,8 @@ class RozumEnv(gym.Env):
     def reset(self):
         # self._pyrep.stop()
         # self._pyrep.start()
-        self.rozum.set_joint_target_positions(self.init_angles)
-        pose = self.init_cube_pose
+        self.rozum.set_joint_positions(self.init_angles)
+        pose = self.init_cube_pose.copy()
         pose[0] += np.random.uniform(-0.2, 0.2)
         self.cube.set_pose(pose)
         # self.cube.set_color([0.,np.random.uniform(0., 255.),0.])
