@@ -45,10 +45,10 @@ class Learner(DQN):
 @ray.remote(num_gpus=0, num_cpus=2)
 class Actor(DQN):
     def __init__(self, thread_id, build_model, obs_space, action_space,
-                 make_env, remote_counter, rollout_size, gamma=0.99, n_step=10):
+                 make_env, config_env, remote_counter, rollout_size, gamma=0.99, n_step=10):
         import tensorflow as tf
         self.tf = tf
-        self.env = make_env('{}_thread'.format(thread_id))
+        self.env = make_env('{}_thread'.format(thread_id), **config_env)
         env_dict, _ = get_dtype_dict(self.env)
         env_dict['q_value'] = {"dtype": "float32"}
         buffer = ReplayBuffer(size=rollout_size, env_dict=env_dict)

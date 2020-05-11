@@ -10,7 +10,7 @@ from environments.pyrep_env import RozumEnv
 from common.wrappers import *
 
 
-def make_env(name, obs_space_keys=('pov', 'angles'), frame_skip=4, frame_stack=4):
+def make_env(name, obs_space_keys=('pov', 'arm'), frame_skip=4, frame_stack=4):
     env = RozumEnv(obs_space_keys)
     if frame_skip > 1:
         env = FrameSkip(env)
@@ -55,7 +55,7 @@ def apex_run(config_path):
         replay_buffer = DictWrapper(replay_buffer, state_prefix=('', 'next_', 'n_'),
                                     state_keys=state_keys)
     learner = Learner.remote(make_model, obs_space, action_space, **config['learner'])
-    actors = [Actor.remote(i, make_model, obs_space, action_space, make_env, counter,
+    actors = [Actor.remote(i, make_model, obs_space, action_space, make_env, config['env'], counter,
                            **config['actors']) for i in range(n_actors)]
     online_weights, target_weights = learner.get_weights.remote()
     start_learner = False
