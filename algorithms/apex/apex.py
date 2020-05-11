@@ -50,6 +50,7 @@ class Actor(DQN):
         self.tf = tf
         self.env = make_env('{}_thread'.format(thread_id))
         env_dict, _ = get_dtype_dict(self.env)
+        env_dict['q_value'] = {"dtype": "float32"}
         buffer = ReplayBuffer(size=rollout_size, env_dict=env_dict)
         if isinstance(self.env.observation_space, gym.spaces.Dict):
             state_keys = self.env.observation_space.spaces.keys()

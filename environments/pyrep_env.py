@@ -28,9 +28,9 @@ class RozumEnv(gym.Env):
     def __init__(self, obs_space_keys=('pov', 'angles'), scene_file='rozum_pyrep.ttt',
                  headless=True, always_render=False):
         self.obs_space_keys = (obs_space_keys,) if isinstance(obs_space_keys, str) else obs_space_keys
-        self.pr = PyRep()
-        self.pr.launch(scene_file, headless=headless)
-        self.pr.start()
+        self._pyrep = PyRep()
+        self._pyrep.launch(scene_file, headless=headless)
+        self._pyrep.start()
         self.rozum = Rozum()
         self.gripper = BaxterGripper()
         self.cube = Shape("Cube")
@@ -82,7 +82,7 @@ class RozumEnv(gym.Env):
         position = np.array([j + a for j, a in zip(self.rozum.get_joint_target_positions_degrees(), action)])
         position = np.clip(position, self.action_space.low, self.action_space.high)
         self.rozum.set_joint_target_positions_degrees(position)
-        self.pr.step()
+        self._pyrep.step()
         x, y, z = self.rozum_tip.get_position()
 
         tx, ty, tz = self.cube.get_position()
@@ -104,10 +104,14 @@ class RozumEnv(gym.Env):
         return state, reward, done, info
 
     def reset(self):
-        self.pr.stop()
-        self.pr.start()
+        self._pyrep.stop()
+        self._pyrep.start()
         tx, ty, tz = self.cube.get_position()
         self.cube.set_position([tx + np.random.uniform(-0.2, 0.2), ty, tz])
+        gripper_open=False
+        while not gripper_open:
+            gripper_open = self.gripper.actuate(1.0, velocity=0.2)
+            self._pyrep.step()
         state = self.render()
         self.current_step = 0
         return state
@@ -126,5 +130,5 @@ class RozumEnv(gym.Env):
         return img
 
     def close(self):
-        self.pr.stop()
-        self.pr.shutdown()
+        self._pyrep.stop()
+        self._pyrep.shutdown()
