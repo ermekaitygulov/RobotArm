@@ -45,12 +45,12 @@ class Learner(DQN):
 @ray.remote(num_gpus=0, num_cpus=2)
 class Actor(DQN):
     def __init__(self, thread_id, build_model, obs_space, action_space,
-                 make_env, remote_counter, buffer_size, gamma=0.99, n_step=10):
+                 make_env, remote_counter, rollout_size, gamma=0.99, n_step=10):
         import tensorflow as tf
         self.tf = tf
         self.env = make_env('{}_thread'.format(thread_id))
         env_dict, _ = get_dtype_dict(self.env)
-        buffer = ReplayBuffer(size=buffer_size, env_dict=env_dict)
+        buffer = ReplayBuffer(size=rollout_size, env_dict=env_dict)
         if isinstance(self.env.observation_space, gym.spaces.Dict):
             state_keys = self.env.observation_space.spaces.keys()
             buffer = DictWrapper(buffer, state_prefix=('', 'next_', 'n_'), state_keys=state_keys)
@@ -64,7 +64,7 @@ class Actor(DQN):
         self.env_state = None
         self.remote_counter = remote_counter
 
-    def rollout(self, online_weights, target_weights, rollout_size=300):
+    def rollout(self, online_weights, target_weights):
         with self.summary_writer.as_default():
             self.online_model.set_weights(online_weights)
             self.target_model.set_weights(target_weights)
@@ -72,7 +72,7 @@ class Actor(DQN):
                 done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
             else:
                 done, score, state, start_time = self.env_state
-            while self.replay_buff.get_stored_size() < rollout_size:
+            while self.replay_buff.get_stored_size() < self.replay_buff.get_buffer_size():
                 action, q = self.choose_act(state, self.epsilon, self.env.sample_action)
                 next_state, reward, done, _ = self.env.step(action)
                 score += reward

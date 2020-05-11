@@ -1,0 +1,23 @@
+env:
+  obs_space_keys: ["pov", "angles"]
+  frame_skip: 4
+  frame_stack: 4
+buffer:
+  size: 100000
+neural_network: "DuelingDQN_pov_angle"
+learner:
+  update_target_nn_mod: 1000
+  gamma: 0.9
+  learning_rate: 0.0001
+  log_freq: 100
+actors:
+  num: 3
+  rollout_size: 50
+  gamma: 0.99
+  n_step: 5
+train:
+  max_eps: 1000
+  replay_start_size: 1000
+  batch_size: 128
+  sync_nn_mod: 100
+  number_of_batchs: 16

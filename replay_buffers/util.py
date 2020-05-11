@@ -28,6 +28,9 @@ class DictWrapper:
             batch[prefix + 'state'] = {key: batch.pop(prefix + key) for key in self.state_keys}
         return batch
 
+    def get_buffer_size(self):
+        return self.replay_buffer.get_buffer_size()
+
     def get_stored_size(self):
         return self.replay_buffer.get_stored_size()
 
