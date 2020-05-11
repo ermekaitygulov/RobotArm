@@ -153,15 +153,15 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         to priorities[i].
         Parameters
         ----------
-        idxes: [int]
+        indexes: [int]
             List of idxes of sampled transitions
         priorities: [float]
             List of updated priorities corresponding to
             transitions at the sampled idxes denoted by
             variable `idxes`.
         """
-        assert len(idxes) == len(priorities)
-        for idx, priority in zip(idxes, priorities):
+        assert len(indexes) == len(priorities)
+        for idx, priority in zip(indexes, priorities):
             assert priority >= 0
             assert 0 <= idx < len(self._storage)
             self._it_sum[idx] = (priority + self._eps) ** self._alpha
