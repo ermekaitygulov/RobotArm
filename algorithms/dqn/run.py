@@ -14,6 +14,7 @@ from common.tf_util import config_gpu
 
 def make_env(frame_skip, frame_stack, stack_key='pov', **kwargs):
     env = RozumEnv(**kwargs)
+    env = SaveVideoWrapper(env, key='pov')
     if frame_skip:
         env = FrameSkip(env, frame_skip)
     if frame_stack:
