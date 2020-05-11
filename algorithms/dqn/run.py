@@ -1,7 +1,8 @@
 import yaml
 
 from algorithms.dqn.dqn import DQN
-from cpprb import PrioritizedReplayBuffer
+from cpprb import PrioritizedReplayBuffer as cppPER
+from replay_buffers.stable_baselines import PrioritizedReplayBuffer
 from replay_buffers.util import DictWrapper, get_dtype_dict
 from algorithms.model import get_network_builder
 from environments.pyrep_env import RozumEnv
@@ -40,20 +41,19 @@ def dqn_run(config_path):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(config['gpu'])
     tf.config.optimizer.set_jit(True)
     config_gpu()
-    env_config = config['env']
-    env = make_env(**env_config)
+    env = make_env(**config['env'])
     env_dict, dtype_dict = get_dtype_dict(env)
-
-    buffer_config = config['buffer']
-    replay_buffer = PrioritizedReplayBuffer(env_dict=env_dict, **buffer_config)
+    if 'cpp' in config['buffer'].keys() and config['buffer'].pop('cpp'):
+        replay_buffer = cppPER(env_dict=env_dict, **config['buffer'])
+    else:
+        replay_buffer = PrioritizedReplayBuffer(env_dict=env_dict, **config['buffer'])
     if isinstance(env.observation_space, gym.spaces.Dict):
         state_keys = env.observation_space.spaces.keys()
         replay_buffer = DictWrapper(replay_buffer, state_prefix=('', 'next_', 'n_'),
                                     state_keys=state_keys)
     make_model = get_network_builder(config['neural_network'])
-    agent_config = config['agent']
     agent = DQN(replay_buffer, make_model, env.observation_space, env.action_space, dtype_dict,
-                **agent_config)
+                **config['agent'])
 
     train_config = config['train']
     summary_writer = tf.summary.create_file_writer(train_config.pop('log_dir'))
