@@ -122,8 +122,9 @@ class RozumEnv(gym.Env):
         # self._pyrep.stop()
         # self._pyrep.start()
         self.rozum.set_joint_target_positions(self.init_angles)
-        tx = self.init_cube_pose
-        self.cube.set_pose([tx + np.random.uniform(-0.2, 0.2), *self.init_cube_pose[1:]])
+        pose = self.init_cube_pose
+        pose[0] += np.random.uniform(-0.2, 0.2)
+        self.cube.set_pose(pose)
         self.cube.set_color([0.,np.random.uniform(0., 255.),0.])
         state = self.render()
         self.current_step = 0
