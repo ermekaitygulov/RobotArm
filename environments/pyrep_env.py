@@ -29,8 +29,8 @@ class RozumEnv(gym.Env):
         self.camera = VisionSensor("render")
         self.rozum_tip = self.rozum.get_tip()
 
-        low = np.array([-1. for _ in range(self.rozum.num_joints)] + [0.,])
-        high = np.array([1. for _ in range(self.rozum.num_joints)] + [1.,])
+        low = np.array([-1. for _ in range(self.rozum.num_joints)] + [0., ])
+        high = np.array([1. for _ in range(self.rozum.num_joints)] + [1., ])
         self.angles_scale = np.array([2 * np.pi for _ in range(self.rozum.num_joints)])
         self.action_space = gym.spaces.Box(low=low,
                                            high=high)
@@ -39,8 +39,8 @@ class RozumEnv(gym.Env):
         self._available_obs_spaces['pov'] = gym.spaces.Box(shape=self.camera.resolution + [3],
                                                            low=0, high=255, dtype=np.uint8)
         self._render_dict['pov'] = self.get_image
-        low = np.array([-angle for angle in self.angles_scale] + [0.,])
-        high = np.array([angle for angle in self.angles_scale] + [1.,])
+        low = np.array([-angle for angle in self.angles_scale] + [0., ])
+        high = np.array([angle for angle in self.angles_scale] + [1., ])
         self._available_obs_spaces['arm'] = gym.spaces.Box(low=low, high=high, dtype=np.float32)
         self._render_dict['arm'] = self.get_arm_state
         self._available_obs_spaces['cube'] = gym.spaces.Box(shape=(3,),
@@ -125,7 +125,7 @@ class RozumEnv(gym.Env):
         pose = self.init_cube_pose
         pose[0] += np.random.uniform(-0.2, 0.2)
         self.cube.set_pose(pose)
-        self.cube.set_color([0.,np.random.uniform(0., 255.),0.])
+        # self.cube.set_color([0.,np.random.uniform(0., 255.),0.])
         state = self.render()
         self.current_step = 0
         return state
