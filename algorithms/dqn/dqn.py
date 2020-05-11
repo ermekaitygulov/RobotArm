@@ -147,16 +147,17 @@ class DQN:
         print("Q-nn_update tracing")
         online_variables = self.online_model.trainable_variables
         with tf.GradientTape() as tape:
-            tape.watch(online_variables)
             q_value = self.online_model(state, training=True)
             q_value = take_vector_elements(q_value, action)
             target = self.compute_target(next_state, done, reward, 1, gamma)
+            target = tf.stop_gradient(target)
             td_loss = q_value - target
             huber_td = huber_loss(td_loss)
             mean_td = tf.reduce_mean(huber_td * weights)
             self.update_metrics('TD', mean_td)
 
             n_target = self.compute_target(n_state, n_done, n_reward, actual_n, gamma)
+            n_target = tf.stop_gradient(n_target)
             ntd_loss = q_value - n_target
             huber_ntd = huber_loss(ntd_loss)
             mean_ntd = tf.reduce_mean(huber_ntd * weights)
