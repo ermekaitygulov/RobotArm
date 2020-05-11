@@ -39,16 +39,21 @@ class DQN:
         self._schedule_dict[self.target_update] = update_target_nn_mod
         self._schedule_dict[self.update_log] = log_freq
 
-    def train(self, env, episodes=200, name="train/max_model.ckpt", epsilon=0.1, final_epsilon=0.01, eps_decay=0.99):
+    def train(self, env, episodes=200, name="train/max_model.ckpt",
+              epsilon=0.1, final_epsilon=0.01, eps_decay=0.99, save_window=25):
         max_reward = - np.inf
         counter = 0
+        window = deque([], maxlen=save_window)
         for e in range(episodes):
             start_time = timeit.default_timer()
             score, counter = self._train_episode(env, counter, epsilon)
             if self.replay_buff.get_stored_size() > self.replay_start_size:
                 epsilon = max(final_epsilon, epsilon * eps_decay)
-            if score >= max_reward:
-                max_reward = score
+            window.append(score)
+            avg_reward = sum(window) / len(window)
+            if avg_reward >= max_reward:
+                print("MaxAvg reward moved from {:.2f} to {:.2f} (save model)".format(max_reward, avg_reward))
+                max_reward = avg_reward
                 self.save(name)
             stop_time = timeit.default_timer()
             print("episode: {}  score: {}  counter: {}  epsilon: {}  max: {}"
