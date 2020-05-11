@@ -17,7 +17,7 @@ class Rozum(Arm):
 class RozumEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, obs_space_keys=('pov', 'angles'), scene_file='rozum_pyrep.ttt',
+    def __init__(self, obs_space_keys=('pov', 'arm'), scene_file='rozum_pyrep.ttt',
                  headless=True, always_render=False):
         self.obs_space_keys = (obs_space_keys,) if isinstance(obs_space_keys, str) else obs_space_keys
         self._pyrep = PyRep()
@@ -39,13 +39,13 @@ class RozumEnv(gym.Env):
         self._available_obs_spaces['pov'] = gym.spaces.Box(shape=self.camera.resolution + [3],
                                                            low=0, high=255, dtype=np.uint8)
         self._render_dict['pov'] = self.get_image
-        self._available_obs_spaces['angles'] = gym.spaces.Box(shape=(self.rozum.num_joints,),
-                                                              low=-2 * np.pi, high=2 * np.pi,
-                                                              dtype=np.float32)
-        self._render_dict['angles'] = self.rozum.get_joint_target_positions
+        low = np.array([-angle for angle in self.angles_scale] + [0.,])
+        high = np.array([angle for angle in self.angles_scale] + [1.,])
+        self._available_obs_spaces['arm'] = gym.spaces.Box(low=low, high=high, dtype=np.float32)
+        self._render_dict['arm'] = self.get_arm_state
         self._available_obs_spaces['cube'] = gym.spaces.Box(shape=(3,),
-                                                              low=0, high=100,
-                                                              dtype=np.float32)
+                                                            low=0, high=100,
+                                                            dtype=np.float32)
         self._render_dict['cube'] = self.cube.get_position
         try:
             if len(self.obs_space_keys) > 1:
@@ -63,8 +63,14 @@ class RozumEnv(gym.Env):
         self.current_step = 0
         self.step_limit = 400
         self.init_angles = self.rozum.get_joint_target_positions()
-        self.init_cube_pose = self.cube.get_position()
+        self.init_cube_pose = self.cube.get_pose()
         self.always_render = always_render
+
+    def get_arm_state(self):
+        joints = self.rozum.get_joint_target_positions()
+        gripper = self.gripper.get_open_amount()
+        return joints + gripper
+
 
     def sample_action(self):
         return self.action_space.sample()
@@ -116,8 +122,9 @@ class RozumEnv(gym.Env):
         # self._pyrep.stop()
         # self._pyrep.start()
         self.rozum.set_joint_target_positions(self.init_angles)
-        tx, ty, tz = self.init_cube_pose
-        self.cube.set_position([tx + np.random.uniform(-0.2, 0.2), ty, tz])
+        tx = self.init_cube_pose
+        self.cube.set_pose([tx + np.random.uniform(-0.2, 0.2), *self.init_cube_pose[1:]])
+        self.cube.set_color([0.,np.random.uniform(0., 255.),0.])
         state = self.render()
         self.current_step = 0
         return state

@@ -1,11 +1,11 @@
 gpu: 1
 env:
-  obs_space_keys: ["pov", "angles"]
+  obs_space_keys: ["pov", "arm"]
   frame_skip: 4
   frame_stack: 4
 buffer:
   size: 100000
-neural_network: "DuelingDQN_pov_angle"
+neural_network: "DuelingDQN_pov_arm"
 agent:
   update_target_nn_mod: 500
 train:

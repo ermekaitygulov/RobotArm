@@ -1,13 +1,13 @@
 gpu: 1
 env:
-  obs_space_keys: ["pov", "angles"]
+  obs_space_keys: ["pov", "arm"]
   frame_skip: 4
   frame_stack: 4
 buffer:
   size: 100000
 neural_network:
-  critic: "Critic_pov_angle"
-  actor: "Actor_pov_angle"
+  critic: "Critic_pov_arm"
+  actor: "Actor_pov_arm"
 agent:
   train_freq: 100
   train_quantity: 100

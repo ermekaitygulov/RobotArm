@@ -77,47 +77,47 @@ class MLP(tf.keras.Model):
         return self.model(inputs)
 
 
-@register("DuelingDQN_pov_angle")
+@register("DuelingDQN_pov_arm")
 def make_model(name, obs_space, action_space):
     pov = tf.keras.Input(shape=obs_space['pov'].shape)
-    angles = tf.keras.Input(shape=obs_space['angles'].shape)
+    arm = tf.keras.Input(shape=obs_space['arm'].shape)
     normalized_pov = pov / 255
     pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(normalized_pov)
-    angles_base = MLP([512, 256])(angles)
+    angles_base = MLP([512, 256])(arm)
     base = tf.keras.layers.concatenate([pov_base, angles_base])
     head = DuelingModel([1024], action_space.n)(base)
-    model = tf.keras.Model(inputs={'pov': pov, 'angles': angles}, outputs=head, name=name)
+    model = tf.keras.Model(inputs={'pov': pov, 'arm': arm}, outputs=head, name=name)
     return model
 
 
-@register("Critic_pov_angle")
+@register("Critic_pov_arm")
 def make_critic(name, obs_space, action_space):
     # TODO add reg
     pov = tf.keras.Input(shape=obs_space['pov'].shape)
-    angles = tf.keras.Input(shape=obs_space['angles'].shape)
+    arm = tf.keras.Input(shape=obs_space['arm'].shape)
     action = tf.keras.Input(shape=action_space.shape)
     normalized_pov = pov / 255
     normalized_action = action
-    feature_input = tf.keras.layers.concatenate([angles, normalized_action])
+    feature_input = tf.keras.layers.concatenate([arm, normalized_action])
     pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(normalized_pov)
     feature_base = MLP([64, 64], 'tanh')(feature_input)
     base = tf.keras.layers.concatenate([pov_base, feature_base])
     fc = MLP([512, 512], 'relu')(base)
     out = tf.keras.layers.Dense(1)(fc)
-    model = tf.keras.Model(inputs={'pov': pov, 'angles': angles, 'action': action},
+    model = tf.keras.Model(inputs={'pov': pov, 'arm': arm, 'action': action},
                            outputs=out, name=name)
     return model
 
 
-@register("Actor_pov_angle")
+@register("Actor_pov_arm")
 def make_actor(name, obs_space, action_space):
     pov = tf.keras.Input(shape=obs_space['pov'].shape)
-    angles = tf.keras.Input(shape=obs_space['angles'].shape)
+    arm = tf.keras.Input(shape=obs_space['arm'].shape)
     normalized_pov = pov / 255
     pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(normalized_pov)
-    angles_base = MLP([512, 256], 'tanh')(angles)
+    angles_base = MLP([512, 256], 'tanh')(arm)
     base = tf.keras.layers.concatenate([pov_base, angles_base])
     fc = MLP([512, 512], 'relu')(base)
     out = tf.keras.layers.Dense(action_space.shape[0])(fc)
-    model = tf.keras.Model(inputs={'pov': pov, 'angles': angles}, outputs=out, name=name)
+    model = tf.keras.Model(inputs={'pov': pov, 'arm': arm}, outputs=out, name=name)
     return model
