@@ -147,7 +147,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         encoded_sample['indexes'] = idxes
         return encoded_sample
 
-    def update_priorities(self, idxes, priorities):
+    def update_priorities(self, indexes, priorities):
         """Update priorities of sampled transitions.
         sets priority of transition at index idxes[i] in buffer
         to priorities[i].
