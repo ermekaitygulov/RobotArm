@@ -3,6 +3,7 @@ env:
   frame_skip: 4
   frame_stack: 4
 buffer:
+  cpp: True
   size: 100000
 neural_network: "DuelingDQN_pov_arm"
 learner:
