@@ -7,7 +7,7 @@ buffer:
   size: 100000
 neural_network: "DuelingDQN_pov_arm"
 agent:
-  update_target_nn_mod: 500
+  update_target_nn_mod: 1000
 train:
   log_dir: "train/"
   episodes: 1000
