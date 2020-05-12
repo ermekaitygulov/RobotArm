@@ -23,9 +23,8 @@ discrete_dict[2 * robot_dof] = [0., ] * (robot_dof + 1)
 env = DiscreteWrapper(env, discrete_dict)
 
 for i in tqdm(range(400)):
-    action = env.sample_action()
-    state, reward, done, _ = env.step(action)
-    if i % 100 == 0:
+    state, reward, done, _ = env.step(i % robot_dof)
+    if i % 50 == 0:
         env.reset()
 env.reset()
 
