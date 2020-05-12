@@ -4,8 +4,7 @@ from common.wrappers import DiscreteWrapper, FrameSkip, SaveVideoWrapper
 from tqdm import tqdm
 import numpy as np
 
-env = RozumEnv(obs_space_keys='pov')
-env = SaveVideoWrapper(env)
+env = RozumEnv(obs_space_keys=('arm', 'cube'))
 env = FrameSkip(env)
 done = False
 start_time = timeit.default_timer()

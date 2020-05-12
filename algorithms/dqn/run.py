@@ -45,6 +45,7 @@ def dqn_run(config_path):
     env = make_env(**config['env'])
     env_dict, dtype_dict = get_dtype_dict(env)
     if 'cpp' in config['buffer'].keys() and config['buffer'].pop('cpp'):
+        dtype_dict['indexes'] = 'uint64'
         replay_buffer = cppPER(env_dict=env_dict, **config['buffer'])
     else:
         replay_buffer = PrioritizedReplayBuffer(env_dict=env_dict, **config['buffer'])
