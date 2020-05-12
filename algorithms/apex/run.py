@@ -4,7 +4,8 @@ import yaml
 
 from algorithms.apex.apex import Learner, Counter, Actor
 from replay_buffers.util import DictWrapper, get_dtype_dict
-from cpprb import PrioritizedReplayBuffer
+from cpprb import PrioritizedReplayBuffer as cppPER
+from replay_buffers.stable_baselines import PrioritizedReplayBuffer
 from algorithms.model import get_network_builder
 from environments.pyrep_env import RozumEnv
 from common.wrappers import *
@@ -49,7 +50,11 @@ def apex_run(config_path):
 
     counter = Counter.remote()
     make_model = get_network_builder(config['neural_network'])
-    replay_buffer = PrioritizedReplayBuffer(env_dict=env_dict, **config['buffer'])
+    if 'cpp' in config['buffer'].keys() and config['buffer'].pop('cpp'):
+        dtype_dict['indexes'] = 'uint64'
+        replay_buffer = cppPER(env_dict=env_dict, **config['buffer'])
+    else:
+        replay_buffer = PrioritizedReplayBuffer(env_dict=env_dict, **config['buffer'])
     if isinstance(test_env.observation_space, gym.spaces.Dict):
         state_keys = test_env.observation_space.spaces.keys()
         replay_buffer = DictWrapper(replay_buffer, state_prefix=('', 'next_', 'n_'),

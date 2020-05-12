@@ -71,7 +71,6 @@ class RozumEnv(gym.Env):
         arm.append(self.gripper.get_open_amount()[0])
         return arm
 
-
     def sample_action(self):
         return self.action_space.sample()
 
