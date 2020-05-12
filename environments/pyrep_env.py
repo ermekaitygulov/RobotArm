@@ -119,9 +119,8 @@ class RozumEnv(gym.Env):
         return state, reward, done, info
 
     def reset(self):
-        # self._pyrep.stop()
-        # self._pyrep.start()
-        self.rozum.set_joint_positions(self.init_angles)
+        self._pyrep.stop()
+        self._pyrep.start()
         pose = self.init_cube_pose.copy()
         pose[0] += np.random.uniform(-0.2, 0.2)
         self.cube.set_pose(pose)

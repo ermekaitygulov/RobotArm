@@ -10,4 +10,4 @@ agent:
   update_target_nn_mod: 500
 train:
   log_dir: "train/"
-  episodes: 200
+  episodes: 1000
