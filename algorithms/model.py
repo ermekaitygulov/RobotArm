@@ -94,7 +94,7 @@ def make_model(name, obs_space, action_space):
     cube = tf.keras.Input(shape=obs_space['cube'].shape)
     arm = tf.keras.Input(shape=obs_space['arm'].shape)
     features = tf.keras.layers.concatenate([arm, cube])
-    base = MLP([64, 64])(features)
+    base = MLP([64, 64], activation='tanh')(features)
     head = DuelingModel([512], action_space.n)(base)
     model = tf.keras.Model(inputs={'cube': cube, 'arm': arm}, outputs=head, name=name)
     return model
