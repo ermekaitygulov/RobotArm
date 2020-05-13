@@ -29,9 +29,9 @@ class RozumEnv(gym.Env):
         self.camera = VisionSensor("render")
         self.rozum_tip = self.rozum.get_tip()
 
-        low = np.array([0. for _ in range(self.rozum.num_joints)] + [0., ])
+        low = np.array([-0.9 for _ in range(self.rozum.num_joints)] + [0., ])
         high = np.array([0.9 for _ in range(self.rozum.num_joints)] + [1., ])
-        self.angles_scale = np.array([2 * np.pi for _ in range(self.rozum.num_joints)])
+        self.angles_scale = np.array([np.pi for _ in range(self.rozum.num_joints)])
         self.action_space = gym.spaces.Box(low=low,
                                            high=high)
         self._available_obs_spaces = dict()
