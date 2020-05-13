@@ -38,7 +38,6 @@ def apex_run(config_path):
     with open(config_path, "r") as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
     ray.init(webui_host='0.0.0.0', num_gpus=1)
-    config_gpu()
     try:
         n_actors = config['actors'].pop('num')
     except KeyError:
