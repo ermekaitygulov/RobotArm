@@ -14,9 +14,9 @@ from common.wrappers import *
 def make_env(name, obs_space_keys=('pov', 'arm'), frame_skip=4, frame_stack=4):
     env = RozumEnv(obs_space_keys)
     if frame_skip > 1:
-        env = FrameSkip(env)
+        env = FrameSkip(env, frame_skip)
     if frame_stack > 1:
-        env = FrameStack(env, 2, stack_key='pov')
+        env = FrameStack(env, frame_stack, stack_key='pov')
     env = AccuracyLogWrapper(env, 10, name)
     discrete_dict = dict()
     robot_dof = env.action_space.shape[0] - 1
