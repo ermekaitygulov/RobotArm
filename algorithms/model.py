@@ -89,6 +89,16 @@ def make_model(name, obs_space, action_space):
     model = tf.keras.Model(inputs={'pov': pov, 'arm': arm}, outputs=head, name=name)
     return model
 
+@register("DuelingDQN_arm_cube")
+def make_model(name, obs_space, action_space):
+    cube = tf.keras.Input(shape=obs_space['cube'].shape)
+    arm = tf.keras.Input(shape=obs_space['arm'].shape)
+    features = tf.keras.layers.concatenate([arm, cube])
+    base = MLP([64, 64])(features)
+    head = DuelingModel([512], action_space.n)(base)
+    model = tf.keras.Model(inputs={'cube': cube, 'arm': arm}, outputs=head, name=name)
+    return model
+
 
 @register("Critic_pov_arm")
 def make_critic(name, obs_space, action_space):

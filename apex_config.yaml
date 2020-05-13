@@ -1,11 +1,11 @@
 env:
-  obs_space_keys: ["pov", "arm"]
+  obs_space_keys: ["cube", "arm"]
   frame_skip: 4
   frame_stack: 4
 buffer:
   cpp: True
   size: 100000
-neural_network: "DuelingDQN_pov_arm"
+neural_network: "DuelingDQN_arm_cube"
 learner:
   update_target_nn_mod: 2000
   gamma: 0.99

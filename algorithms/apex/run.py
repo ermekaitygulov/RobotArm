@@ -9,6 +9,7 @@ from replay_buffers.stable_baselines import PrioritizedReplayBuffer
 from algorithms.model import get_network_builder
 from environments.pyrep_env import RozumEnv
 from common.wrappers import *
+from common.tf_util import config_gpu
 
 
 def make_env(name, obs_space_keys=('pov', 'arm'), frame_skip=4, frame_stack=4):
@@ -37,6 +38,7 @@ def apex_run(config_path):
     with open(config_path, "r") as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
     ray.init(webui_host='0.0.0.0', num_gpus=1)
+    config_gpu()
     try:
         n_actors = config['actors'].pop('num')
     except KeyError:
