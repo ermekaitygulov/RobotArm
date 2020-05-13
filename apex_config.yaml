@@ -11,7 +11,6 @@ learner:
   gamma: 0.99
   learning_rate: 0.0001
   log_freq: 100
-  n_step: 10
 actors:
   num: 8
   rollout_size: 50
