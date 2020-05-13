@@ -61,6 +61,7 @@ def apex_run(config_path):
                                     state_keys=state_keys)
     learner = Learner.remote(make_model, obs_space, action_space, **config['learner'])
     actors = [Actor.remote(i, make_model, obs_space, action_space, make_env, config['env'], counter,
+                           epsilon=0.4**(1+i/(n_actors-1)*0.7),
                            **config['actors']) for i in range(n_actors)]
     online_weights, target_weights = learner.get_weights.remote()
     start_learner = False

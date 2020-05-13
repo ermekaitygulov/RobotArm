@@ -7,18 +7,19 @@ buffer:
   size: 100000
 neural_network: "DuelingDQN_pov_arm"
 learner:
-  update_target_nn_mod: 1000
-  gamma: 0.9
+  update_target_nn_mod: 2000
+  gamma: 0.99
   learning_rate: 0.0001
   log_freq: 100
+  n_step: 10
 actors:
-  num: 3
+  num: 8
   rollout_size: 50
   gamma: 0.99
-  n_step: 5
+  n_step: 10
 train:
   max_eps: 1000
-  replay_start_size: 1000
-  batch_size: 128
+  replay_start_size: 2000
+  batch_size: 64
   sync_nn_mod: 100
   number_of_batchs: 16

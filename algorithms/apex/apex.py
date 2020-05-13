@@ -45,7 +45,8 @@ class Learner(DQN):
 @ray.remote(num_gpus=0, num_cpus=2)
 class Actor(DQN):
     def __init__(self, thread_id, build_model, obs_space, action_space,
-                 make_env, config_env, remote_counter, rollout_size, gamma=0.99, n_step=10):
+                 make_env, config_env, remote_counter, rollout_size, epsilon=0.1,
+                 gamma=0.99, n_step=10):
         import tensorflow as tf
         self.tf = tf
         self.env = make_env('{}_thread'.format(thread_id), **config_env)
@@ -58,9 +59,7 @@ class Actor(DQN):
         super().__init__(buffer, build_model, obs_space, action_space,
                          gamma=gamma, n_step=n_step)
         self.summary_writer = self.tf.summary.create_file_writer('train/{}_actor/'.format(thread_id))
-        self.epsilon = 0.1
-        self.epsilon_decay = 0.99
-        self.final_epsilon = 0.01
+        self.epsilon = epsilon
         self.max_reward = -np.inf
         self.env_state = None
         self.remote_counter = remote_counter
@@ -90,7 +89,6 @@ class Actor(DQN):
                     self.tf.summary.scalar("reward", score, step=global_ep-1)
                     self.tf.summary.flush()
                     done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
-                    self.epsilon = max(self.final_epsilon, self.epsilon * self.epsilon_decay)
             self.env_state = [done, score, state, start_time]
             rollout = self.replay_buff.get_all_transitions()
             priorities = self.priority_err(rollout)
