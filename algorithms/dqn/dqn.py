@@ -175,8 +175,8 @@ class DQN:
             self.update_metrics('all_losses', all_losses)
 
         gradients = tape.gradient(all_losses, online_variables)
-        for i, g in enumerate(gradients):
-            gradients[i] = tf.clip_by_norm(g, 10)
+        # for i, g in enumerate(gradients):
+        #     gradients[i] = tf.clip_by_norm(g, 10)
         self.optimizer.apply_gradients(zip(gradients, online_variables))
         priorities = tf.abs(ntd_loss)
         return priorities
