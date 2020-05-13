@@ -109,7 +109,7 @@ class RozumEnv(gym.Env):
             state = None
 
         if curent_distance < 0.02:
-            reward += 10
+            reward += 15
             done = True
             info = 'SUCCESS'
         elif self.current_step >= self.step_limit:
