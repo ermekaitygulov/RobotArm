@@ -16,7 +16,7 @@ def make_env(name, obs_space_keys=('pov', 'arm'), frame_skip=4, frame_stack=4):
     env = RozumEnv(obs_space_keys)
     if frame_skip > 1:
         env = FrameSkip(env, frame_skip)
-    if frame_stack > 1:
+    if frame_stack > 1 and 'pov' in obs_space_keys:
         env = FrameStack(env, frame_stack, stack_key='pov')
     env = AccuracyLogWrapper(env, 10, name)
     discrete_dict = dict()
