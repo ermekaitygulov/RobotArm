@@ -36,9 +36,11 @@ class DuelingModel(tf.keras.Model):
     def __init__(self, units, action_dim, reg=1e-6):
         super(DuelingModel, self).__init__()
         reg = l2(reg)
-        self.h_layers = Sequential([Dense(l, 'relu', kernel_regularizer=reg) for l in units[:-1]])
-        self.a_head, self.v_head = Dense(units[-1]/2, 'relu', kernel_regularizer=reg), Dense(units[-1]/2, 'relu', kernel_regularizer=reg)
-        self.a_head1, self.v_head1 = Dense(action_dim, kernel_regularizer=reg), Dense(1, kernel_regularizer=reg)
+        self.h_layers = Sequential([Dense(l, 'relu', kernel_regularizer=reg, bias_regularizer=reg) for l in units[:-1]])
+        self.a_head, self.v_head = Dense(units[-1]/2, 'relu', kernel_regularizer=reg, bias_regularizer=reg),\
+                                   Dense(units[-1]/2, 'relu', kernel_regularizer=reg, bias_regularizer=reg)
+        self.a_head1, self.v_head1 = Dense(action_dim, kernel_regularizer=reg, bias_regularizer=reg),\
+                                     Dense(1, kernel_regularizer=reg, bias_regularizer=reg)
 
     @tf.function
     def call(self, inputs):
@@ -70,7 +72,7 @@ class MLP(tf.keras.Model):
     def __init__(self, units, activation='relu', reg=1e-6):
         super(MLP, self).__init__()
         reg = l2(reg)
-        self.model = Sequential([Dense(l, activation, kernel_regularizer=reg) for l in units])
+        self.model = Sequential([Dense(l, activation, kernel_regularizer=reg, bias_regularizer=reg) for l in units])
 
     @tf.function
     def call(self, inputs):
