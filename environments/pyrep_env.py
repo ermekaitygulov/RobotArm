@@ -26,6 +26,7 @@ class RozumEnv(gym.Env):
         self.rozum = Rozum()
         self.gripper = BaxterGripper()
         self.cube = Shape("Cube")
+        self.graspable_objects = [self.cube, ]
         self.camera = VisionSensor("render")
         self.rozum_tip = self.rozum.get_tip()
 
@@ -80,6 +81,7 @@ class RozumEnv(gym.Env):
         joint_action, ee_action = action[:-1], action[-1]
         current_ee = (1.0 if self.gripper.get_open_amount()[0] > 0.9
                       else 0.0)
+        grasped = False
         if ee_action > 0.5:
             ee_action = 1.0
         elif ee_action < 0.5:
@@ -89,6 +91,11 @@ class RozumEnv(gym.Env):
             while not gripper_done:
                 gripper_done = self.gripper.actuate(ee_action, velocity=0.2)
                 self._pyrep.step()
+            if ee_action == 0.0:
+                # If gripper close action, the check for grasp.
+                for g_obj in self.graspable_objects:
+                    grasped = self.gripper.grasp(g_obj)
+
         else:
             joint_action *= self.angles_scale
             position = [j + a for j, a in zip(self.rozum.get_joint_positions(), joint_action)]
@@ -105,7 +112,7 @@ class RozumEnv(gym.Env):
         else:
             state = None
 
-        if curent_distance < 0.02:
+        if grasped:
             reward += 15
             done = True
             info = 'SUCCESS'
