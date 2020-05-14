@@ -23,7 +23,7 @@ def make_env(name, obs_space_keys=('pov', 'arm'), frame_skip=4, frame_stack=4):
     robot_dof = env.action_space.shape[0] - 1
     for i in range(robot_dof):
         # joint actions
-        discrete_angle = 5 / 180
+        discrete_angle = 1 / 180
         discrete_dict[i] = [discrete_angle
                             if j == i else 0 for j in range(robot_dof)] + [1., ]
         discrete_dict[i + robot_dof] = [-discrete_angle
