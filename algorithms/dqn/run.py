@@ -15,9 +15,9 @@ from common.tf_util import config_gpu
 def make_env(frame_skip, frame_stack, stack_key='pov', **kwargs):
     env = RozumEnv(**kwargs)
     env = SaveVideoWrapper(env, key='pov')
-    if frame_skip:
+    if frame_skip > 1:
         env = FrameSkip(env, frame_skip)
-    if frame_stack and 'pov' in stack_key:
+    if frame_stack > 1:
         env = FrameStack(env, frame_stack, stack_key=stack_key)
     env = AccuracyLogWrapper(env, 10)
     discrete_dict = dict()
