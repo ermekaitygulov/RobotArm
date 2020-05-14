@@ -17,7 +17,7 @@ def make_env(frame_skip, frame_stack, stack_key='pov', **kwargs):
     env = SaveVideoWrapper(env, key='pov')
     if frame_skip:
         env = FrameSkip(env, frame_skip)
-    if frame_stack:
+    if frame_stack and 'pov' in stack_key:
         env = FrameStack(env, frame_stack, stack_key=stack_key)
     env = AccuracyLogWrapper(env, 10)
     discrete_dict = dict()
