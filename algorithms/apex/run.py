@@ -60,8 +60,9 @@ def apex_dqn_run(config_path):
                                     state_keys=state_keys)
     learner = Learner.remote(build_model=make_model, obs_space=obs_space, action_space=action_space,
                              **config['learner'])
-    actors = [Actor.remote(i, make_dqn_env, {'epsilon': 0.4**(1+i/(n_actors-1)*0.7), **config['env']},
-                           counter, build_model=make_model, obs_space=obs_space,
+    actors = [Actor.remote(thread_id=i, make_env=make_dqn_env,
+                           config_env={'epsilon': 0.4**(1+i/(n_actors-1)*0.7), **config['env']},
+                           remote_counter=counter, build_model=make_model, obs_space=obs_space,
                            action_space=action_space, **config['actors']) for i in range(n_actors)]
     online_weights, target_weights = learner.get_weights.remote()
     start_learner = False
