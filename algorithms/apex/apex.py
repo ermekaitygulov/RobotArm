@@ -29,7 +29,7 @@ class Learner:
             ds = ds.cache()
             ds = ds.prefetch(self.tf.data.experimental.AUTOTUNE)
             for batch in ds:
-                priorities = self.base.nn_update(gamma=self.gamma, **batch)
+                priorities = self.base.nn_update(gamma=self.base.gamma, **batch)
                 stop_time = timeit.default_timer()
                 self.base.run_time_deque.append(stop_time - start_time)
                 self.base.schedule()
@@ -103,7 +103,7 @@ class Actor:
                                        done=batch['n_done'],
                                        reward=batch['n_reward'],
                                        actual_n=batch['actual_n'],
-                                       gamma=self.gamma)
+                                       gamma=self.base.gamma)
         ntd = batch['q_value'] - n_target
         return np.abs(ntd)
 
