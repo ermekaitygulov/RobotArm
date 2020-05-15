@@ -41,8 +41,6 @@ class DDPG:
         self._run_time_deque = deque(maxlen=log_freq)
         self._schedule_dict = dict()
         self._schedule_dict[self.update_log] = log_freq
-        # TODO tune OUNoise
-        self._exploration = OUNoise(action_space.shape[0], action_space.low, action_space.high)
 
     def train(self, env, episodes=200, name="train/max_model.ckpt", save_window=20):
         max_reward = - np.inf
@@ -68,9 +66,7 @@ class DDPG:
         counter = current_step
         done, score, state = False, 0, env.reset()
         while not done:
-            action = self.choose_act(state)
-            if self._exploration:
-                action = self._exploration.get_action(action, counter)
+            action = self.choose_act(state, env.sample_action)
             next_state, reward, done, info = env.step(action)
             if info:
                 print(info)
@@ -109,9 +105,11 @@ class DDPG:
                 self.replay_buff.update_priorities(**priorities)
             steps += int(finite_loop)
 
-    def choose_act(self, state):
+    def choose_act(self, state, action_sampler=None):
         inputs = {key: np.array(value)[None] for key, value in state.items()}
         action = self.online_actor(inputs, training=False)[0]
+        if action_sampler:
+            action = action_sampler(action)
         return action
 
     @tf.function
@@ -230,32 +228,3 @@ class DDPG:
     def load(self, out_dir=None):
         self.online_critic.load_weights(out_dir)
         self.online_actor.load_weights(out_dir)
-
-
-class OUNoise(object):
-    def __init__(self, action_dim, low, high, mu=0.0, theta=0.15, max_sigma=0.3, min_sigma=0.1, decay_period=100000):
-        self.mu = mu
-        self.theta = theta
-        self.sigma = max_sigma
-        self.max_sigma = max_sigma
-        self.min_sigma = min_sigma
-        self.decay_period = decay_period
-        self.action_dim = action_dim
-        self.low = low
-        self.high = high
-        self.state = np.ones(self.action_dim) * self.mu
-
-    def reset(self):
-        self.state = np.ones(self.action_dim) * self.mu
-
-    def evolve_state(self):
-        x = self.state
-        dx = self.theta * (self.mu - x) + self.sigma * np.random.randn(self.action_dim)
-        self.state = x + dx
-        return self.state
-
-    def get_action(self, action, t=0):
-        ou_state = self.evolve_state()
-        self.sigma = self.max_sigma - (self.max_sigma - self.min_sigma) * min(1.0, t / self.decay_period)
-        return np.clip(action + ou_state, self.low, self.high)
-

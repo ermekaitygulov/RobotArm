@@ -19,6 +19,7 @@ def make_env(frame_skip, frame_stack, stack_key='pov', **kwargs):
     if frame_stack > 1:
         env = FrameStack(env, frame_stack, stack_key=stack_key)
     env = AccuracyLogWrapper(env, 10)
+    env = OUExploration(env)
     return env
 
 
