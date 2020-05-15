@@ -81,7 +81,7 @@ class RozumEnv(gym.Env):
         done = False
         info = None
         joint_action, ee_action = action[:-1], action[-1]
-        current_ee = (1.0 if self.gripper.get_open_amount()[0] > 0.9
+        current_ee = (1.0 if self.gripper.get_open_amount()[0] > 0.5
                       else 0.0)
         grasped = False
         if ee_action > 0.5:
