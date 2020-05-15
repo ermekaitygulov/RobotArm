@@ -45,10 +45,10 @@ class RozumEnv(gym.Env):
         high = np.array([angle for angle in self.angles_scale] + [1., ])
         self._available_obs_spaces['arm'] = gym.spaces.Box(low=low, high=high, dtype=np.float32)
         self._render_dict['arm'] = self.get_arm_state
-        self._available_obs_spaces['cube'] = gym.spaces.Box(shape=(3,),
+        self._available_obs_spaces['cube'] = gym.spaces.Box(shape=(7,),
                                                             low=0, high=100,
                                                             dtype=np.float32)
-        self._render_dict['cube'] = self.cube.get_position
+        self._render_dict['cube'] = self.cube.get_pose
         try:
             if len(self.obs_space_keys) > 1:
                 self.observation_space = gym.spaces.Dict({key: self._available_obs_spaces[key]
