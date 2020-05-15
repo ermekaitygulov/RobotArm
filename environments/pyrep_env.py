@@ -64,7 +64,7 @@ class RozumEnv(gym.Env):
         self.reward_range = None
         self.current_step = 0
         self.step_limit = 400
-        self.init_angles = self.rozum.get_joint_target_positions()
+        self.init_angles = self.rozum.get_joint_positions()
         self.init_cube_pose = self.cube.get_pose()
         self.always_render = always_render
         self._eps_done = 0
@@ -81,7 +81,7 @@ class RozumEnv(gym.Env):
         done = False
         info = None
         joint_action, ee_action = action[:-1], action[-1]
-        current_ee = (1.0 if self.gripper.get_open_amount()[0] > 0.5
+        current_ee = (1.0 if self.gripper.get_open_amount()[0] > 0.9
                       else 0.0)
         grasped = False
         if ee_action > 0.5:
@@ -106,7 +106,7 @@ class RozumEnv(gym.Env):
 
         tx, ty, tz = self.cube.get_position()
         curent_distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
-        reward = tolerance(curent_distance, (0.0, 0.02), 0.25)/25
+        reward = tolerance(curent_distance, (0.0, 0.06), 0.25)/25
         self.current_step += 1
         if self.always_render:
             state = self.render()
@@ -114,7 +114,7 @@ class RozumEnv(gym.Env):
             state = None
 
         if grasped:
-            reward += 15
+            reward += 20
             done = True
             info = 'SUCCESS'
         elif self.current_step >= self.step_limit:
