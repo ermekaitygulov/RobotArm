@@ -6,6 +6,7 @@ from pyrep.objects.vision_sensor import VisionSensor
 from pyrep.objects import Shape
 import numpy as np
 from common.rewards import tolerance
+import tensorflow as tf
 
 
 class Rozum(Arm):
@@ -66,6 +67,7 @@ class RozumEnv(gym.Env):
         self.init_angles = self.rozum.get_joint_target_positions()
         self.init_cube_pose = self.cube.get_pose()
         self.always_render = always_render
+        self._eps_done = 0
 
     def get_arm_state(self):
         arm = self.rozum.get_joint_positions()
@@ -95,7 +97,6 @@ class RozumEnv(gym.Env):
                 # If gripper close action, the check for grasp.
                 for g_obj in self.graspable_objects:
                     grasped = self.gripper.grasp(g_obj)
-
         else:
             joint_action *= self.angles_scale
             position = [j + a for j, a in zip(self.rozum.get_joint_positions(), joint_action)]
@@ -119,6 +120,10 @@ class RozumEnv(gym.Env):
         elif self.current_step >= self.step_limit:
             done = True
             info = 'FAIL'
+        if done:
+            self._eps_done += 1
+            tf.summary.scalar('final_distance', curent_distance, step=self._eps_done)
+            tf.summary.flush()
         return state, reward, done, info
 
     def reset(self):
