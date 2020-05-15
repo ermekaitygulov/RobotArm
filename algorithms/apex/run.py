@@ -37,6 +37,8 @@ def make_env(name, obs_space_keys=('pov', 'arm'), frame_skip=4, frame_stack=4):
 def apex_run(config_path):
     with open(config_path, "r") as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(config['gpu'])
     ray.init(webui_host='0.0.0.0', num_gpus=1)
     try:
         n_actors = config['actors'].pop('num')
