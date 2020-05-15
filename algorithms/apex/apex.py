@@ -10,45 +10,42 @@ from algorithms.dqn.dqn import DQN
 
 
 @ray.remote(num_gpus=0.5)
-class Learner(DQN):
-    def __init__(self, build_model, obs_shape, action_space, update_target_nn_mod=1000,
-                 gamma=0.99, learning_rate=1e-4, log_freq=100):
+class Learner:
+    def __init__(self, base=DQN, **kwargs):
         import tensorflow as tf
         from common.tf_util import config_gpu
         config_gpu()
         self.tf = tf
         self.tf.config.optimizer.set_jit(True)
-        super().__init__(None, build_model, obs_shape, action_space,
-                         gamma=gamma, learning_rate=learning_rate, update_target_nn_mod=update_target_nn_mod,
-                         log_freq=log_freq)
+        self.base = base(None, **kwargs)
         self.summary_writer = tf.summary.create_file_writer('train/learner/')
 
     def update_from_ds(self, ds, start_time, batch_size):
-        loss_list = list()
-        indexes = ds.pop('indexes')
-        ds = self.tf.data.Dataset.from_tensor_slices(ds)
-        ds = ds.batch(batch_size)
-        ds = ds.cache()
-        ds = ds.prefetch(self.tf.data.experimental.AUTOTUNE)
-        for batch in ds:
-            priorities = self.q_network_update(gamma=self.gamma, **batch)
-            stop_time = timeit.default_timer()
-            self._run_time_deque.append(stop_time - start_time)
-            self.schedule()
-            loss_list.append(priorities)
-            start_time = timeit.default_timer()
+        with self.summary_writer.as_default():
+            loss_list = list()
+            indexes = ds.pop('indexes')
+            ds = self.tf.data.Dataset.from_tensor_slices(ds)
+            ds = ds.batch(batch_size)
+            ds = ds.cache()
+            ds = ds.prefetch(self.tf.data.experimental.AUTOTUNE)
+            for batch in ds:
+                priorities = self.base.nn_update(gamma=self.gamma, **batch)
+                stop_time = timeit.default_timer()
+                self.base.run_time_deque.append(stop_time - start_time)
+                self.base.schedule()
+                loss_list.append(priorities)
+                start_time = timeit.default_timer()
         return indexes, np.concatenate(loss_list)
 
     @ray.method(num_return_vals=2)
     def get_weights(self):
-        return self.online_model.get_weights(), self.target_model.get_weights()
+        return self.base.get_online(), self.base.get_target()
 
 
 @ray.remote(num_gpus=0, num_cpus=2)
-class Actor(DQN):
-    def __init__(self, thread_id, build_model, obs_space, action_space,
-                 make_env, config_env, remote_counter, rollout_size, epsilon=0.1,
-                 gamma=0.99, n_step=10):
+class Actor:
+    def __init__(self, base=DQN, thread_id=0, make_env=None, config_env=None, remote_counter=None,
+                 rollout_size=300, **agent_kwargs):
         import tensorflow as tf
         self.tf = tf
         self.env = make_env('{}_thread'.format(thread_id), **config_env)
@@ -58,24 +55,21 @@ class Actor(DQN):
         if isinstance(self.env.observation_space, gym.spaces.Dict):
             state_keys = self.env.observation_space.spaces.keys()
             buffer = DictWrapper(buffer, state_prefix=('', 'next_', 'n_'), state_keys=state_keys)
-        super().__init__(buffer, build_model, obs_space, action_space,
-                         gamma=gamma, n_step=n_step)
+        self.base = base(buffer, **agent_kwargs)
         self.summary_writer = self.tf.summary.create_file_writer('train/{}_actor/'.format(thread_id))
-        self.epsilon = epsilon
         self.max_reward = -np.inf
         self.env_state = None
         self.remote_counter = remote_counter
 
-    def rollout(self, online_weights, target_weights):
+    def rollout(self, *weights):
         with self.summary_writer.as_default():
-            self.online_model.set_weights(online_weights)
-            self.target_model.set_weights(target_weights)
+            self.base.set_weights(*weights)
             if self.env_state is None:
                 done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
             else:
                 done, score, state, start_time = self.env_state
             while self.replay_buff.get_stored_size() < self.replay_buff.get_buffer_size():
-                action, q = self.choose_act(state, self.epsilon, self.env.sample_action)
+                action, q = self.base.choose_act(state, self.env.sample_action)
                 next_state, reward, done, _ = self.env.step(action)
                 score += reward
                 self.perceive(state, action, reward, next_state, done, q_value=q)
@@ -98,18 +92,7 @@ class Actor(DQN):
             self.replay_buff.clear()
             return rollout, priorities
 
-    def validate(self, test_mod=100, test_eps=10, max_eps=1e+6):
-        with self.summary_writer.as_default():
-            global_ep = ray.get(self.parameter_server.get_eps_done.remote())
-            while global_ep < max_eps:
-                if (global_ep + 1) % test_mod == 0:
-                    self.sync_with_param_server()
-                    total_reward = self.test(self.env, None, test_eps, False)
-                    total_reward /= test_eps
-                    print("validation_reward (mean): {}".format(total_reward))
-                    self.tf.summary.scalar("validation", total_reward, step=global_ep)
-                    self.tf.summary.flush()
-                global_ep = ray.get(self.parameter_server.get_eps_done.remote())
+    # TODO add validation method
 
     def priority_err(self, rollout):
         batch = {key: rollout[key] for key in ['q_value', 'n_done',

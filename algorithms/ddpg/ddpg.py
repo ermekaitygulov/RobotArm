@@ -87,7 +87,7 @@ class DDPG:
         start_time = timeit.default_timer()
         for batch in self.sampler(steps):
             indexes = batch.pop('indexes')
-            priorities = self.ac_update(gamma=self.gamma, **batch)
+            priorities = self.nn_update(gamma=self.gamma, **batch)
             self.priorities_store.append({'indexes': indexes.numpy(),
                                           'priorities': priorities.numpy()})
             self.schedule()
@@ -115,7 +115,7 @@ class DDPG:
         return action
 
     @tf.function
-    def ac_update(self, state, action, next_state, done, reward,
+    def nn_update(self, state, action, next_state, done, reward,
                   n_state, n_done, n_reward, actual_n, weights,
                   gamma):
         priorities = self.critic_update(state, action, next_state, done, reward,

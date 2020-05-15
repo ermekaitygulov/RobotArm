@@ -1,4 +1,3 @@
-import random
 from collections import deque
 
 import numpy as np
@@ -34,21 +33,18 @@ class DQN:
             self.sampler = self.sample_generator
 
         self._update_frequency = 0
-        self._run_time_deque = deque(maxlen=log_freq)
+        self.run_time_deque = deque(maxlen=log_freq)
         self._schedule_dict = dict()
         self._schedule_dict[self.target_update] = update_target_nn_mod
         self._schedule_dict[self.update_log] = log_freq
 
-    def train(self, env, episodes=200, name="train/max_model.ckpt",
-              epsilon=0.1, final_epsilon=0.01, eps_decay=0.99, save_window=25):
+    def train(self, env, episodes=200, name="train/max_model.ckpt", save_window=25):
         max_reward = - np.inf
         counter = 0
         window = deque([], maxlen=save_window)
         for e in range(episodes):
             start_time = timeit.default_timer()
-            score, counter = self._train_episode(env, counter, epsilon)
-            if self.replay_buff.get_stored_size() > self.replay_start_size:
-                epsilon = max(final_epsilon, epsilon * eps_decay)
+            score, counter = self._train_episode(env, counter)
             window.append(score)
             avg_reward = sum(window) / len(window)
             if avg_reward >= max_reward:
@@ -56,19 +52,19 @@ class DQN:
                 max_reward = avg_reward
                 self.save(name)
             stop_time = timeit.default_timer()
-            print("episode: {}  score: {}  counter: {}  epsilon: {}  max: {}"
-                  .format(e, score, counter, epsilon, max_reward))
+            print("episode: {}  score: {}  counter: {}  max: {}"
+                  .format(e, score, counter, max_reward))
             print("RunTime: ", stop_time - start_time)
             tf.summary.scalar("reward", score, step=e)
             tf.summary.flush()
 
-    def _train_episode(self, env, current_step=0, epsilon=0.0):
+    def _train_episode(self, env, current_step=0):
         counter = current_step
         if current_step == 0:
             self.target_update()
         done, score, state = False, 0, env.reset()
         while not done:
-            action, _ = self.choose_act(state, epsilon, env.sample_action)
+            action, _ = self.choose_act(state, env.sample_action)
             next_state, reward, done, info = env.step(action)
             if info:
                 print(info)
@@ -100,7 +96,7 @@ class DQN:
             done = False
             observation = env.reset()
             while not done:
-                action, _ = self.choose_act(observation, 0, env.sample_action)
+                action, _ = self.choose_act(observation, None)
                 observation, r, done, _ = env.step(action)
                 reward += r
             total_reward += reward
@@ -114,12 +110,12 @@ class DQN:
         start_time = timeit.default_timer()
         for batch in self.sampler(steps):
             indexes = batch.pop('indexes')
-            priorities = self.q_network_update(gamma=self.gamma, **batch)
+            priorities = self.nn_update(gamma=self.gamma, **batch)
             self.priorities_store.append({'indexes': indexes.numpy(),
                                           'priorities': priorities.numpy()})
             self.schedule()
             stop_time = timeit.default_timer()
-            self._run_time_deque.append(stop_time - start_time)
+            self.run_time_deque.append(stop_time - start_time)
             start_time = timeit.default_timer()
         while len(self.priorities_store) > 0:
             priorities = self.priorities_store.pop(0)
@@ -136,19 +132,18 @@ class DQN:
                 self.replay_buff.update_priorities(**priorities)
             steps += int(finite_loop)
 
-    def choose_act(self, state, epsilon, action_sampler):
+    def choose_act(self, state, action_sampler=None):
         inputs = {key: np.array(value)[None] for key, value in state.items()}
         q_value = self.online_model(inputs, training=False)[0]
-        if random.random() > epsilon:
-            action = np.argmax(q_value)
-        else:
-            action = action_sampler()
+        action = np.argmax(q_value)
+        if action_sampler:
+            action = action_sampler(action)
         return action, q_value[action]
 
     @tf.function
-    def q_network_update(self, state, action, next_state, done, reward,
-                         n_state, n_done, n_reward, actual_n, weights,
-                         gamma):
+    def nn_update(self, state, action, next_state, done, reward,
+                  n_state, n_done, n_reward, actual_n, weights,
+                  gamma):
         print("Q-nn_update tracing")
         online_variables = self.online_model.trainable_variables
         with tf.GradientTape() as tape:
@@ -224,7 +219,7 @@ class DQN:
                 key()
 
     def update_log(self):
-        update_frequency = len(self._run_time_deque) / sum(self._run_time_deque)
+        update_frequency = len(self.run_time_deque) / sum(self.run_time_deque)
         print("LearnerEpoch({:.2f}it/sec): ".format(update_frequency), self.optimizer.iterations.numpy())
         for key, metric in self.avg_metrics.items():
             tf.summary.scalar(key, metric.result(), step=self.optimizer.iterations)
@@ -237,3 +232,14 @@ class DQN:
 
     def load(self, out_dir=None):
         self.online_model.load_weights(out_dir)
+
+    # Functions below are needed for unify form of apex for dqn and ddpg
+    def get_online(self):
+        return self.online_model.get_weights()
+
+    def get_target(self):
+        return self.target_model.get_weights()
+
+    def set_weights(self, online_weights, target_weights):
+        self.online_model.set_weights(online_weights)
+        self.target_model.set_weights(target_weights)

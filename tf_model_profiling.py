@@ -43,9 +43,9 @@ class TestAgent(DQN):
         ds = ds.cache()
         ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
         for batch in ds:
-            _, ntd_loss, _, _ = self.q_network_update(gamma=self.gamma, **batch)
+            _, ntd_loss, _, _ = self.nn_update(gamma=self.gamma, **batch)
             stop_time = timeit.default_timer()
-            self._run_time_deque.append(stop_time - start_time)
+            self.run_time_deque.append(stop_time - start_time)
             self.schedule()
             loss_list.append(np.abs(ntd_loss.numpy()))
             start_time = timeit.default_timer()

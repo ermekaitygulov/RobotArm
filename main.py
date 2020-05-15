@@ -1,11 +1,11 @@
 from algorithms.dqn.run import dqn_run
-from algorithms.apex.run import apex_run
+from algorithms.apex.run import apex_dqn_run
 from algorithms.ddpg.run import ddpg_run
 from argparse import ArgumentParser
 import os
 
 algorithms = {'dqn': dqn_run,
-              'apex': apex_run,
+              'apex': apex_dqn_run,
               'ddpg': ddpg_run}
 
 if __name__ == '__main__':

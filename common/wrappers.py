@@ -1,5 +1,6 @@
 import os
 from collections import deque
+from random import random
 
 import cv2
 import gym
@@ -13,7 +14,7 @@ class FrameSkip(gym.Wrapper):
     Note that this wrapper does not "maximize" over the skipped frames.
     """
     def __init__(self, env, skip=4):
-        super().__init__(env)
+        super(FrameSkip, self).__init__(env)
 
         self._skip = skip
 
@@ -29,12 +30,32 @@ class FrameSkip(gym.Wrapper):
         return obs, total_reward, done, info
 
 
+class EpsilonExploration(gym.Wrapper):
+    def __init__(self, env, epsilon=0.1, final_epsilon=0.01, epsilon_decay=0.99):
+        super(EpsilonExploration, self).__init__(env)
+        self.epsilon = epsilon
+        self.final_epsilon = final_epsilon
+        self.epsilon_decay = epsilon_decay
+
+    def sample_action(self, action):
+        if random() > self.epsilon:
+            return action
+        else:
+            return self.env.sample_action()
+
+    def step(self, action):
+        obs, rew, done, info = self.env.step(action)
+        if done:
+            self.epsilon = max(self.epsilon*self.epsilon_decay, self.final_epsilon)
+        return obs, rew, done, info
+
+
 class FrameStack(gym.Wrapper):
     def __init__(self, env, k, channel_order='hwc', stack_key=None):
         """Stack k last frames.
         Returns lazy array, which is much more memory efficient.
         """
-        gym.Wrapper.__init__(self, env)
+        super(FrameStack, self).__init__(env)
         self.k = k
         self.observations = deque([], maxlen=k)
         self.stack_axis = {'hwc': 2, 'chw': 0}[channel_order]
@@ -84,7 +105,7 @@ class FrameStack(gym.Wrapper):
 
 class DiscreteWrapper(gym.Wrapper):
     def __init__(self, env, discrete_dict):
-        gym.Wrapper.__init__(self, env)
+        super(DiscreteWrapper, self).__init__(env)
         self.action_space = gym.spaces.Discrete(len(discrete_dict))
         self.discrete_dict = discrete_dict
 
@@ -105,7 +126,7 @@ class SaveVideoWrapper(gym.Wrapper):
         :param path: path to save videos
         :param resize: resize factor
         """
-        super().__init__(env)
+        super(SaveVideoWrapper, self).__init__(env)
         self.path = path
         self.recording = []
         self.rewards = [0]
@@ -187,7 +208,7 @@ class SaveVideoWrapper(gym.Wrapper):
 
 class AccuracyLogWrapper(gym.Wrapper):
     def __init__(self, env, window, name='agent'):
-        super().__init__(env)
+        super(AccuracyLogWrapper, self).__init__(env)
         self.accuracy = deque(maxlen=window)
         self.name = name
         self.episodes_done = 0

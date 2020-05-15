@@ -5,14 +5,12 @@ import yaml
 from algorithms.apex.apex import Learner, Counter, Actor
 from replay_buffers.util import DictWrapper, get_dtype_dict
 from cpprb import PrioritizedReplayBuffer as cppPER
-from replay_buffers.stable_baselines import PrioritizedReplayBuffer
 from algorithms.model import get_network_builder
 from environments.pyrep_env import RozumEnv
 from common.wrappers import *
-from common.tf_util import config_gpu
 
 
-def make_env(name, obs_space_keys=('pov', 'arm'), frame_skip=4, frame_stack=4):
+def make_dqn_env(name, epsilon, obs_space_keys=('pov', 'arm'), frame_skip=4, frame_stack=4):
     env = RozumEnv(obs_space_keys)
     if frame_skip > 1:
         env = FrameSkip(env, frame_skip)
@@ -31,10 +29,11 @@ def make_env(name, obs_space_keys=('pov', 'arm'), frame_skip=4, frame_stack=4):
     # gripper action
     discrete_dict[2 * robot_dof] = [0., ] * (robot_dof + 1)
     env = DiscreteWrapper(env, discrete_dict)
+    env = EpsilonExploration(env, epsilon, epsilon_decay=1.)
     return env
 
 
-def apex_run(config_path):
+def apex_dqn_run(config_path):
     with open(config_path, "r") as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -45,7 +44,7 @@ def apex_run(config_path):
     except KeyError:
         n_actors = 1
 
-    test_env = make_env('test_name', **config['env'])
+    test_env = make_dqn_env('test_name', **config['env'])
     obs_space = test_env.observation_space
     action_space = test_env.action_space
     env_dict, dtype_dict = get_dtype_dict(test_env)
@@ -59,10 +58,11 @@ def apex_run(config_path):
         state_keys = test_env.observation_space.spaces.keys()
         replay_buffer = DictWrapper(replay_buffer, state_prefix=('', 'next_', 'n_'),
                                     state_keys=state_keys)
-    learner = Learner.remote(make_model, obs_space, action_space, **config['learner'])
-    actors = [Actor.remote(i, make_model, obs_space, action_space, make_env, config['env'], counter,
-                           epsilon=0.4**(1+i/(n_actors-1)*0.7),
-                           **config['actors']) for i in range(n_actors)]
+    learner = Learner.remote(build_model=make_model, obs_space=obs_space, action_space=action_space,
+                             **config['learner'])
+    actors = [Actor.remote(i, make_dqn_env, {'epsilon': 0.4**(1+i/(n_actors-1)*0.7), **config['env']},
+                           counter, build_model=make_model, obs_space=obs_space,
+                           action_space=action_space, **config['actors']) for i in range(n_actors)]
     online_weights, target_weights = learner.get_weights.remote()
     start_learner = False
     rollouts = {}
