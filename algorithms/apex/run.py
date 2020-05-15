@@ -10,7 +10,7 @@ from environments.pyrep_env import RozumEnv
 from common.wrappers import *
 
 
-def make_dqn_env(name, epsilon, obs_space_keys=('pov', 'arm'), frame_skip=4, frame_stack=4):
+def make_dqn_env(name, epsilon=0.1, obs_space_keys=('pov', 'arm'), frame_skip=4, frame_stack=4):
     env = RozumEnv(obs_space_keys)
     if frame_skip > 1:
         env = FrameSkip(env, frame_skip)
