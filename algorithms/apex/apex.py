@@ -79,8 +79,8 @@ class Actor:
                     stop_time = timeit.default_timer()
                     if score > self.max_reward:
                         self.max_reward = score
-                    print("episode: {}  score: {:.3f}  epsilon: {:.3f}  max: {:.3f}"
-                          .format(global_ep-1, score, self.epsilon, self.max_reward))
+                    print("episode: {}  score: {:.3f}  max: {:.3f}"
+                          .format(global_ep-1, score, self.max_reward))
                     print("RunTime: {:.3f}".format(stop_time - start_time))
                     self.tf.summary.scalar("reward", score, step=global_ep-1)
                     self.tf.summary.flush()
