@@ -68,11 +68,11 @@ class Actor:
                 done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
             else:
                 done, score, state, start_time = self.env_state
-            while self.replay_buff.get_stored_size() < self.replay_buff.get_buffer_size():
+            while self.base.replay_buff.get_stored_size() < self.base.replay_buff.get_buffer_size():
                 action, q = self.base.choose_act(state, self.env.sample_action)
                 next_state, reward, done, _ = self.env.step(action)
                 score += reward
-                self.perceive(state, action, reward, next_state, done, q_value=q)
+                self.base.perceive(state, action, reward, next_state, done, q_value=q)
                 state = next_state
                 if done:
                     global_ep = ray.get(self.remote_counter.increment.remote())
@@ -86,10 +86,10 @@ class Actor:
                     self.tf.summary.flush()
                     done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
             self.env_state = [done, score, state, start_time]
-            rollout = self.replay_buff.get_all_transitions()
+            rollout = self.base.replay_buff.get_all_transitions()
             priorities = self.priority_err(rollout)
             rollout.pop('q_value')
-            self.replay_buff.clear()
+            self.base.replay_buff.clear()
             return rollout, priorities
 
     # TODO add validation method
@@ -99,7 +99,7 @@ class Actor:
                                                'n_reward', 'actual_n', 'n_state']}
         for key in ['q_value', 'n_done', 'n_reward', 'actual_n']:
             batch[key] = np.squeeze(batch[key])
-        n_target = self.compute_target(next_state=batch['n_state'],
+        n_target = self.base.compute_target(next_state=batch['n_state'],
                                        done=batch['n_done'],
                                        reward=batch['n_reward'],
                                        actual_n=batch['actual_n'],
