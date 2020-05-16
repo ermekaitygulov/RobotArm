@@ -123,7 +123,7 @@ class RozumEnv(gym.Env):
         state = self.render()
 
         if grasped:
-            reward += 20
+            reward += 30
             done = True
             info = 'SUCCESS'
         elif self.current_step >= self.step_limit:
