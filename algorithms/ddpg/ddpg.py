@@ -26,7 +26,8 @@ class DDPG(TDPolicy):
         action = self.online_actor(inputs, training=False)[0]
         if action_sampler:
             action = action_sampler(action)
-        return action
+        q_value = self.online_critic({'state': inputs, 'action': action[None]}, training=False)[0]
+        return action, q_value
 
     @tf.function
     def nn_update(self, state, action, next_state, done, reward,
