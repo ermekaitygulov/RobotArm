@@ -11,6 +11,7 @@ done = False
 start_time = timeit.default_timer()
 discrete_dict = dict()
 robot_dof = env.action_space.shape[0] - 1
+env.reset()
 for i in range(robot_dof):
     # joint actions
     discrete_angle = 5 / 180
@@ -23,9 +24,10 @@ discrete_dict[2 * robot_dof] = [0., ] * (robot_dof + 1)
 env = DiscreteWrapper(env, discrete_dict)
 sign = 0
 done = False
-while not done:
-    state, reward, done, _ = env.step(env.sample_action())
-env.reset()
+for j in range(2*robot_dof):
+    for i in tqdm(range(100)):
+        state, reward, done, _ = env.step(j)
+    env.reset()
 
 stop_time = timeit.default_timer()
 print("RunTime: ", stop_time - start_time)
