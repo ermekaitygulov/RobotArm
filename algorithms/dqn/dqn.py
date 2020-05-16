@@ -9,7 +9,9 @@ class DQN(TDPolicy):
 
         super(DQN, self).__init__(*args, **kwargs)
         self.online_model = build_model('Online', obs_space, action_space)
+        self.online_models.append(self.online_model)
         self.target_model = build_model('Target', obs_space, action_space)
+        self.target_models.append(self.target_model)
         self._schedule_dict[self.target_update] = update_target_nn_mod
 
     def choose_act(self, state, action_sampler=None):
