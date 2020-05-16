@@ -19,7 +19,7 @@ class RozumEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self, obs_space_keys=('pov', 'arm'), scene_file='rozum_pyrep.ttt',
-                 headless=True, always_render=False):
+                 headless=True):
         self.obs_space_keys = (obs_space_keys,) if isinstance(obs_space_keys, str) else obs_space_keys
         self._pyrep = PyRep()
         self._pyrep.launch(scene_file, headless=headless)
@@ -63,10 +63,9 @@ class RozumEnv(gym.Env):
             raise
         self.reward_range = None
         self.current_step = 0
-        self.step_limit = 400
+        self.step_limit = 1000
         self.init_angles = self.rozum.get_joint_positions()
         self.init_cube_pose = self.cube.get_pose()
-        self.always_render = always_render
         self._eps_done = 0
 
     def get_arm_state(self):
@@ -119,10 +118,7 @@ class RozumEnv(gym.Env):
         tx, ty, tz = self.cube.get_position()
         current_distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
         reward = tolerance(current_distance, (0.0, 0.06), 0.25)/25
-        if self.always_render:
-            state = self.render()
-        else:
-            state = None
+        state = self.render()
 
         if grasped:
             reward += 20
