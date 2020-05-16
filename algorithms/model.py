@@ -91,6 +91,7 @@ def make_model(name, obs_space, action_space):
     model = tf.keras.Model(inputs={'pov': pov, 'arm': arm}, outputs=head, name=name)
     return model
 
+
 @register("DuelingDQN_arm_cube")
 def make_model(name, obs_space, action_space):
     cube = tf.keras.Input(shape=obs_space['cube'].shape)
@@ -109,12 +110,11 @@ def make_critic(name, obs_space, action_space):
     arm = tf.keras.Input(shape=obs_space['arm'].shape)
     action = tf.keras.Input(shape=action_space.shape)
     normalized_pov = pov / 255
-    normalized_action = action
-    feature_input = tf.keras.layers.concatenate([arm, normalized_action])
+    feature_input = tf.keras.layers.Concatenate()([arm, action])
     pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(normalized_pov)
     feature_base = MLP([64, 64], 'tanh')(feature_input)
     base = tf.keras.layers.concatenate([pov_base, feature_base])
-    fc = MLP([512, 512], 'relu')(base)
+    fc = MLP([256, 128], 'relu')(base)
     out = tf.keras.layers.Dense(1)(fc)
     model = tf.keras.Model(inputs={'pov': pov, 'arm': arm, 'action': action},
                            outputs=out, name=name)
@@ -127,9 +127,9 @@ def make_actor(name, obs_space, action_space):
     arm = tf.keras.Input(shape=obs_space['arm'].shape)
     normalized_pov = pov / 255
     pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(normalized_pov)
-    angles_base = MLP([512, 256], 'tanh')(arm)
+    angles_base = MLP([64, 64], 'tanh')(arm)
     base = tf.keras.layers.concatenate([pov_base, angles_base])
-    fc = MLP([512, 512], 'relu')(base)
+    fc = MLP([256, 128], 'relu')(base)
     out = tf.keras.layers.Dense(action_space.shape[0])(fc)
     model = tf.keras.Model(inputs={'pov': pov, 'arm': arm}, outputs=out, name=name)
     return model
