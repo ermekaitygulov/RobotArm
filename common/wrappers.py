@@ -228,7 +228,7 @@ class AccuracyLogWrapper(gym.Wrapper):
         observation = self.env.reset(**kwargs)
         if len(self.accuracy) == self.accuracy.maxlen:
             mean = sum(self.accuracy)/len(self.accuracy)
-            tf.summary.scalar('{}_accuracy'.format(self.name), mean, step=self.episodes_done)
+            tf.summary.scalar('accuracy'.format(self.name), mean, step=self.episodes_done)
             print('{}_accuracy: {}'.format(self.name, mean))
         return observation
 
