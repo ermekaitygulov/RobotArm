@@ -48,8 +48,8 @@ def ddpg_run(config_path):
     make_critic = get_network_builder(nn_config['critic'])
     make_actor = get_network_builder(nn_config['actor'])
 
-    agent = DDPG(replay_buffer, make_critic, make_actor, env.observation_space, env.action_space, dtype_dict,
-                 **config['agent'])
+    agent = DDPG(make_critic, make_actor, env.observation_space, env.action_space,
+                 replay_buff=replay_buffer, dtype_dict=dtype_dict, **config['agent'])
 
     train_config = config['train']
     summary_writer = tf.summary.create_file_writer(train_config.pop('log_dir'))

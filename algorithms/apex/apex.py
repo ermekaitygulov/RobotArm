@@ -55,7 +55,7 @@ class Actor:
         if isinstance(self.env.observation_space, gym.spaces.Dict):
             state_keys = self.env.observation_space.spaces.keys()
             buffer = DictWrapper(buffer, state_prefix=('', 'next_', 'n_'), state_keys=state_keys)
-        self.base = base(buffer, **agent_kwargs)
+        self.base = base(replay_buff=buffer, **agent_kwargs)
         self.summary_writer = self.tf.summary.create_file_writer('train/{}_actor/'.format(thread_id))
         self.max_reward = -np.inf
         self.env_state = None
@@ -100,10 +100,10 @@ class Actor:
         for key in ['q_value', 'n_done', 'n_reward', 'actual_n']:
             batch[key] = np.squeeze(batch[key])
         n_target = self.base.compute_target(next_state=batch['n_state'],
-                                       done=batch['n_done'],
-                                       reward=batch['n_reward'],
-                                       actual_n=batch['actual_n'],
-                                       gamma=self.base.gamma)
+                                            done=batch['n_done'],
+                                            reward=batch['n_reward'],
+                                            actual_n=batch['actual_n'],
+                                            gamma=self.base.gamma)
         ntd = batch['q_value'] - n_target
         return np.abs(ntd)
 

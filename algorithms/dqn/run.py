@@ -55,8 +55,8 @@ def dqn_run(config_path):
         replay_buffer = DictWrapper(replay_buffer, state_prefix=('', 'next_', 'n_'),
                                     state_keys=state_keys)
     make_model = get_network_builder(config['neural_network'])
-    agent = DQN(replay_buffer, make_model, env.observation_space, env.action_space, dtype_dict,
-                **config['agent'])
+    agent = DQN(make_model, env.observation_space, env.action_space, replay_buff=replay_buffer,
+                dtype_dict=dtype_dict, **config['agent'])
 
     train_config = config['train']
     summary_writer = tf.summary.create_file_writer(train_config.pop('log_dir'))

@@ -1,109 +1,25 @@
-from collections import deque
-
 import numpy as np
 import tensorflow as tf
-import timeit
-
+from algorithms.base.td_base import TDPolicy
 from common.tf_util import huber_loss, update_target_variables
 
 
-class DDPG:
-    def __init__(self, replay_buffer, build_critic, build_actor, obs_space, action_space, dtype_dict,
-                 train_freq=100, train_quantity=100, log_freq=50, polyak=0.99, batch_size=32,
-                 replay_start_size=500, gamma=0.99, learning_rate=1e-4, n_step=10):
-
-        self.gamma = np.array(gamma, dtype='float32')
+class DDPG(TDPolicy):
+    def __init__(self, build_critic, build_actor, obs_space, action_space,
+                 polyak=0.99, actor_lr=1e-4, *args, **kwargs):
+        super(DDPG, self).__init__(*args, **kwargs)
         self.online_critic = build_critic('Online_Q', obs_space, action_space)
+        self.online_models.append(self.online_critic)
         self.target_critic = build_critic('Target_Q', obs_space, action_space)
+        self.target_models.append(self.target_critic)
         update_target_variables(self.target_critic.weights, self.online_critic.weights)
         self.online_actor = build_actor('Online_actor', obs_space, action_space)
+        self.online_models.append(self.online_actor)
         self.target_actor = build_actor('Target_actor', obs_space, action_space)
+        self.target_models.append(self.target_actor)
         update_target_variables(self.target_actor.weights, self.online_actor.weights)
-        self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.avg_metrics = dict()
-        self.train_freq = train_freq
-        self.train_quantity = train_quantity
-        self.batch_size = batch_size
-        self.replay_start_size = replay_start_size
-        self.n_deque = deque([], maxlen=n_step)
-        self.replay_buff = replay_buffer
+        self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
         self.polyak = polyak
-
-        self.priorities_store = list()
-        if dtype_dict is not None:
-            ds = tf.data.Dataset.from_generator(self.sample_generator, output_types=dtype_dict)
-            ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
-            self.sampler = ds.take
-        else:
-            self.sampler = self.sample_generator
-
-        self._run_time_deque = deque(maxlen=log_freq)
-        self._schedule_dict = dict()
-        self._schedule_dict[self.update_log] = log_freq
-
-    def train(self, env, episodes=200, name="train/max_model.ckpt", save_window=20):
-        max_reward = - np.inf
-        counter = 0
-        window = deque([], maxlen=save_window)
-        for e in range(episodes):
-            start_time = timeit.default_timer()
-            score, counter = self._train_episode(env, counter)
-            window.append(score)
-            avg_reward = sum(window)/len(window)
-            if avg_reward >= max_reward:
-                print("MaxAvg reward moved from {:.2f} to {:.2f} (save model)".format(max_reward, avg_reward))
-                max_reward = avg_reward
-                self.save(name)
-            stop_time = timeit.default_timer()
-            print("episode: {}  score: {}  counter: {}  maxavg: {}"
-                  .format(e, score, counter, max_reward))
-            print("RunTime: ", stop_time - start_time)
-            tf.summary.scalar("reward", score, step=e)
-            tf.summary.flush()
-
-    def _train_episode(self, env, current_step=0):
-        counter = current_step
-        done, score, state = False, 0, env.reset()
-        while not done:
-            action = self.choose_act(state, env.sample_action)
-            next_state, reward, done, info = env.step(action)
-            if info:
-                print(info)
-            score += reward
-            self.perceive(state, action, reward, next_state, done)
-            counter += 1
-            state = next_state
-            if self.replay_buff.get_stored_size() > self.replay_start_size \
-                    and counter % self.train_freq == 0:
-                self.update(self.train_quantity)
-        return score, counter
-
-    def update(self, steps):
-        start_time = timeit.default_timer()
-        for batch in self.sampler(steps):
-            indexes = batch.pop('indexes')
-            priorities = self.nn_update(gamma=self.gamma, **batch)
-            self.priorities_store.append({'indexes': indexes.numpy(),
-                                          'priorities': priorities.numpy()})
-            self.schedule()
-            stop_time = timeit.default_timer()
-            self._run_time_deque.append(stop_time - start_time)
-            start_time = timeit.default_timer()
-        while len(self.priorities_store) > 0:
-            priorities = self.priorities_store.pop(0)
-            self.replay_buff.update_priorities(**priorities)
-
-    def sample_generator(self, steps=None):
-        steps_done = 0
-        finite_loop = bool(steps)
-        steps = steps if finite_loop else 1
-        while steps_done < steps:
-            yield self.replay_buff.sample(self.batch_size)
-            if len(self.priorities_store) > 0:
-                priorities = self.priorities_store.pop(0)
-                self.replay_buff.update_priorities(**priorities)
-            steps += int(finite_loop)
 
     def choose_act(self, state, action_sampler=None):
         inputs = {key: np.array(value)[None] for key, value in state.items()}
@@ -171,7 +87,7 @@ class DDPG:
         gradients = tape.gradient(critic_loss, critic_variables)
         for i, g in enumerate(gradients):
             gradients[i] = tf.clip_by_norm(g, 10)
-        self.critic_optimizer.apply_gradients(zip(gradients, critic_variables))
+        self.q_optimizer.apply_gradients(zip(gradients, critic_variables))
         priorities = tf.abs(ntd_loss)
         return priorities
 
@@ -184,42 +100,6 @@ class DDPG:
         target = target * gamma ** actual_n
         target = target + reward
         return target
-
-    def update_metrics(self, key, value):
-        if key not in self.avg_metrics:
-            self.avg_metrics[key] = tf.keras.metrics.Mean(name=key, dtype=tf.float32)
-        self.avg_metrics[key].update_state(value)
-
-    def perceive(self, state, action, reward, next_state, done, **kwargs):
-        transition = dict(state=state, action=action, reward=reward,
-                          next_state=next_state, done=done, **kwargs)
-        self.n_deque.append(transition)
-        if len(self.n_deque) == self.n_deque.maxlen or transition['done']:
-            while len(self.n_deque) != 0:
-                n_step_state = self.n_deque[-1]['next_state']
-                n_step_done = self.n_deque[-1]['done']
-                n_step_r = sum([t['reward'] * self.gamma ** i for i, t in enumerate(self.n_deque)])
-                self.n_deque[0]['n_state'] = n_step_state
-                self.n_deque[0]['n_reward'] = n_step_r
-                self.n_deque[0]['n_done'] = n_step_done
-                self.n_deque[0]['actual_n'] = len(self.n_deque)
-                self.replay_buff.add(**self.n_deque.popleft())
-                if not n_step_done:
-                    break
-
-    def schedule(self):
-        for key, value in self._schedule_dict.items():
-            if tf.equal(self.critic_optimizer.iterations % value, 0):
-                key()
-
-    def update_log(self):
-        update_frequency = len(self._run_time_deque) / sum(self._run_time_deque)
-        print("LearnerEpoch({:.2f}it/sec): ".format(update_frequency), self.critic_optimizer.iterations.numpy())
-        for key, metric in self.avg_metrics.items():
-            tf.summary.scalar(key, metric.result(), step=self.critic_optimizer.iterations)
-            print('  {}:     {:.5f}'.format(key, metric.result()))
-            metric.reset_states()
-        tf.summary.flush()
 
     def save(self, out_dir=None):
         self.online_critic.save_weights(out_dir)
