@@ -5,7 +5,8 @@
 * DDPG for continues control
 
 **Implementation details:**
-* Two variants of buffer can be used:
+* Two variants of buffer can be used in DQN and DDPG (support of sb implementation
+ in APEX is in process):
  
 | [ccprb](https://ymd_h.gitlab.io/cpprb/) (C++ realization of replay buffers) | stable_baselines |
 |------------|-----------------|
@@ -17,16 +18,13 @@
  ```state = {'pov':{'shape':(64,64,3), 'dtype': 'uint8'}, 'angles': {'shape': (7), 'dtype':'float'}} ```
 * Vrep environment for Rozum robot uses [PyRep API](https://github.com/stepjam/PyRep)
  (instead of original VREP API). Rewards uses tolerance function from [DeepMind ControlSuite](https://github.com/deepmind/dm_control)
+* Observation type option in environment ('pov'/('pov', 'angles')/'angles' and etc.)
 * If dtype_dict is specified, samplings in DQN and DDPG will be wrapped with tf.data.Dataset.from_generator, improving updates frequency
 
 **TODO**:
 * APEX-DDPG (asynchronus DDPG)
-* Observation type option in environment ('pov'/('pov', 'angles')/'angles' and etc.)
 * Unity environment for Rozum model
  to speed up training on server in headless mode
 
 **InProc**:
-* alg configs support:
-    * [X] DQN
-    * [ ] DDPG
-    * [ ] APEX-DQN    
+* [ ] APEX-DDPG    
