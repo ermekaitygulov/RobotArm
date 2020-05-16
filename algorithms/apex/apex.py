@@ -17,7 +17,7 @@ class Learner:
         config_gpu()
         self.tf = tf
         self.tf.config.optimizer.set_jit(True)
-        self.base = base(None, **kwargs)
+        self.base = base(replay_buff=None, **kwargs)
         self.summary_writer = tf.summary.create_file_writer('train/learner/')
 
     def update_from_ds(self, ds, start_time, batch_size):

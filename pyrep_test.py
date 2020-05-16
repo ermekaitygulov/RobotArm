@@ -5,8 +5,8 @@ from tqdm import tqdm
 import numpy as np
 
 env = RozumEnv(obs_space_keys=('pov'))
-env = SaveVideoWrapper(env)
-env = FrameSkip(env)
+env = SaveVideoWrapper(env, path='./')
+# env = FrameSkip(env)
 done = False
 start_time = timeit.default_timer()
 discrete_dict = dict()
@@ -22,11 +22,9 @@ for i in range(robot_dof):
 discrete_dict[2 * robot_dof] = [0., ] * (robot_dof + 1)
 env = DiscreteWrapper(env, discrete_dict)
 sign = 0
-for i in tqdm(range(100)):
-    state, reward, done, _ = env.step(i % robot_dof+(sign%2)*robot_dof)
-    if i % 50 == 0:
-        env.reset()
-        sign += 1
+done = False
+while not done:
+    state, reward, done, _ = env.step(env.sample_action())
 env.reset()
 
 stop_time = timeit.default_timer()
