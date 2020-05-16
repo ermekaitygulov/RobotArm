@@ -97,17 +97,28 @@ class RozumEnv(gym.Env):
                 # If gripper close action, the check for grasp.
                 for g_obj in self.graspable_objects:
                     grasped = self.gripper.grasp(g_obj)
+            self.current_step += 1
         else:
             joint_action *= self.angles_scale
             position = [j + a for j, a in zip(self.rozum.get_joint_positions(), joint_action)]
             self.rozum.set_joint_target_positions(position)
-            self._pyrep.step()
+            current_pose = self.rozum.get_joint_positions()
+            step = 0
+            while True:
+                previous_pose = current_pose.copy()
+                self._pyrep.step()
+                step += 1
+                current_pose = self.rozum.get_joint_positions()
+                block_case = all([abs(c-p) < 0.015 for c, p in zip(current_pose, previous_pose)])
+                done_case = all([abs(c-t) < 0.015 for c, t in zip(current_pose, position)])
+                if block_case or done_case or step > 20:
+                    break
+            self.current_step += step
         x, y, z = self.rozum_tip.get_position()
 
         tx, ty, tz = self.cube.get_position()
-        curent_distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
-        reward = tolerance(curent_distance, (0.0, 0.06), 0.25)/25
-        self.current_step += 1
+        current_distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
+        reward = tolerance(current_distance, (0.0, 0.06), 0.25)/25
         if self.always_render:
             state = self.render()
         else:
@@ -122,7 +133,7 @@ class RozumEnv(gym.Env):
             info = 'FAIL'
         if done:
             self._eps_done += 1
-            tf.summary.scalar('final_distance', curent_distance, step=self._eps_done)
+            tf.summary.scalar('final_distance', current_distance, step=self._eps_done)
             tf.summary.flush()
         return state, reward, done, info
 

@@ -10,10 +10,8 @@ from environments.pyrep_env import RozumEnv
 from common.wrappers import *
 
 
-def make_dqn_env(name, epsilon=0.1, obs_space_keys=('pov', 'arm'), frame_skip=4, frame_stack=4):
+def make_dqn_env(name, epsilon=0.1, obs_space_keys=('pov', 'arm'), frame_stack=4):
     env = RozumEnv(obs_space_keys)
-    if frame_skip > 1:
-        env = FrameSkip(env, frame_skip)
     if frame_stack > 1 and 'pov' in obs_space_keys:
         env = FrameStack(env, frame_stack, stack_key='pov')
     env = AccuracyLogWrapper(env, 10, name)
@@ -21,7 +19,7 @@ def make_dqn_env(name, epsilon=0.1, obs_space_keys=('pov', 'arm'), frame_skip=4,
     robot_dof = env.action_space.shape[0] - 1
     for i in range(robot_dof):
         # joint actions
-        discrete_angle = 1 / 180
+        discrete_angle = 5 / 180
         discrete_dict[i] = [discrete_angle
                             if j == i else 0 for j in range(robot_dof)] + [1., ]
         discrete_dict[i + robot_dof] = [-discrete_angle

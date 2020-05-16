@@ -1,7 +1,6 @@
 gpu: 1
 env:
   obs_space_keys: ["cube", "arm"]
-  frame_skip: 4
   frame_stack: 4
 buffer:
   size: 100000
