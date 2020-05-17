@@ -119,11 +119,11 @@ class RozumEnv(gym.Env):
 
         tx, ty, tz = self.cube.get_position()
         current_distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
-        reward = tolerance(current_distance, (0.0, 0.06), 0.25)/25
+        reward = tolerance(current_distance, (0.0, 0.01), 0.25)/25
         state = self.render()
 
         if grasped:
-            reward += 30
+            reward += 10
             done = True
             info = 'SUCCESS'
         elif self.current_step >= self.step_limit:
@@ -131,8 +131,8 @@ class RozumEnv(gym.Env):
             info = 'FAIL'
         if done:
             self._eps_done += 1
-            tf.summary.scalar('final_distance', current_distance, step=self._eps_done)
-            tf.summary.flush()
+            # tf.summary.scalar('final_distance', current_distance, step=self._eps_done)
+            # tf.summary.flush()
         return state, reward, done, info
 
     def reset(self):
