@@ -96,7 +96,7 @@ def apex_dqn_run(config_path):
             replay_buffer.update_priorities(indexes=indexes, priorities=priorities)
             ds = replay_buffer.sample(train_config['number_of_batchs'] * train_config['batch_size'])
         else:
-            if episodes_done // train_config['validate_freq'] * validation_counter > 0:
+            if episodes_done // (train_config['validate_freq'] * validation_counter) > 0:
                 rollouts[first.test.remote(train_config['validate_eps'], validation_counter,
                                            online_weights, target_weights)] = first
                 validation_counter += 1
