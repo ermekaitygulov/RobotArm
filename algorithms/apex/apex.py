@@ -18,7 +18,7 @@ class Learner:
         self.tf = tf
         self.tf.config.optimizer.set_jit(True)
         self.base = base(replay_buff=None, **kwargs)
-        self.summary_writer = tf.summary.create_file_writer('train/learner/')
+        self.summary_writer = tf.summary.create_file_writer('train/Learner_logger/')
 
     def update_from_ds(self, ds, start_time, batch_size):
         with self.summary_writer.as_default():
@@ -56,43 +56,51 @@ class Actor:
             state_keys = self.env.observation_space.spaces.keys()
             buffer = DictWrapper(buffer, state_prefix=('', 'next_', 'n_'), state_keys=state_keys)
         self.base = base(replay_buff=buffer, **agent_kwargs)
-        self.summary_writer = self.tf.summary.create_file_writer('train/{}_actor/'.format(thread_id))
-        self.max_reward = -np.inf
         self.env_state = None
         self.remote_counter = remote_counter
 
     def rollout(self, *weights):
-        with self.summary_writer.as_default():
-            self.base.set_weights(*weights)
-            if self.env_state is None:
+        self.base.set_weights(*weights)
+        if self.env_state is None:
+            done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
+        else:
+            done, score, state, start_time = self.env_state
+        while self.base.replay_buff.get_stored_size() < self.base.replay_buff.get_buffer_size():
+            action, q = self.base.choose_act(state, self.env.sample_action)
+            next_state, reward, done, _ = self.env.step(action)
+            score += reward
+            self.base.perceive(state, action, reward, next_state, done, q_value=q)
+            state = next_state
+            if done:
+                global_ep, max_reward = ray.get(self.remote_counter.increment.remote(score))
+                stop_time = timeit.default_timer()
+                print("episode: {}  score: {:.3f}  max: {:.3f}"
+                      .format(global_ep-1, score, max_reward))
+                print("RunTime: {:.3f}".format(stop_time - start_time))
                 done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
-            else:
-                done, score, state, start_time = self.env_state
-            while self.base.replay_buff.get_stored_size() < self.base.replay_buff.get_buffer_size():
-                action, q = self.base.choose_act(state, self.env.sample_action)
-                next_state, reward, done, _ = self.env.step(action)
-                score += reward
-                self.base.perceive(state, action, reward, next_state, done, q_value=q)
-                state = next_state
-                if done:
-                    global_ep = ray.get(self.remote_counter.increment.remote())
-                    stop_time = timeit.default_timer()
-                    if score > self.max_reward:
-                        self.max_reward = score
-                    print("episode: {}  score: {:.3f}  max: {:.3f}"
-                          .format(global_ep-1, score, self.max_reward))
-                    print("RunTime: {:.3f}".format(stop_time - start_time))
-                    self.tf.summary.scalar("reward", score, step=global_ep-1)
-                    self.tf.summary.flush()
-                    done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
-            self.env_state = [done, score, state, start_time]
-            rollout = self.base.replay_buff.get_all_transitions()
-            priorities = self.priority_err(rollout)
-            rollout.pop('q_value')
-            self.base.replay_buff.clear()
-            return rollout, priorities
+        self.env_state = [done, score, state, start_time]
+        rollout = self.base.replay_buff.get_all_transitions()
+        priorities = self.priority_err(rollout)
+        rollout.pop('q_value')
+        self.base.replay_buff.clear()
+        return rollout, priorities
 
-    # TODO add validation method
+    def test(self, n_eps, step, *weights):
+        self.base.set_weights(*weights)
+        done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
+        avg_score = 0
+        for i in range(n_eps):
+            score = 0
+            while not done:
+                action, _ = self.base.choose_act(state, None)
+                state, reward, done, _ = self.env.step(action)
+                score += reward
+            print("Validation ep:{}  score:{}   avg_score:{}".format(i, score, avg_score))
+            avg_score += score / n_eps
+            done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
+        self.remote_counter.log_value.remote("ValidationAvg", avg_score, step)
+        self.env_state = [done, score, state, start_time]
+        return None, None
 
     def priority_err(self, rollout):
         batch = {key: rollout[key] for key in ['q_value', 'n_done',
@@ -111,11 +119,22 @@ class Actor:
 @ray.remote
 class Counter(object):
     def __init__(self):
+        import tensorflow as tf
+        self.tf = tf
         self.value = 0
+        self.max_reward = -np.inf
+        self.summary_writer = self.tf.summary.create_file_writer('train/Actor_logger/')
 
-    def increment(self):
+    def increment(self, reward):
+        if reward >= self.max_reward:
+            self.max_reward = reward
         self.value += 1
-        return self.value
+        return self.value, self.max_reward
 
     def get_value(self):
         return self.value
+
+    def log_value(self, key, value, step):
+        with self.summary_writer.as_default():
+            self.tf.summary.scalar(key, value, step)
+            self.tf.summary.flush()
