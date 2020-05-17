@@ -73,7 +73,7 @@ def apex_dqn_run(config_path):
 
     train_config = dict(max_eps=1000, replay_start_size=1000,
                         batch_size=128, sync_nn_mod=100, number_of_batchs=16,
-                        validate_freq=10)
+                        validate_freq=10, validate_eps=1)
     if 'train' in config.keys():
         for key, value in config['train'].items():
             assert key in train_config.keys()
@@ -97,7 +97,8 @@ def apex_dqn_run(config_path):
             ds = replay_buffer.sample(train_config['number_of_batchs'] * train_config['batch_size'])
         else:
             if episodes_done // train_config['validate_freq'] * validation_counter > 0:
-                rollouts[first.test.remote(validation_counter, online_weights, target_weights)] = first
+                rollouts[first.test.remote(train_config['validate_eps'], validation_counter,
+                                           online_weights, target_weights)] = first
                 validation_counter += 1
             else:
                 rollouts[first.rollout.remote(online_weights, target_weights)] = first
