@@ -73,7 +73,7 @@ def apex_dqn_run(config_path):
 
     train_config = dict(max_eps=1000, replay_start_size=1000,
                         batch_size=128, sync_nn_mod=100, number_of_batchs=16,
-                        validate_freq=10, validate_eps=1)
+                        validate_freq=32, validate_eps=1)
     if 'train' in config.keys():
         for key, value in config['train'].items():
             assert key in train_config.keys()

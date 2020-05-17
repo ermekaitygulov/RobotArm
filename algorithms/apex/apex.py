@@ -91,11 +91,12 @@ class Actor:
         avg_score = 0
         for i in range(n_eps):
             score = 0
+            info = 'FAIL'
             while not done:
                 action, _ = self.base.choose_act(state, None)
-                state, reward, done, _ = self.env.step(action)
+                state, reward, done, info = self.env.step(action)
                 score += reward
-            print("Validation ep:{}  score:{}   avg_score:{}".format(i, score, avg_score))
+            print("Validation ep:{}  score:{}   avg_score:{}".format(i, score, avg_score), info)
             avg_score += score / n_eps
             done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
         self.remote_counter.log_value.remote("ValidationAvg", avg_score, step)
