@@ -17,7 +17,7 @@ def make_env(frame_stack, epsilon,
     env = RozumEnv(**kwargs)
     if frame_stack > 1:
         env = FrameStack(env, frame_stack, stack_key='pov')
-    env = AccuracyLogWrapper(env, 10)
+    env = RozumLogWrapper(env, 10)
     discrete_dict = dict()
     robot_dof = env.action_space.shape[0] - 1
     for i in range(robot_dof):

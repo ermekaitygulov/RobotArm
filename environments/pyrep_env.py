@@ -78,7 +78,7 @@ class RozumEnv(gym.Env):
 
     def step(self, action: list):
         done = False
-        info = None
+        info = dict()
         joint_action, ee_action = action[:-1], action[-1]
         current_ee = (1.0 if self.gripper.get_open_amount()[0] > 0.9
                       else 0.0)
@@ -119,20 +119,19 @@ class RozumEnv(gym.Env):
 
         tx, ty, tz = self.cube.get_position()
         current_distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
-        reward = tolerance(current_distance, (0.0, 0.01), 0.25)/25
+        reward = tolerance(current_distance, (0.0, 0.01), 0.25)/100
         state = self.render()
 
+        info['distance'] = current_distance
         if grasped:
             reward += 10
             done = True
-            info = 'SUCCESS'
+            info['grasped'] = 1
         elif self.current_step >= self.step_limit:
             done = True
-            info = 'FAIL'
+            info['grasped'] = 0
         if done:
             self._eps_done += 1
-            # tf.summary.scalar('final_distance', current_distance, step=self._eps_done)
-            # tf.summary.flush()
         return state, reward, done, info
 
     def reset(self):

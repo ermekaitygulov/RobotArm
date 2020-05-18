@@ -206,19 +206,19 @@ class SaveVideoWrapper(gym.Wrapper):
         return image[..., ::-1]
 
 
-class AccuracyLogWrapper(gym.Wrapper):
+class RozumLogWrapper(gym.Wrapper):
     def __init__(self, env, window, name='agent'):
-        super(AccuracyLogWrapper, self).__init__(env)
+        super(RozumLogWrapper, self).__init__(env)
         self.accuracy = deque(maxlen=window)
         self.name = name
         self.episodes_done = 0
+        self.eps_distances = list()
 
     def step(self, action):
         observation, reward, done, info = self.env.step(action)
-        if info == 'SUCCESS':
-            self.accuracy.append(1)
-        elif info == 'FAIL':
-            self.accuracy.append(0)
+        if 'grasped' in info.keys():
+            self.accuracy.append(info['grasped'])
+        self.eps_distances.append(info['distance'])
         if done:
             self.episodes_done += 1
         return observation, reward, done, info
@@ -228,8 +228,11 @@ class AccuracyLogWrapper(gym.Wrapper):
         observation = self.env.reset(**kwargs)
         if len(self.accuracy) == self.accuracy.maxlen:
             mean = sum(self.accuracy)/len(self.accuracy)
-            tf.summary.scalar('accuracy'.format(self.name), mean, step=self.episodes_done)
+            tf.summary.scalar('accuracy', mean, step=self.episodes_done)
             print('{}_accuracy: {}'.format(self.name, mean))
+        if len(self.eps_distances) > 0:
+            tf.summary.histogram('distance', self.eps_distances, step=self.episodes_done)
+            self.eps_distances = list()
         return observation
 
 

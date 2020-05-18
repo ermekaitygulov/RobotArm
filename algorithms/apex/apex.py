@@ -1,3 +1,5 @@
+from collections import deque
+
 import gym
 import ray
 from replay_buffers.util import DictWrapper, get_dtype_dict
@@ -45,9 +47,10 @@ class Learner:
 @ray.remote(num_gpus=0, num_cpus=2)
 class Actor:
     def __init__(self, base=DQN, thread_id=0, make_env=None, config_env=None, remote_counter=None,
-                 rollout_size=300, **agent_kwargs):
+                 rollout_size=300, avg_window=10, **agent_kwargs):
         import tensorflow as tf
         self.tf = tf
+        self.thread_id = thread_id
         self.env = make_env('{}_thread'.format(thread_id), **config_env)
         env_dict, _ = get_dtype_dict(self.env)
         env_dict['q_value'] = {"dtype": "float32"}
@@ -58,50 +61,41 @@ class Actor:
         self.base = base(replay_buff=buffer, **agent_kwargs)
         self.env_state = None
         self.remote_counter = remote_counter
+        self.local_ep = 0
+        self.avg_reward = deque([], maxlen=avg_window)
+        self.summary_writer = self.tf.summary.create_file_writer('train/{}_actor/'.format(thread_id))
 
     def rollout(self, *weights):
-        self.base.set_weights(*weights)
-        if self.env_state is None:
-            done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
-        else:
-            done, score, state, start_time = self.env_state
-        while self.base.replay_buff.get_stored_size() < self.base.replay_buff.get_buffer_size():
-            action, q = self.base.choose_act(state, self.env.sample_action)
-            next_state, reward, done, _ = self.env.step(action)
-            score += reward
-            self.base.perceive(state, action, reward, next_state, done, q_value=q)
-            state = next_state
-            if done:
-                global_ep, max_reward = ray.get(self.remote_counter.increment.remote(score))
-                stop_time = timeit.default_timer()
-                print("episode: {}  score: {:.3f}  max: {:.3f}"
-                      .format(global_ep-1, score, max_reward))
-                print("RunTime: {:.3f}".format(stop_time - start_time))
+        with self.summary_writer.as_default():
+            self.base.set_weights(*weights)
+            if self.env_state is None:
                 done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
-        self.env_state = [done, score, state, start_time]
-        rollout = self.base.replay_buff.get_all_transitions()
-        priorities = self.priority_err(rollout)
-        rollout.pop('q_value')
-        self.base.replay_buff.clear()
-        return rollout, priorities
-
-    def test(self, n_eps, step, *weights):
-        self.base.set_weights(*weights)
-        done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
-        avg_score = 0
-        for i in range(n_eps):
-            score = 0
-            info = 'FAIL'
-            while not done:
-                action, _ = self.base.choose_act(state, None)
-                state, reward, done, info = self.env.step(action)
+            else:
+                done, score, state, start_time = self.env_state
+            while self.base.replay_buff.get_stored_size() < self.base.replay_buff.get_buffer_size():
+                action, q = self.base.choose_act(state, self.env.sample_action)
+                next_state, reward, done, _ = self.env.step(action)
                 score += reward
-            print("Validation ep:{}  score:{}   avg_score:{}".format(i, score, avg_score), info)
-            avg_score += score / n_eps
-            done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
-        self.remote_counter.log_value.remote("ValidationAvg", avg_score, step)
-        self.env_state = [done, score, state, start_time]
-        return None, None
+                self.base.perceive(state, action, reward, next_state, done, q_value=q)
+                state = next_state
+                if done:
+                    self.tf.summary.scalar('Score', score, step=self.local_ep)
+                    self.tf.summary.flush()
+                    self.local_ep += 1
+                    self.avg_reward.append(score)
+                    avg = sum(self.avg_reward)/len(self.avg_reward)
+                    global_ep, max_reward = ray.get(self.remote_counter.increment.remote(score))
+                    stop_time = timeit.default_timer()
+                    print("episode: {}  score: {:.3f}  max: {:.3f}  {}_avg: {:.3f}"
+                          .format(global_ep-1, score, max_reward, self.thread_id, avg))
+                    print("RunTime: {:.3f}".format(stop_time - start_time))
+                    done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
+            self.env_state = [done, score, state, start_time]
+            rollout = self.base.replay_buff.get_all_transitions()
+            priorities = self.priority_err(rollout)
+            rollout.pop('q_value')
+            self.base.replay_buff.clear()
+            return rollout, priorities
 
     def priority_err(self, rollout):
         batch = {key: rollout[key] for key in ['q_value', 'n_done',
@@ -124,7 +118,6 @@ class Counter(object):
         self.tf = tf
         self.value = 0
         self.max_reward = -np.inf
-        self.summary_writer = self.tf.summary.create_file_writer('train/Actor_logger/')
 
     def increment(self, reward):
         if reward >= self.max_reward:
@@ -134,8 +127,3 @@ class Counter(object):
 
     def get_value(self):
         return self.value
-
-    def log_value(self, key, value, step):
-        with self.summary_writer.as_default():
-            self.tf.summary.scalar(key, value, step)
-            self.tf.summary.flush()

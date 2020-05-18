@@ -58,8 +58,6 @@ class TDPolicy:
         while not done:
             action, _ = self.choose_act(state, env.sample_action)
             next_state, reward, done, info = env.step(action)
-            if info:
-                print(info)
             score += reward
             self.perceive(state, action, reward, next_state, done)
             counter += 1

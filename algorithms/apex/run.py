@@ -14,7 +14,7 @@ def make_dqn_env(name, epsilon=0.1, obs_space_keys=('pov', 'arm'), frame_stack=4
     env = RozumEnv(obs_space_keys)
     if frame_stack > 1 and 'pov' in obs_space_keys:
         env = FrameStack(env, frame_stack, stack_key='pov')
-    env = AccuracyLogWrapper(env, 10, name)
+    env = RozumLogWrapper(env, 10, name)
     discrete_dict = dict()
     robot_dof = env.action_space.shape[0] - 1
     for i in range(robot_dof):
@@ -72,14 +72,12 @@ def apex_dqn_run(config_path):
     priority_dict, ds = None, None
 
     train_config = dict(max_eps=1000, replay_start_size=1000,
-                        batch_size=128, sync_nn_mod=100, number_of_batchs=16,
-                        validate_freq=32, validate_eps=1)
+                        batch_size=128, sync_nn_mod=100, number_of_batchs=16)
     if 'train' in config.keys():
         for key, value in config['train'].items():
             assert key in train_config.keys()
             train_config[key] = value
 
-    validation_counter = 1
     while episodes_done < train_config['max_eps']:
         ready_ids, _ = ray.wait(list(rollouts))
         first_id = ready_ids[0]
@@ -96,16 +94,10 @@ def apex_dqn_run(config_path):
             replay_buffer.update_priorities(indexes=indexes, priorities=priorities)
             ds = replay_buffer.sample(train_config['number_of_batchs'] * train_config['batch_size'])
         else:
-            if episodes_done // (train_config['validate_freq'] * validation_counter) > 0:
-                rollouts[first.test.remote(train_config['validate_eps'], validation_counter,
-                                           online_weights, target_weights)] = first
-                validation_counter += 1
-            else:
-                rollouts[first.rollout.remote(online_weights, target_weights)] = first
-                data, priorities = ray.get(first_id)
-                if priorities is not None and data is not None:
-                    priorities = priorities.copy()
-                    replay_buffer.add(priorities=priorities, **data)
+            rollouts[first.rollout.remote(online_weights, target_weights)] = first
+            data, priorities = ray.get(first_id)
+            priorities = priorities.copy()
+            replay_buffer.add(priorities=priorities, **data)
         if replay_buffer.get_stored_size() > train_config['replay_start_size'] and not start_learner:
             start_time = timeit.default_timer()
             ds = replay_buffer.sample(train_config['number_of_batchs'] * train_config['batch_size'])
