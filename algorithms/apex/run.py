@@ -147,7 +147,7 @@ def apex_ddpg_run(config_path):
     learner = Learner.remote(base=DDPG, build_critic=make_critic, build_actor=make_actor,
                              obs_space=obs_space, action_space=action_space,
                              **config['learner'])
-    actors = [Actor.remote(thread_id=i, make_env=make_ddpg_env,
+    actors = [Actor.remote(thread_id=i, base=DDPG, make_env=make_ddpg_env,
                            config_env=config['env'], remote_counter=counter,
                            build_critic=make_critic, build_actor=make_actor,
                            obs_space=obs_space,
