@@ -1,6 +1,14 @@
 import tensorflow as tf
 
 
+def concatenate(layers_list):
+    """Concatenates list of layers (including len(layers_list)==1 case)"""
+    try:
+        return tf.keras.layers.concatenate(layers_list)
+    except ValueError:
+        return layers_list[0]
+
+
 def huber_loss(x, delta=1.0):
     """Reference: https://en.wikipedia.org/wiki/Huber_loss"""
     return tf.where(

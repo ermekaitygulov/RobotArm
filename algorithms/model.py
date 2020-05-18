@@ -3,6 +3,7 @@ from tensorflow.keras import Sequential
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.layers import Dense, Conv2D, Flatten
 import gym
+from common.tf_util import concatenate
 
 mapping = {}
 
@@ -76,7 +77,7 @@ def make_model(name, obs_space, action_space, reg=1e-6):
     normalized_pov = pov / 255
     pov_base = make_cnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2], 'tanh', reg)(normalized_pov)
     angles_base = make_mlp([512, 256], 'tanh', reg)(arm)
-    base = tf.keras.layers.concatenate([pov_base, angles_base])
+    base = concatenate([pov_base, angles_base])
     head = DuelingModel([1024], action_space.n, reg)(base)
     model = tf.keras.Model(inputs={'pov': pov, 'arm': arm}, outputs=head, name=name)
     return model
@@ -99,14 +100,14 @@ def make_model(name, obs_space, action_space, reg):
         else:
             feat['state'] = tf.keras.Input(shape=obs_space.shape)
     if len(feat) > 0:
-        feat_base = tf.keras.layers.concatenate(feat.values())
+        feat_base = concatenate(feat.values())
         bases.append(make_mlp([400, 300], 'tanh', reg)(feat_base))
     if len(img) > 0:
-        img_base = tf.keras.layers.concatenate(img.values())
+        img_base = concatenate(img.values())
         normalized = img_base/255
         bases.append(make_cnn([32, 32, 32, 32], [3, 3, 3, 3],
                               [2, 2, 2, 2], 'tanh', reg)(normalized))
-    base = tf.keras.layers.concatenate(bases)
+    base = concatenate(bases)
     head = DuelingModel([512], action_space.n, reg)(base)
     model = tf.keras.Model(inputs={**img, **feat}, outputs=head, name=name)
     return model
@@ -116,7 +117,7 @@ def make_model(name, obs_space, action_space, reg):
 def make_model(name, obs_space, action_space, reg=1e-6):
     cube = tf.keras.Input(shape=obs_space['cube'].shape)
     arm = tf.keras.Input(shape=obs_space['arm'].shape)
-    features = tf.keras.layers.concatenate([arm, cube])
+    features = concatenate([arm, cube])
     base = make_mlp([400, 300], 'tanh', reg)(features)
     head = DuelingModel([512], action_space.n, reg)(base)
     model = tf.keras.Model(inputs={'cube': cube, 'arm': arm}, outputs=head, name=name)
@@ -140,14 +141,14 @@ def make_critic(name, obs_space, action_space, reg=1e-6):
         else:
             feat['state'] = tf.keras.Input(shape=obs_space.shape)
     feat['action'] = tf.keras.Input(shape=action_space.shape)
-    feat_base = tf.keras.layers.concatenate(feat.values())
+    feat_base = concatenate(feat.values())
     bases.append(make_mlp([400, 300], 'tanh', reg)(feat_base))
     if len(img) > 0:
-        img_base = tf.keras.layers.concatenate(img.values())
+        img_base = concatenate(img.values())
         normalized = img_base/255
         bases.append(make_cnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2],
                               'tanh', reg)(normalized))
-    base = tf.keras.layers.concatenate(bases)
+    base = concatenate(bases)
     base = make_mlp([256, ], 'relu', reg)(base)
     head = tf.keras.layers.Dense(1, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     model = tf.keras.Model(inputs={**img, **feat}, outputs=head, name=name)
@@ -171,14 +172,14 @@ def make_model(name, obs_space, action_space, reg=1e-6):
         else:
             feat['state'] = tf.keras.Input(shape=obs_space.shape)
     if len(feat) > 0:
-        feat_base = tf.keras.layers.concatenate(feat.values())
+        feat_base = concatenate(feat.values())
         bases.append(make_mlp([400, 300], 'tanh', reg)(feat_base))
     if len(img) > 0:
-        img_base = tf.keras.layers.concatenate(img.values())
+        img_base = concatenate(img.values())
         normalized = img_base/255
         bases.append(make_cnn([32, 32, 32, 32], [3, 3, 3, 3],
                               [2, 2, 2, 2], 'tanh', reg)(normalized))
-    base = tf.keras.layers.concatenate(bases)
+    base = concatenate(bases)
     base = make_mlp([256, ], 'relu', reg)(base)
     head = tf.keras.layers.Dense(action_space.shape[0],
                                  kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
