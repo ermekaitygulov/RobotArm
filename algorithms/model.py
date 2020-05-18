@@ -124,7 +124,7 @@ def make_model(name, obs_space, action_space, reg=1e-6):
 
 
 @register("Critic_uni")
-def make_critic(name, obs_space, action_space, reg):
+def make_critic(name, obs_space, action_space, reg=1e-6):
     img = dict()
     feat = dict()
     bases = list()
