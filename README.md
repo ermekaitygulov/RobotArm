@@ -1,7 +1,7 @@
 # Robot arm project
 **Algorithms:**
 * DDDQN 
-* APEX-DQN (asynchronus DQN) implementation with [Ray](https://docs.ray.io/en/latest/)
+* APEX-DQN/DDPG (asynchronus DQN/DDPG) implementation with [Ray](https://docs.ray.io/en/latest/)
 * DDPG for continues control
 
 **Implementation details:**
@@ -20,11 +20,10 @@
  (instead of original VREP API). Rewards uses tolerance function from [DeepMind ControlSuite](https://github.com/deepmind/dm_control)
 * Observation type option in environment ('pov'/('pov', 'angles')/'angles' and etc.)
 * If dtype_dict is specified, samplings in DQN and DDPG will be wrapped with tf.data.Dataset.from_generator, improving updates frequency
+* There are different make_model functions in algorithms/model.py. 
+They can be accessed with get_network_builder(name) function. There is ***_uni** functions that can work with different combinations 
+ of obs_spaces in RozumEnv. Depending on space they build CNN/MLP blocks and concatenates them.
 
 **TODO**:
-* APEX-DDPG (asynchronus DDPG)
 * Unity environment for Rozum model
  to speed up training on server in headless mode
-
-**InProc**:
-* [ ] APEX-DDPG    
