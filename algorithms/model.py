@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow.keras import Sequential
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.layers import Dense, Conv2D, Flatten
+import gym
 
 mapping = {}
 
@@ -36,11 +37,12 @@ class DuelingModel(tf.keras.Model):
     def __init__(self, units, action_dim, reg=1e-6):
         super(DuelingModel, self).__init__()
         reg = l2(reg)
-        self.h_layers = Sequential([Dense(l, 'relu', kernel_regularizer=reg, bias_regularizer=reg) for l in units[:-1]])
-        self.a_head, self.v_head = Dense(units[-1]/2, 'relu', kernel_regularizer=reg, bias_regularizer=reg),\
-                                   Dense(units[-1]/2, 'relu', kernel_regularizer=reg, bias_regularizer=reg)
-        self.a_head1, self.v_head1 = Dense(action_dim, kernel_regularizer=reg, bias_regularizer=reg),\
-                                     Dense(1, kernel_regularizer=reg, bias_regularizer=reg)
+        self.h_layers = Sequential([Dense(unit, 'relu', kernel_regularizer=reg, bias_regularizer=reg)
+                                    for unit in units[:-1]])
+        self.a_head = Dense(units[-1]/2, 'relu', kernel_regularizer=reg, bias_regularizer=reg)
+        self.v_head = Dense(units[-1]/2, 'relu', kernel_regularizer=reg, bias_regularizer=reg)
+        self.a_head1 = Dense(action_dim, kernel_regularizer=reg, bias_regularizer=reg)
+        self.v_head1 = Dense(1, kernel_regularizer=reg, bias_regularizer=reg)
 
     @tf.function
     def call(self, inputs):
@@ -53,83 +55,132 @@ class DuelingModel(tf.keras.Model):
         return out
 
 
-class ClassicCnn(tf.keras.Model):
-    def __init__(self, filters, kernels, strides, reg=1e-6):
-        super(ClassicCnn, self).__init__()
-        reg = l2(reg)
-        self.cnn = Sequential(Conv2D(filters[0], kernels[0], strides[0], activation='tanh',
-                                     kernel_regularizer=reg), name='CNN')
-        for f, k, s in zip(filters[1:], kernels[1:], strides[1:]):
-            self.cnn.add(Conv2D(f, k, s, activation='tanh', kernel_regularizer=reg))
-        self.cnn.add(Flatten())
-
-    @tf.function
-    def call(self, inputs):
-        return self.cnn(inputs)
+def make_mlp(units, activation='tanh', reg=1e-6):
+    _reg = l2(reg)
+    return Sequential([Dense(unit, activation, kernel_regularizer=_reg,
+                             bias_regularizer=_reg) for unit in units])
 
 
-class MLP(tf.keras.Model):
-    def __init__(self, units, activation='relu', reg=1e-6):
-        super(MLP, self).__init__()
-        reg = l2(reg)
-        self.model = Sequential([Dense(l, activation, kernel_regularizer=reg, bias_regularizer=reg) for l in units])
-
-    @tf.function
-    def call(self, inputs):
-        return self.model(inputs)
+def make_cnn(filters, kernels, strides, activation='tanh', reg=1e-6):
+    _reg = l2(reg)
+    cnn = Sequential([Conv2D(f, k, s, activation=activation, kernel_regularizer=reg)
+                      for f, k, s in zip(filters, kernels, strides)], name='CNN')
+    cnn.add(Flatten())
+    return cnn
 
 
 @register("DuelingDQN_pov_arm")
-def make_model(name, obs_space, action_space):
+def make_model(name, obs_space, action_space, reg=1e-6):
     pov = tf.keras.Input(shape=obs_space['pov'].shape)
     arm = tf.keras.Input(shape=obs_space['arm'].shape)
     normalized_pov = pov / 255
-    pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(normalized_pov)
-    angles_base = MLP([512, 256])(arm)
+    pov_base = make_cnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2], 'tanh', reg)(normalized_pov)
+    angles_base = make_mlp([512, 256], 'tanh', reg)(arm)
     base = tf.keras.layers.concatenate([pov_base, angles_base])
-    head = DuelingModel([1024], action_space.n)(base)
+    head = DuelingModel([1024], action_space.n, reg)(base)
     model = tf.keras.Model(inputs={'pov': pov, 'arm': arm}, outputs=head, name=name)
     return model
 
 
+@register("DuelingDQN_uni")
+def make_model(name, obs_space, action_space, reg):
+    img = dict()
+    feat = dict()
+    bases = list()
+    if isinstance(obs_space, gym.spaces.Dict):
+        for key, value in obs_space.spaces.items():
+            if len(value.shape) > 1:
+                img[key] = tf.keras.Input(shape=value.shape)
+            else:
+                feat[key] = tf.keras.Input(shape=value.shape)
+    else:
+        if len(obs_space.shape) > 1:
+            img['state'] = tf.keras.Input(shape=obs_space.shape)
+        else:
+            feat['state'] = tf.keras.Input(shape=obs_space.shape)
+    if len(feat) > 0:
+        feat_base = tf.keras.layers.concatenate(feat.values())
+        bases.append(make_mlp([400, 300], 'tanh', reg)(feat_base))
+    if len(img) > 0:
+        img_base = tf.keras.layers.concatenate(img.values())
+        normalized = img_base/255
+        bases.append(make_cnn([32, 32, 32, 32], [3, 3, 3, 3],
+                              [2, 2, 2, 2], 'tanh', reg)(normalized))
+    base = tf.keras.layers.concatenate(bases)
+    head = DuelingModel([512], action_space.n, reg)(base)
+    model = tf.keras.Model(inputs={**img, **feat}, outputs=head, name=name)
+    return model
+
+
 @register("DuelingDQN_arm_cube")
-def make_model(name, obs_space, action_space):
+def make_model(name, obs_space, action_space, reg=1e-6):
     cube = tf.keras.Input(shape=obs_space['cube'].shape)
     arm = tf.keras.Input(shape=obs_space['arm'].shape)
     features = tf.keras.layers.concatenate([arm, cube])
-    base = MLP([400, 300], activation='tanh')(features)
-    head = DuelingModel([512], action_space.n)(base)
+    base = make_mlp([400, 300], 'tanh', reg)(features)
+    head = DuelingModel([512], action_space.n, reg)(base)
     model = tf.keras.Model(inputs={'cube': cube, 'arm': arm}, outputs=head, name=name)
     return model
 
 
-@register("Critic_pov_arm")
-def make_critic(name, obs_space, action_space):
-    # TODO add reg
-    pov = tf.keras.Input(shape=obs_space['pov'].shape)
-    arm = tf.keras.Input(shape=obs_space['arm'].shape)
-    action = tf.keras.Input(shape=action_space.shape)
-    normalized_pov = pov / 255
-    feature_input = tf.keras.layers.Concatenate()([arm, action])
-    pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(normalized_pov)
-    feature_base = MLP([64, 64], 'tanh')(feature_input)
-    base = tf.keras.layers.concatenate([pov_base, feature_base])
-    fc = MLP([256, 128], 'relu')(base)
-    out = tf.keras.layers.Dense(1)(fc)
-    model = tf.keras.Model(inputs={'pov': pov, 'arm': arm, 'action': action},
-                           outputs=out, name=name)
+@register("Critic_uni")
+def make_critic(name, obs_space, action_space, reg):
+    img = dict()
+    feat = dict()
+    bases = list()
+    if isinstance(obs_space, gym.spaces.Dict):
+        for key, value in obs_space.spaces.items():
+            if len(value.shape) > 1:
+                img[key] = tf.keras.Input(shape=value.shape)
+            else:
+                feat[key] = tf.keras.Input(shape=value.shape)
+    else:
+        if len(obs_space.shape) > 1:
+            img['state'] = tf.keras.Input(shape=obs_space.shape)
+        else:
+            feat['state'] = tf.keras.Input(shape=obs_space.shape)
+    feat['action'] = tf.keras.Input(shape=action_space.shape)
+    feat_base = tf.keras.layers.concatenate(feat.values())
+    bases.append(make_mlp([400, 300], 'tanh', reg)(feat_base))
+    if len(img) > 0:
+        img_base = tf.keras.layers.concatenate(img.values())
+        normalized = img_base/255
+        bases.append(make_cnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2],
+                              'tanh', reg)(normalized))
+    base = tf.keras.layers.concatenate(bases)
+    base = make_mlp([256, ], 'relu', reg)(base)
+    head = tf.keras.layers.Dense(1, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
+    model = tf.keras.Model(inputs={**img, **feat}, outputs=head, name=name)
     return model
 
 
-@register("Actor_pov_arm")
-def make_actor(name, obs_space, action_space):
-    pov = tf.keras.Input(shape=obs_space['pov'].shape)
-    arm = tf.keras.Input(shape=obs_space['arm'].shape)
-    normalized_pov = pov / 255
-    pov_base = ClassicCnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2])(normalized_pov)
-    angles_base = MLP([64, 64], 'tanh')(arm)
-    base = tf.keras.layers.concatenate([pov_base, angles_base])
-    fc = MLP([256, 128], 'relu')(base)
-    out = tf.keras.layers.Dense(action_space.shape[0])(fc)
-    model = tf.keras.Model(inputs={'pov': pov, 'arm': arm}, outputs=out, name=name)
+@register("Actor_uni")
+def make_model(name, obs_space, action_space, reg=1e-6):
+    img = dict()
+    feat = dict()
+    bases = list()
+    if isinstance(obs_space, gym.spaces.Dict):
+        for key, value in obs_space.spaces.items():
+            if len(value.shape) > 1:
+                img[key] = tf.keras.Input(shape=value.shape)
+            else:
+                feat[key] = tf.keras.Input(shape=value.shape)
+    else:
+        if len(obs_space.shape) > 1:
+            img['state'] = tf.keras.Input(shape=obs_space.shape)
+        else:
+            feat['state'] = tf.keras.Input(shape=obs_space.shape)
+    if len(feat) > 0:
+        feat_base = tf.keras.layers.concatenate(feat.values())
+        bases.append(make_mlp([400, 300], 'tanh', reg)(feat_base))
+    if len(img) > 0:
+        img_base = tf.keras.layers.concatenate(img.values())
+        normalized = img_base/255
+        bases.append(make_cnn([32, 32, 32, 32], [3, 3, 3, 3],
+                              [2, 2, 2, 2], 'tanh', reg)(normalized))
+    base = tf.keras.layers.concatenate(bases)
+    base = make_mlp([256, ], 'relu', reg)(base)
+    head = tf.keras.layers.Dense(action_space.shape[0],
+                                 kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
+    model = tf.keras.Model(inputs={**img, **feat}, outputs=head, name=name)
     return model

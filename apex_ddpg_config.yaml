@@ -1,0 +1,26 @@
+gpu: 1
+env:
+  obs_space_keys: ["cube", "arm"]
+  frame_stack: 4
+buffer:
+  size: 1000000
+neural_network:
+  critic: "Critic_uni"
+  actor: "Actor_uni"
+learner:
+  polyak: 0.99
+  gamma: 0.99
+  learning_rate: 0.0001
+  actor_lr: 0.0001
+  log_freq: 1000
+actors:
+  num: 2
+  rollout_size: 300
+  gamma: 0.99
+  n_step: 10
+train:
+  max_eps: 3000
+  replay_start_size: 500
+  batch_size: 256
+  sync_nn_mod: 100
+  number_of_batchs: 16
