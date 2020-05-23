@@ -14,13 +14,13 @@ learner:
   actor_lr: 0.0001
   log_freq: 1000
 actors:
-  num: 2
+  num: 32
   rollout_size: 300
   gamma: 0.99
   n_step: 10
 train:
   max_eps: 3000
-  replay_start_size: 500
+  replay_start_size: 50000
   batch_size: 256
   sync_nn_mod: 100
   number_of_batchs: 16
