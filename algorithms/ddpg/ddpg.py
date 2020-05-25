@@ -55,6 +55,7 @@ class DDPG(TDPolicy):
             loss = -q_value + l2
         gradients = tape.gradient(loss, actor_variables)
         for i, g in enumerate(gradients):
+            self.update_metrics('Actor_Gradient_norm', tf.norm(g))
             gradients[i] = tf.clip_by_norm(g, 10)
         self.actor_optimizer.apply_gradients(zip(gradients, actor_variables))
 
@@ -90,6 +91,7 @@ class DDPG(TDPolicy):
 
         gradients = tape.gradient(critic_loss, critic_variables)
         for i, g in enumerate(gradients):
+            self.update_metrics('Critic_Gradient_norm', tf.norm(g))
             gradients[i] = tf.clip_by_norm(g, 10)
         self.q_optimizer.apply_gradients(zip(gradients, critic_variables))
         priorities = tf.abs(ntd_loss)

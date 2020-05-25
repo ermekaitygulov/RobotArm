@@ -257,7 +257,7 @@ class OUExploration(gym.Wrapper):
 
 
 class OUNoise(object):
-    def __init__(self, action_dim, low, high, mu=0.0, theta=0.15, max_sigma=0.3, min_sigma=0.1, decay_period=100000):
+    def __init__(self, action_dim, low, high, mu=0.0, theta=0.2, max_sigma=0.01, min_sigma=0.001, decay_period=500):
         self.mu = mu
         self.theta = theta
         self.sigma = max_sigma
@@ -282,3 +282,13 @@ class OUNoise(object):
         ou_state = self.evolve_state()
         self.sigma = self.max_sigma - (self.max_sigma - self.min_sigma) * min(1.0, t / self.decay_period)
         return np.clip(action + ou_state, self.low, self.high)
+
+
+if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+    noise = OUNoise(1, -0.9, 0.9)
+    exploration = list()
+    for i in range(1000):
+        exploration.append(noise.get_action(0, i))
+    plt.plot(exploration)
+    plt.show()
