@@ -48,11 +48,11 @@ class DDPG(TDPolicy):
         with tf.GradientTape() as tape:
             tape.watch(actor_variables)
             action = self.online_actor(state, training=True)
-            q_value = self.online_critic({'state': state, 'action': action}, training=True)
+            q_value = -tf.reduce_mean(self.online_critic({'state': state, 'action': action}, training=True))
             self.update_metrics('actor_loss', q_value)
             l2 = tf.add_n(self.online_actor.losses)
             self.update_metrics('actor_l2', l2)
-            loss = -q_value + l2
+            loss = q_value + l2
         gradients = tape.gradient(loss, actor_variables)
         for i, g in enumerate(gradients):
             self.update_metrics('Actor_Gradient_norm', tf.norm(g))
