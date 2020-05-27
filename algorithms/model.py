@@ -117,9 +117,10 @@ class NoisyDense(Dense):
         return output
 
 
-def make_mlp(units, activation='tanh', reg=1e-6):
+def make_mlp(units, activation='tanh', reg=1e-6, noisy=False):
     _reg = l2(reg)
-    return Sequential([Dense(unit, activation, kernel_regularizer=_reg,
+    layer = NoisyDense if noisy else Dense
+    return Sequential([layer(unit, activation, kernel_regularizer=_reg,
                              bias_regularizer=_reg) for unit in units])
 
 
@@ -186,7 +187,7 @@ def make_model(name, obs_space, action_space, reg=1e-6):
 
 
 @register("Critic_uni")
-def make_critic(name, obs_space, action_space, reg=1e-6):
+def make_critic(name, obs_space, action_space, reg=1e-6, noisy_head=True):
     img = dict()
     feat = dict()
     bases = list()
@@ -210,14 +211,15 @@ def make_critic(name, obs_space, action_space, reg=1e-6):
         bases.append(make_cnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2],
                               'tanh', reg)(normalized))
     base = concatenate(bases)
-    base = make_mlp([256, ], 'relu', reg)(base)
-    head = tf.keras.layers.Dense(1, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
+    base = make_mlp([256, ], 'relu', reg, noisy_head)(base)
+    layer = NoisyDense if noisy_head else Dense
+    head = layer(1, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     model = tf.keras.Model(inputs={**img, **feat}, outputs=head, name=name)
     return model
 
 
 @register("Actor_uni")
-def make_model(name, obs_space, action_space, reg=1e-6):
+def make_model(name, obs_space, action_space, reg=1e-6, noisy_head=True):
     img = dict()
     feat = dict()
     bases = list()
@@ -241,8 +243,8 @@ def make_model(name, obs_space, action_space, reg=1e-6):
         bases.append(make_cnn([32, 32, 32, 32], [3, 3, 3, 3],
                               [2, 2, 2, 2], 'tanh', reg)(normalized))
     base = concatenate(bases)
-    base = make_mlp([256, ], 'relu', reg)(base)
-    head = tf.keras.layers.Dense(action_space.shape[0],
-                                 kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
+    base = make_mlp([256, ], 'relu', reg, noisy_head)(base)
+    layer = NoisyDense if noisy_head else Dense
+    head = layer(action_space.shape[0], kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     model = tf.keras.Model(inputs={**img, **feat}, outputs=head, name=name)
     return model
