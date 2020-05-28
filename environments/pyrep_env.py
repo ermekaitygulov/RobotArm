@@ -111,7 +111,7 @@ class RozumEnv(gym.Env):
                 self._pyrep.step()
                 step += 1
                 current_pose = self.rozum.get_joint_positions()
-                block_case = all([abs(c-p) < 0.03 for c, p in zip(current_pose, previous_pose)])
+                block_case = all([abs(c-p) < 0.02 for c, p in zip(current_pose, previous_pose)])
                 done_case = all([abs(c-t) < 0.01 for c, t in zip(current_pose, position)])
                 if block_case or done_case or step > 20:
                     break
