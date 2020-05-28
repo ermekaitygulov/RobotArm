@@ -36,19 +36,19 @@ class DDPG(TDPolicy):
         priorities = self.critic_update(state, action, next_state, done, reward,
                                         n_state, n_done, n_reward, actual_n, weights,
                                         gamma)
-        self.actor_update(state)
+        self.actor_update(state, weights)
         update_target_variables(self.target_critic.weights, self.online_critic.weights, self.polyak)
         update_target_variables(self.target_actor.weights, self.online_actor.weights, self.polyak)
         return priorities
 
     @tf.function
-    def actor_update(self, state):
+    def actor_update(self, state, weights):
         print("Actor update tracing")
         actor_variables = self.online_actor.trainable_variables
         with tf.GradientTape() as tape:
             tape.watch(actor_variables)
             action = self.online_actor(state, training=True)
-            q_value = -tf.reduce_mean(self.online_critic({'state': state, 'action': action}, training=True))
+            q_value = -tf.reduce_mean(weights * self.online_critic({'state': state, 'action': action}, training=True))
             self.update_metrics('actor_loss', q_value)
             l2 = tf.add_n(self.online_actor.losses)
             self.update_metrics('actor_l2', l2)
