@@ -108,15 +108,13 @@ class RozumEnv(gym.Env):
             position = list(np.clip(position, self.angles_bounds.low*self.angles_scale,
                                     self.angles_bounds.high*self.angles_scale))
             self.rozum.set_joint_target_positions(position)
-            step = 0
-            while True:
+            for _ in range(15):
                 self._pyrep.step()
-                step += 1
+                self.current_step += 1
                 current_pose = self.rozum.get_joint_positions()
                 done_case = all([abs(c-t) < 0.01 for c, t in zip(current_pose, position)])
-                if done_case or step > 15:
+                if done_case:
                     break
-            self.current_step += step
         x, y, z = self.rozum_tip.get_position()
 
         tx, ty, tz = self.cube.get_position()
