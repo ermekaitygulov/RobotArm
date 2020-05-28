@@ -89,6 +89,7 @@ class Actor:
                     print("episode: {}  score: {:.3f}  max: {:.3f}  {}_avg: {:.3f}"
                           .format(global_ep-1, score, max_reward, self.thread_id, avg))
                     print("RunTime: {:.3f}".format(stop_time - start_time))
+                    print("{} transitions collected".format(self.base.replay_buff.get_stored_size()))
                     done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
             self.env_state = [done, score, state, start_time]
             rollout = self.base.replay_buff.get_all_transitions()
