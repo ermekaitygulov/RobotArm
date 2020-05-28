@@ -115,7 +115,6 @@ class RozumEnv(gym.Env):
                 current_pose = self.rozum.get_joint_positions()
                 done_case = all([abs(c-t) < 0.01 for c, t in zip(current_pose, position)])
                 if done_case or step > 15:
-                    print(step)
                     break
             self.current_step += step
         x, y, z = self.rozum_tip.get_position()
@@ -130,7 +129,7 @@ class RozumEnv(gym.Env):
             reward += 10
             done = True
             info['grasped'] = 1
-        elif self.current_step >= self.step_limit or current_distance > 0.65:
+        elif self.current_step >= self.step_limit or current_distance > 1.:
             done = True
             info['grasped'] = 0
         if done:
