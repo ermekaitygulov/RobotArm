@@ -6,7 +6,6 @@ from pyrep.objects.vision_sensor import VisionSensor
 from pyrep.objects import Shape
 import numpy as np
 from common.rewards import tolerance
-import tensorflow as tf
 
 
 class Rozum(Arm):
@@ -31,11 +30,16 @@ class RozumEnv(gym.Env):
         self.camera = VisionSensor("render")
         self.rozum_tip = self.rozum.get_tip()
 
-        low = np.array([-0.9 for _ in range(self.rozum.num_joints)] + [0., ])
-        high = np.array([0.9 for _ in range(self.rozum.num_joints)] + [1., ])
         self.angles_scale = np.array([np.pi for _ in range(self.rozum.num_joints)])
+        low = np.array([-0.15 for _ in range(self.rozum.num_joints)] + [0., ])
+        high = np.array([0.15 for _ in range(self.rozum.num_joints)] + [1., ])
         self.action_space = gym.spaces.Box(low=low,
                                            high=high)
+
+        low = np.array([-0.9 for _ in range(self.rozum.num_joints)] + [0., ])
+        high = np.array([0.9 for _ in range(self.rozum.num_joints)] + [1., ])
+        self.angles_bounds = gym.spaces.Box(low=low[:-1],
+                                            high=high[:-1])
         self._available_obs_spaces = dict()
         self._render_dict = dict()
         self._available_obs_spaces['pov'] = gym.spaces.Box(shape=self.camera.resolution + [3],
@@ -101,19 +105,17 @@ class RozumEnv(gym.Env):
         else:
             joint_action *= self.angles_scale
             position = [j + a for j, a in zip(self.rozum.get_joint_positions(), joint_action)]
-            position = list(np.clip(position, self.action_space.low[:-1]*self.angles_scale,
-                                    self.action_space.high[:-1]*self.angles_scale))
+            position = list(np.clip(position, self.angles_bounds.low[:-1]*self.angles_scale,
+                                    self.angles_bounds.high[:-1]*self.angles_scale))
             self.rozum.set_joint_target_positions(position)
-            current_pose = self.rozum.get_joint_positions()
             step = 0
             while True:
-                previous_pose = current_pose.copy()
                 self._pyrep.step()
                 step += 1
                 current_pose = self.rozum.get_joint_positions()
-                block_case = all([abs(c-p) < 0.02 for c, p in zip(current_pose, previous_pose)])
                 done_case = all([abs(c-t) < 0.01 for c, t in zip(current_pose, position)])
-                if block_case or done_case or step > 20:
+                if done_case or step > 15:
+                    print(step)
                     break
             self.current_step += step
         x, y, z = self.rozum_tip.get_position()
@@ -128,7 +130,7 @@ class RozumEnv(gym.Env):
             reward += 10
             done = True
             info['grasped'] = 1
-        elif self.current_step >= self.step_limit:
+        elif self.current_step >= self.step_limit or current_distance > 0.65:
             done = True
             info['grasped'] = 0
         if done:
