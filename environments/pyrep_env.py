@@ -105,8 +105,8 @@ class RozumEnv(gym.Env):
         else:
             joint_action *= self.angles_scale
             position = [j + a for j, a in zip(self.rozum.get_joint_positions(), joint_action)]
-            position = list(np.clip(position, self.angles_bounds.low[:-1]*self.angles_scale,
-                                    self.angles_bounds.high[:-1]*self.angles_scale))
+            position = list(np.clip(position, self.angles_bounds.low*self.angles_scale,
+                                    self.angles_bounds.high*self.angles_scale))
             self.rozum.set_joint_target_positions(position)
             step = 0
             while True:
