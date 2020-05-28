@@ -79,7 +79,7 @@ class RozumEnv(gym.Env):
     def step(self, action: list):
         done = False
         info = dict()
-        joint_action, ee_action = action[:-1], action[-1]
+        joint_action, ee_action = action[:-1].copy(), action[-1].copy()
         current_ee = (1.0 if self.gripper.get_open_amount()[0] > 0.9
                       else 0.0)
         grasped = False
@@ -92,16 +92,17 @@ class RozumEnv(gym.Env):
             while not gripper_done:
                 gripper_done = self.gripper.actuate(ee_action, velocity=0.2)
                 self._pyrep.step()
+                self.current_step += 1
             if ee_action == 0.0:
                 # If gripper close action, the check for grasp.
                 for g_obj in self.graspable_objects:
                     grasped = self.gripper.grasp(g_obj)
-            self.current_step += 1
+
         else:
             joint_action *= self.angles_scale
             position = [j + a for j, a in zip(self.rozum.get_joint_positions(), joint_action)]
             position = list(np.clip(position, self.action_space.low[:-1]*self.angles_scale,
-                               self.action_space.high[:-1]*self.angles_scale))
+                                    self.action_space.high[:-1]*self.angles_scale))
             self.rozum.set_joint_target_positions(position)
             current_pose = self.rozum.get_joint_positions()
             step = 0
