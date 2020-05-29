@@ -8,7 +8,7 @@ neural_network:
   critic: "Critic_uni"
   actor: "Actor_uni"
 learner:
-  polyak: 0.99
+  polyak: 0.01
   gamma: 0.99
   learning_rate: 0.0001
   actor_lr: 0.0001
