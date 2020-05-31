@@ -38,9 +38,8 @@ def make_ddpg_env(name, frame_stack=4, obs_space_keys=('pov')):
         env = FrameStack(env, frame_stack, stack_key='pov')
     env = RozumLogWrapper(env, 10, name)
     mu = np.zeros_like(env.action_space.low)
-    # sigma = np.ones_like(env.action_space.low) * 0.01
-    # sigma[-1] = 0.1
-    sigma = np.zeros_like(env.action_space.low)
+    sigma = np.ones_like(env.action_space.low) * 0.01
+    sigma[-1] = 0.1
     theta = np.ones_like(env.action_space.low) * 0.15
     theta[-1] = 0.1
     env = OUExploration(env, mu, sigma, theta)
