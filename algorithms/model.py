@@ -117,6 +117,18 @@ class NoisyDense(Dense):
         return output
 
 
+class TwinCritic(tf.keras.Model):
+    def __init__(self, build_function, name, obs_space, action_space, reg=1e-6, noisy_head=True):
+        super(TwinCritic, self).__init__()
+        self.twin1 = build_function(name + '_1', obs_space, action_space, reg, noisy_head)
+        self.twin2 = build_function(name + '_2', obs_space, action_space, reg, noisy_head)
+
+    @tf.function
+    def call(self, inputs):
+        return self.twin1(inputs), self.twin2(inputs)
+
+
+
 def make_mlp(units, activation='tanh', reg=1e-6, noisy=False):
     _reg = l2(reg)
     layer = NoisyDense if noisy else Dense
