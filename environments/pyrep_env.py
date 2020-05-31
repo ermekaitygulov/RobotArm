@@ -36,8 +36,8 @@ class RozumEnv(gym.Env):
         self.action_space = gym.spaces.Box(low=low,
                                            high=high)
 
-        low = np.array([-0.9 for _ in range(self.rozum.num_joints)] + [0., ])
-        high = np.array([0.9 for _ in range(self.rozum.num_joints)] + [1., ])
+        low = np.array([-0.9 * scale for scale in self.angles_scale] + [0., ])
+        high = np.array([0.9 * scale for scale in self.angles_scale] + [1., ])
         self.angles_bounds = gym.spaces.Box(low=low[:-1],
                                             high=high[:-1])
         self._available_obs_spaces = dict()
@@ -83,7 +83,7 @@ class RozumEnv(gym.Env):
     def step(self, action: list):
         done = False
         info = dict()
-        joint_action, ee_action = action[:-1].copy(), action[-1].copy()
+        joint_action, ee_action = action[:-1], action[-1]
         current_ee = (1.0 if self.gripper.get_open_amount()[0] > 0.9
                       else 0.0)
         grasped = False
@@ -103,10 +103,9 @@ class RozumEnv(gym.Env):
                     grasped = self.gripper.grasp(g_obj)
 
         else:
-            joint_action *= self.angles_scale
-            position = [j + a for j, a in zip(self.rozum.get_joint_positions(), joint_action)]
-            position = list(np.clip(position, self.angles_bounds.low*self.angles_scale,
-                                    self.angles_bounds.high*self.angles_scale))
+            position = [j * scale + a for j, a, scale in zip(self.rozum.get_joint_positions(),
+                                                        joint_action, self.angles_scale)]
+            position = list(np.clip(position, self.angles_bounds.low, self.angles_bounds.high))
             self.rozum.set_joint_target_positions(position)
             for _ in range(15):
                 self._pyrep.step()
