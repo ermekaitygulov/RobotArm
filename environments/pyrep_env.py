@@ -103,7 +103,7 @@ class RozumEnv(gym.Env):
                     grasped = self.gripper.grasp(g_obj)
 
         else:
-            position = [j * scale + a for j, a, scale in zip(self.rozum.get_joint_positions(),
+            position = [j + a * scale for j, a, scale in zip(self.rozum.get_joint_positions(),
                                                         joint_action, self.angles_scale)]
             position = list(np.clip(position, self.angles_bounds.low, self.angles_bounds.high))
             self.rozum.set_joint_target_positions(position)
