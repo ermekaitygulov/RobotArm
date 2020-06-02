@@ -153,7 +153,7 @@ class TDPolicy:
         return [model.get_weights() for model in self.online_models]
 
     def get_target(self):
-        return [model.get_weights() for model in self.online_models]
+        return [model.get_weights() for model in self.target_models]
 
     def set_weights(self, online_weights, target_weights):
         for model, weights in zip(self.online_models, online_weights):
