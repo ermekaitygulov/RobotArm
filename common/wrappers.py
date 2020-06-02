@@ -7,6 +7,8 @@ import gym
 import numpy as np
 
 from chainerrl.wrappers.atari_wrappers import LazyFrames
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
 
 
 class FrameSkip(gym.Wrapper):
@@ -312,8 +314,40 @@ class OUNoise(object):
         return np.clip(action + ou_state, self.low, self.high)
 
 
+class CriticViz(gym.Wrapper):
+    def __init__(self, env, online_actor, target_actor, target_critic):
+        super(CriticViz, self).__init__(env)
+        self.online_actor = online_actor
+        self.target_actor = target_actor
+        self.target_critic = target_critic
+        self.x_axis = np.expand_dims(np.linspace(0, 1, 30), axis=-1)
+        self.q_values = list()
+
+    def step(self, action):
+        obs, reward, done, info = self.env.step(action)
+        inputs = {key: np.array(value)[None] for key, value in obs.items()}
+        online_action = self.online_actor(inputs)[0]
+        target_action = self.target_actor(inputs)[0]
+        action_batch = target_action * self.x_axis + online_action * (1 - self.x_axis)
+        inputs = {key: np.repeat(value, self.x_axis.shape[0], axis=0) for key, value in inputs.items()}
+        self.q_values.append(self.target_critic({'state': inputs, 'action': action_batch}))
+        return obs, reward, done, info
+
+    def reset(self):
+        obs = self.env.reset()
+        if len(self.q_values) > 0:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            Z = np.squeeze(np.stack(self.q_values, axis=0))
+            y = np.arange(len(self.q_values))
+            X, Y = np.meshgrid(np.squeeze(self.x_axis), y)
+            ax.plot_wireframe(X, Y, Z)
+            plt.show()
+            self.q_values = list()
+        return obs
+
+
 if __name__ == '__main__':
-    import matplotlib.pyplot as plt
     noise = OrnsteinUhlenbeckActionNoise(np.zeros(1), 0.1, 0.0, 1., theta=0.1)
     exploration = list()
     for i in range(1000):
