@@ -24,7 +24,9 @@ class RozumEnv(gym.Env):
         self._pyrep.launch(scene_file, headless=headless)
         self._pyrep.start()
         self.rozum = Rozum()
+        self.rozum.set_control_loop_enabled(True)
         self.gripper = BaxterGripper()
+        self.gripper.set_control_loop_enabled(True)
         self.cube = Shape("Cube")
         self.graspable_objects = [self.cube, ]
         self.camera = VisionSensor("render")
@@ -36,8 +38,8 @@ class RozumEnv(gym.Env):
         self.action_space = gym.spaces.Box(low=low,
                                            high=high)
 
-        low = np.array([-0.9 * scale for scale in self.angles_scale] + [0., ])
-        high = np.array([0.9 * scale for scale in self.angles_scale] + [1., ])
+        low = np.array([-0.8 * scale for scale in self.angles_scale] + [0., ])
+        high = np.array([0.8 * scale for scale in self.angles_scale] + [1., ])
         self.angles_bounds = gym.spaces.Box(low=low[:-1],
                                             high=high[:-1])
         self._available_obs_spaces = dict()
@@ -107,13 +109,9 @@ class RozumEnv(gym.Env):
                                                         joint_action, self.angles_scale)]
             position = list(np.clip(position, self.angles_bounds.low, self.angles_bounds.high))
             self.rozum.set_joint_target_positions(position)
-            for _ in range(15):
+            for _ in range(4):
                 self._pyrep.step()
                 self.current_step += 1
-                current_pose = self.rozum.get_joint_positions()
-                done_case = all([abs(c-t) < 0.01 for c, t in zip(current_pose, position)])
-                if done_case:
-                    break
         x, y, z = self.rozum_tip.get_position()
 
         tx, ty, tz = self.cube.get_position()
