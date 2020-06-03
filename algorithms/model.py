@@ -216,7 +216,7 @@ def make_critic(name, obs_space, action_space, reg=1e-6, noisy_head=False):
             feat['state'] = tf.keras.Input(shape=obs_space.shape)
     feat['action'] = tf.keras.Input(shape=action_space.shape)
     feat_base = concatenate(feat.values())
-    bases.append(make_mlp([400, 300], 'tanh', reg)(feat_base))
+    bases.append(make_mlp([400, 300], 'relu', reg)(feat_base))
     if len(img) > 0:
         img_base = concatenate(img.values())
         normalized = img_base/255
@@ -253,7 +253,7 @@ def make_model(name, obs_space, action_space, reg=1e-6, noisy_head=False):
         img_base = concatenate(img.values())
         normalized = img_base/255
         bases.append(make_cnn([32, 32, 32, 32], [3, 3, 3, 3],
-                              [2, 2, 2, 2], 'tanh', reg)(normalized))
+                              [2, 2, 2, 2], 'relu', reg)(normalized))
     base = concatenate(bases)
     base = make_mlp([256, ], 'relu', reg, noisy_head)(base)
     layer = NoisyDense if noisy_head else Dense

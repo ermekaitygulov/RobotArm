@@ -41,6 +41,10 @@ class Learner:
 
     @ray.method(num_return_vals=2)
     def get_weights(self):
+        for model in self.base.online_models:
+            model.save_weights('train/{}.ckpt'.format(model.name))
+        for model in self.base.target_models:
+            model.save_weights('train/{}.ckpt'.format(model.name))
         return self.base.get_online(), self.base.get_target()
 
 
