@@ -248,7 +248,7 @@ def make_model(name, obs_space, action_space, reg=1e-6, noisy_head=False):
             feat['state'] = tf.keras.Input(shape=obs_space.shape)
     if len(feat) > 0:
         feat_base = concatenate(feat.values())
-        bases.append(make_mlp([400, 300], 'tanh', reg)(feat_base))
+        bases.append(make_mlp([400, 300], 'relu', reg)(feat_base))
     if len(img) > 0:
         img_base = concatenate(img.values())
         normalized = img_base/255
