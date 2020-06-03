@@ -9,6 +9,7 @@ import numpy as np
 from chainerrl.wrappers.atari_wrappers import LazyFrames
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
+from matplotlib import cm
 
 
 class FrameSkip(gym.Wrapper):
@@ -208,6 +209,24 @@ class SaveVideoWrapper(gym.Wrapper):
         return image[..., ::-1]
 
 
+class PopPov(gym.Wrapper):
+    def __init__(self, env):
+        super(PopPov, self).__init__(env)
+        self.observation_space = gym.spaces.Dict({key: value for key, value
+                                                  in self.env.observation_space.spaces.items()
+                                                  if key != 'pov'})
+
+    def step(self, action):
+        obs, reward, done, info = self.env.step(action)
+        obs.pop('pov')
+        return obs, reward, done, info
+
+    def reset(self):
+        obs = self.env.reset()
+        obs.pop('pov')
+        return obs
+
+
 class RozumLogWrapper(gym.Wrapper):
     def __init__(self, env, window, name='agent'):
         super(RozumLogWrapper, self).__init__(env)
@@ -238,9 +257,9 @@ class RozumLogWrapper(gym.Wrapper):
         return observation
 
 
-class OUExploration(gym.Wrapper):
+class CorrelatedExploration(gym.Wrapper):
     def __init__(self, env, mu, sigma, theta=.15, dt=1e-2):
-        super(OUExploration, self).__init__(env)
+        super(CorrelatedExploration, self).__init__(env)
         # self._exploration = OUNoise(env.action_space.shape[0],
         #                             env.action_space.low, env.action_space.high)
         self._exploration = OrnsteinUhlenbeckActionNoise(mu, sigma, env.action_space.low, env.action_space.high,
@@ -286,65 +305,91 @@ class OrnsteinUhlenbeckActionNoise:
         return 'OrnsteinUhlenbeckActionNoise(mu={}, sigma={})'.format(self.mu, self.sigma)
 
 
-class OUNoise(object):
-    def __init__(self, action_dim, low, high, mu=0.0, theta=0.2, max_sigma=0.01, min_sigma=0.001, decay_period=500):
-        self.mu = mu
-        self.theta = theta
-        self.sigma = max_sigma
-        self.max_sigma = max_sigma
-        self.min_sigma = min_sigma
-        self.decay_period = decay_period
-        self.action_dim = action_dim
-        self.low = low
-        self.high = high
-        self.state = np.ones(self.action_dim) * self.mu
-
-    def reset(self):
-        self.state = np.ones(self.action_dim) * self.mu
-
-    def evolve_state(self):
-        x = self.state
-        dx = self.theta * (self.mu - x) + self.sigma * np.random.randn(self.action_dim)
-        self.state = x + dx
-        return self.state
-
-    def get_action(self, action, t=0):
-        ou_state = self.evolve_state()
-        self.sigma = self.max_sigma - (self.max_sigma - self.min_sigma) * min(1.0, t / self.decay_period)
-        return np.clip(action + ou_state, self.low, self.high)
+# class OUNoise(object):
+#     def __init__(self, action_dim, low, high, mu=0.0, theta=0.2, max_sigma=0.01, min_sigma=0.001, decay_period=500):
+#         self.mu = mu
+#         self.theta = theta
+#         self.sigma = max_sigma
+#         self.max_sigma = max_sigma
+#         self.min_sigma = min_sigma
+#         self.decay_period = decay_period
+#         self.action_dim = action_dim
+#         self.low = low
+#         self.high = high
+#         self.state = np.ones(self.action_dim) * self.mu
+#
+#     def reset(self):
+#         self.state = np.ones(self.action_dim) * self.mu
+#
+#     def evolve_state(self):
+#         x = self.state
+#         dx = self.theta * (self.mu - x) + self.sigma * np.random.randn(self.action_dim)
+#         self.state = x + dx
+#         return self.state
+#
+#     def get_action(self, action, t=0):
+#         ou_state = self.evolve_state()
+#         self.sigma = self.max_sigma - (self.max_sigma - self.min_sigma) * min(1.0, t / self.decay_period)
+#         return np.clip(action + ou_state, self.low, self.high)
 
 
 class CriticViz(gym.Wrapper):
-    def __init__(self, env, online_actor, target_actor, target_critic):
+    def __init__(self, env, online_actor, target_actor, online_critic, target_critic):
         super(CriticViz, self).__init__(env)
         self.online_actor = online_actor
         self.target_actor = target_actor
+        self.online_critic = online_critic
         self.target_critic = target_critic
-        self.x_axis = np.expand_dims(np.linspace(0, 1, 30), axis=-1)
-        self.q_values = list()
+        self.x_axis = np.expand_dims(np.linspace(-2, 2,60), axis=-1)
+        self.y_axis = np.expand_dims(np.linspace(-2, 2, 60), axis=-1)
+        self.target_values = list()
+        self.online_values = list()
 
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
         inputs = {key: np.array(value)[None] for key, value in obs.items()}
-        online_action = self.online_actor(inputs)[0]
-        target_action = self.target_actor(inputs)[0]
-        action_batch = target_action * self.x_axis + online_action * (1 - self.x_axis)
+        online_direction = self.online_actor(inputs)[0] - action
+        target_direction = self.target_actor(inputs)[0] - action
+        print(online_direction)
+        print(target_direction)
+        print(action)
         inputs = {key: np.repeat(value, self.x_axis.shape[0], axis=0) for key, value in inputs.items()}
-        self.q_values.append(self.target_critic({'state': inputs, 'action': action_batch}))
+        for y_value in self.y_axis:
+            action_batch = action + online_direction * self.x_axis + target_direction * y_value
+            self.target_values.append(self.target_critic({'state': inputs, 'action': action_batch}))
+            self.online_values.append(self.online_critic({'state': inputs, 'action': action_batch}))
+        self.vis3d(self.target_values, self.online_values, self.x_axis, self.y_axis)
+        self.target_values = list()
+        self.online_values = list()
         return obs, reward, done, info
 
     def reset(self):
         obs = self.env.reset()
-        if len(self.q_values) > 0:
+        if len(self.target_values) > 0:
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
-            Z = np.squeeze(np.stack(self.q_values, axis=0))
-            y = np.arange(len(self.q_values))
+            Z = np.squeeze(np.stack(self.target_values, axis=0))
+            y = np.arange(len(self.target_values))
             X, Y = np.meshgrid(np.squeeze(self.x_axis), y)
             ax.plot_wireframe(X, Y, Z)
             plt.show()
-            self.q_values = list()
+            self.target_values = list()
         return obs
+
+    def vis3d(self, target_values, online_values, x_axis, y_axis):
+        fig = plt.figure()
+        X, Y = np.meshgrid(np.squeeze(x_axis), np.squeeze(y_axis))
+
+        ax = fig.add_subplot(1, 2, 1, projection='3d')
+        Z = np.squeeze(np.stack(target_values, axis=0))
+        ax.plot_surface(X, Y, Z, cmap=cm.coolwarm)
+
+        ax = fig.add_subplot(1, 2, 2, projection='3d')
+        Z = np.squeeze(np.stack(online_values, axis=0))
+        ax.plot_surface(X, Y, Z, cmap=cm.coolwarm)
+
+        plt.show()
+
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 gpu: 1
 env:
-  obs_space_keys: ["arm", "cube"]
+  obs_space_keys: ["cube", "arm"]
   frame_skip: 1
   frame_stack: 1
 buffer:

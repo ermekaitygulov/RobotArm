@@ -42,7 +42,7 @@ def make_ddpg_env(name, frame_stack=4, obs_space_keys=('pov')):
     sigma[-1] = 0.1
     theta = np.ones_like(env.action_space.low) * 0.15
     theta[-1] = 0.1
-    env = OUExploration(env, mu, sigma, theta)
+    env = CorrelatedExploration(env, mu, sigma, theta)
     return env
 
 

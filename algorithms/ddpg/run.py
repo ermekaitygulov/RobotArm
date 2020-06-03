@@ -24,7 +24,7 @@ def make_env(frame_skip, frame_stack, stack_key='pov', **kwargs):
     sigma[-1] = 0.1
     theta = np.ones_like(env.action_space.low) * 0.15
     theta[-1] = 0.1
-    env = OUExploration(env, mu, sigma, theta)
+    env = CorrelatedExploration(env, mu, sigma, theta)
     return env
 
 

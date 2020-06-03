@@ -132,7 +132,7 @@ class TwinCritic(tf.keras.Model):
 def make_mlp(units, activation='tanh', reg=1e-6, noisy=False):
     _reg = l2(reg)
     layer = NoisyDense if noisy else Dense
-    return Sequential([layer(unit, activation, kernel_regularizer=_reg,
+    return Sequential([layer(unit, activation, use_bias=True, kernel_regularizer=_reg,
                              bias_regularizer=_reg) for unit in units])
 
 
@@ -225,7 +225,7 @@ def make_critic(name, obs_space, action_space, reg=1e-6, noisy_head=False):
     base = concatenate(bases)
     base = make_mlp([256, ], 'relu', reg, noisy_head)(base)
     layer = NoisyDense if noisy_head else Dense
-    head = layer(1, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
+    head = layer(1, use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     model = tf.keras.Model(inputs={**img, **feat}, outputs=head, name=name)
     return model
 
@@ -257,6 +257,7 @@ def make_model(name, obs_space, action_space, reg=1e-6, noisy_head=False):
     base = concatenate(bases)
     base = make_mlp([256, ], 'relu', reg, noisy_head)(base)
     layer = NoisyDense if noisy_head else Dense
-    head = layer(action_space.shape[0], kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
+    head = layer(action_space.shape[0], 'tanh', use_bias=True,
+                 kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base) * action_space.high
     model = tf.keras.Model(inputs={**img, **feat}, outputs=head, name=name)
     return model
