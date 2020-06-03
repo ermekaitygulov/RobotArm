@@ -348,32 +348,21 @@ class CriticViz(gym.Wrapper):
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
         inputs = {key: np.array(value)[None] for key, value in obs.items()}
-        online_direction = self.online_actor(inputs)[0] - action
-        target_direction = self.target_actor(inputs)[0] - action
-        print(online_direction)
-        print(target_direction)
-        print(action)
+        online_action = self.online_actor(inputs)[0]
+        target_action = self.target_actor(inputs)[0]
         inputs = {key: np.repeat(value, self.x_axis.shape[0], axis=0) for key, value in inputs.items()}
-        for y_value in self.y_axis:
-            action_batch = action + online_direction * self.x_axis + target_direction * y_value
-            self.target_values.append(self.target_critic({'state': inputs, 'action': action_batch}))
-            self.online_values.append(self.online_critic({'state': inputs, 'action': action_batch}))
-        self.vis3d(self.target_values, self.online_values, self.x_axis, self.y_axis)
-        self.target_values = list()
-        self.online_values = list()
+        action_batch = target_action * self.x_axis + online_action * (1 - self.x_axis)
+        self.target_values.append(self.target_critic({'state': inputs, 'action': action_batch}))
+        self.online_values.append(self.online_critic({'state': inputs, 'action': action_batch}))
         return obs, reward, done, info
 
     def reset(self):
         obs = self.env.reset()
         if len(self.target_values) > 0:
-            fig = plt.figure()
-            ax = fig.add_subplot(111, projection='3d')
-            Z = np.squeeze(np.stack(self.target_values, axis=0))
             y = np.arange(len(self.target_values))
-            X, Y = np.meshgrid(np.squeeze(self.x_axis), y)
-            ax.plot_wireframe(X, Y, Z)
-            plt.show()
+            self.vis3d(self.target_values, self.online_values, self.x_axis, y)
             self.target_values = list()
+            self.online_values = list()
         return obs
 
     def vis3d(self, target_values, online_values, x_axis, y_axis):
