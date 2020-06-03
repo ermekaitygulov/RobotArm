@@ -33,8 +33,8 @@ class RozumEnv(gym.Env):
         self.rozum_tip = self.rozum.get_tip()
 
         self.angles_scale = np.array([np.pi for _ in range(self.rozum.num_joints)])
-        low = np.array([-0.15 for _ in range(self.rozum.num_joints)] + [0., ])
-        high = np.array([0.15 for _ in range(self.rozum.num_joints)] + [1., ])
+        low = np.array([-0.5 for _ in range(self.rozum.num_joints)] + [0., ])
+        high = np.array([0.5 for _ in range(self.rozum.num_joints)] + [1., ])
         self.action_space = gym.spaces.Box(low=low,
                                            high=high)
 
