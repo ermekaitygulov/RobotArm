@@ -220,14 +220,14 @@ def make_critic(name, obs_space, action_space, reg=1e-6, noisy_head=False):
 
     bases.append(action)
     bases.append(layer(400, 'relu', use_bias=True,
-                       kernel_regularizer=reg, bias_regularizer=reg)(feat_base))
+                       kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(feat_base))
     if len(img) > 0:
         img_base = concatenate(img.values())
         normalized = img_base/255
         bases.append(make_cnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2],
                               'tanh', reg)(normalized))
     base = concatenate(bases)
-    base = layer(300, 'relu', use_bias=True,  kernel_regularizer=reg, bias_regularizer=reg)(base)
+    base = layer(300, 'relu', use_bias=True,  kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
 
     head = layer(1, use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     model = tf.keras.Model(inputs={**img, **feat, 'action': action}, outputs=head, name=name)
@@ -254,14 +254,14 @@ def make_model(name, obs_space, action_space, reg=1e-6, noisy_head=False):
     if len(feat) > 0:
         feat_base = concatenate(feat.values())
         bases.append(layer(400, 'relu', use_bias=True,
-                     kernel_regularizer=reg, bias_regularizer=reg)(feat_base))
+                     kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(feat_base))
     if len(img) > 0:
         img_base = concatenate(img.values())
         normalized = img_base/255
         bases.append(make_cnn([32, 32, 32, 32], [3, 3, 3, 3],
                               [2, 2, 2, 2], 'relu', reg)(normalized))
     base = concatenate(bases)
-    base = layer(300, 'relu', use_bias=True,  kernel_regularizer=reg, bias_regularizer=reg)(base)
+    base = layer(300, 'relu', use_bias=True,  kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     head = layer(action_space.shape[0], 'tanh', use_bias=True,
                  kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base) * action_space.high
     model = tf.keras.Model(inputs={**img, **feat}, outputs=head, name=name)
