@@ -109,9 +109,9 @@ class DDPG(TDPolicy):
         return target
 
     def save(self, out_dir=None):
-        self.online_critic.save_weights(out_dir)
+        #self.online_critic.save_weights(out_dir)
         self.online_actor.save_weights(out_dir)
 
     def load(self, out_dir=None):
-        self.online_critic.load_weights(out_dir)
+        #self.online_critic.load_weights(out_dir)
         self.online_actor.load_weights(out_dir)

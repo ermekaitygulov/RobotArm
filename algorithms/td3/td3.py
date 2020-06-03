@@ -2,13 +2,14 @@ from algorithms.ddpg.ddpg import DDPG
 import tensorflow as tf
 import numpy as np
 from common.tf_util import update_target_variables, huber_loss
+from algorithms.model import make_twin
 
 
 class TD3(DDPG):
     def __init__(self, build_critic, build_actor, obs_space, action_space,
-                 polyak=0.99, actor_lr=1e-4, delay=2, *args, **kwargs):
-        #TODO add twincritic
-        super(TD3, self).__init__(build_critic, build_actor, obs_space, action_space,
+                 polyak=0.001, actor_lr=1e-4, delay=2, *args, **kwargs):
+        build_twin_critic = make_twin(build_critic)
+        super(TD3, self).__init__(build_twin_critic, build_actor, obs_space, action_space,
                                   polyak, actor_lr, *args, **kwargs)
         self.delay = delay
 
@@ -20,7 +21,7 @@ class TD3(DDPG):
                                         n_state, n_done, n_reward, actual_n, weights,
                                         gamma)
         if tf.equal(self.q_optimizer.iterations % self.delay, 0):
-            self.actor_update(state)
+            self.actor_update(state, weights)
             update_target_variables(self.target_critic.weights, self.online_critic.weights, self.polyak)
             update_target_variables(self.target_actor.weights, self.online_actor.weights, self.polyak)
         return priorities
@@ -83,7 +84,7 @@ class TD3(DDPG):
         with tf.GradientTape() as tape:
             action = self.online_actor(state, training=True)
             q_value1, _ = self.online_critic({'state': state, 'action': action}, training=True)
-            q_value = -tf.reduce_mean(weights * q_value1, training=True)
+            q_value = -tf.reduce_mean(weights * q_value1)
             self.update_metrics('actor_loss', q_value)
             l2 = tf.add_n(self.online_actor.losses)
             self.update_metrics('actor_l2', l2)

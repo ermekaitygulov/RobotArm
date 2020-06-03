@@ -128,6 +128,11 @@ class TwinCritic(tf.keras.Model):
         return self.twin1(inputs), self.twin2(inputs)
 
 
+def make_twin(build_critic):
+    def thunk(name, obs_space, action_space, reg=1e-6, noisy_head=True):
+        return TwinCritic(build_critic, name, obs_space, action_space, reg, noisy_head)
+    return thunk
+
 
 def make_mlp(units, activation='tanh', reg=1e-6, noisy=False):
     _reg = l2(reg)
@@ -263,6 +268,7 @@ def make_model(name, obs_space, action_space, reg=1e-6, noisy_head=False):
     base = concatenate(bases)
     base = layer(300, 'relu', use_bias=True,  kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     head = layer(action_space.shape[0], 'tanh', use_bias=True,
-                 kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base) * action_space.high
+                 kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
+    head = head * (action_space.high - action_space.low) + (action_space.high - action_space.low)/2
     model = tf.keras.Model(inputs={**img, **feat}, outputs=head, name=name)
     return model

@@ -260,9 +260,9 @@ class RozumLogWrapper(gym.Wrapper):
 class CorrelatedExploration(gym.Wrapper):
     def __init__(self, env, mu, sigma, theta=.15, dt=1e-2):
         super(CorrelatedExploration, self).__init__(env)
-        # self._exploration = OUNoise(env.action_space.shape[0],
-        #                             env.action_space.low, env.action_space.high)
-        self._exploration = OrnsteinUhlenbeckActionNoise(mu, sigma, env.action_space.low, env.action_space.high,
+        self._exploration = OrnsteinUhlenbeckActionNoise(mu, sigma,
+                                                         env.action_space.low,
+                                                         env.action_space.high,
                                                          theta, dt)
         self._counter = 0
 
@@ -382,9 +382,9 @@ class CriticViz(gym.Wrapper):
 
 
 if __name__ == '__main__':
-    noise = OrnsteinUhlenbeckActionNoise(np.zeros(1), 0.1, 0.0, 1., theta=0.1)
+    noise = OrnsteinUhlenbeckActionNoise(np.zeros(1), 0.01, 0.0, 1., theta=1., dt=1.)
     exploration = list()
     for i in range(1000):
-        exploration.append(noise(1))
+        exploration.append(noise(0.5))
     plt.plot(exploration)
     plt.show()
