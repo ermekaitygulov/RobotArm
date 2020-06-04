@@ -7,11 +7,16 @@ from algorithms.model import make_twin
 
 class TD3(DDPG):
     def __init__(self, build_critic, build_actor, obs_space, action_space,
-                 polyak=0.001, actor_lr=1e-4, delay=2, *args, **kwargs):
+                 polyak=0.001, actor_lr=1e-4, delay=2, noise_sigma=0.05, noise_clip=0.1,
+                 *args, **kwargs):
+        self.noise_sigma = noise_sigma
+        self.noise_clip = noise_clip
         build_twin_critic = make_twin(build_critic)
         super(TD3, self).__init__(build_twin_critic, build_actor, obs_space, action_space,
                                   polyak, actor_lr, *args, **kwargs)
         self.delay = delay
+        self.action_min = action_space.low
+        self.action_max = action_space.high
 
     @tf.function
     def nn_update(self, state, action, next_state, done, reward,
@@ -69,6 +74,10 @@ class TD3(DDPG):
     def compute_target(self, next_state, done, reward, actual_n, gamma):
         print("Compute_target tracing")
         action = self.target_actor(next_state, training=True)
+        noise = tf.random.normal(action.shape) * self.noise_sigma
+        noise = tf.clip_by_value(noise, -self.noise_clip, self.noise_clip)
+        action = action + noise
+        action = tf.clip_by_value(action, self.action_min, self.action_max)
         target1, target2 = self.target_critic({'state': next_state, 'action': action}, training=True)
         target1, target2 = tf.squeeze(target1), tf.squeeze(target2)
         target = tf.minimum(target1, target2)
