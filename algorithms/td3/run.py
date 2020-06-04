@@ -12,19 +12,12 @@ import os
 from common.tf_util import config_gpu
 
 
-def make_env(frame_skip, frame_stack, stack_key='pov', **kwargs):
+def make_env(mu=0., sigma=0.1, **kwargs):
     env = RozumEnv(**kwargs)
-    if frame_skip > 1:
-        env = FrameSkip(env, frame_skip)
-    if frame_stack > 1:
-        env = FrameStack(env, frame_stack, stack_key=stack_key)
     env = RozumLogWrapper(env, 10)
-    mu = np.zeros_like(env.action_space.low)
-    sigma = np.ones_like(env.action_space.low) * 0.01
-    sigma[-1] = 0.1
-    theta = np.ones_like(env.action_space.low)
-    # theta[-1] = 0.1
-    env = CorrelatedExploration(env, mu, sigma, theta, dt=1.)
+    mu = np.ones_like(env.action_space.low) * mu
+    sigma = np.ones_like(env.action_space.low) * sigma
+    env = UncorrelatedExploration(env, mu, sigma)
     return env
 
 

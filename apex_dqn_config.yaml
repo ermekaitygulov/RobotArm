@@ -1,7 +1,6 @@
 gpu: 1
 env:
   obs_space_keys: ["cube", "arm"]
-  frame_stack: 4
 buffer:
   size: 1000000
 neural_network: "DuelingDQN_arm_cube"

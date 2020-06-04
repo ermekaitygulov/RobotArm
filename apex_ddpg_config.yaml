@@ -1,7 +1,7 @@
 gpu: 1
 env:
   obs_space_keys: ["cube", "arm"]
-  frame_stack: 1
+  sigma: 0.1
 buffer:
   size: 1000000
 neural_network:

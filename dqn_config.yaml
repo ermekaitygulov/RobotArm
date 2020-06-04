@@ -1,10 +1,6 @@
 gpu: 1
 env:
   obs_space_keys: ["cube", "arm"]
-  frame_stack: 1
-  epsilon: 0.1
-  final_epsilon: 0.01
-  epsilon_decay: 0.99
 buffer:
   size: 100000
 neural_network: "DuelingDQN_arm_cube"

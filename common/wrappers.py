@@ -275,8 +275,12 @@ class CorrelatedExploration(gym.Wrapper):
         return obs, rew, done, info
 
     def sample_action(self, action):
-        # return self._exploration.get_action(action, self._counter)
         return self._exploration(action)
+
+
+class UncorrelatedExploration(CorrelatedExploration):
+    def __init__(self, env, mu, sigma):
+        super(UncorrelatedExploration, self).__init__(env, mu, sigma, 1., 1.)
 
 
 class OrnsteinUhlenbeckActionNoise:
@@ -303,34 +307,6 @@ class OrnsteinUhlenbeckActionNoise:
 
     def __repr__(self):
         return 'OrnsteinUhlenbeckActionNoise(mu={}, sigma={})'.format(self.mu, self.sigma)
-
-
-# class OUNoise(object):
-#     def __init__(self, action_dim, low, high, mu=0.0, theta=0.2, max_sigma=0.01, min_sigma=0.001, decay_period=500):
-#         self.mu = mu
-#         self.theta = theta
-#         self.sigma = max_sigma
-#         self.max_sigma = max_sigma
-#         self.min_sigma = min_sigma
-#         self.decay_period = decay_period
-#         self.action_dim = action_dim
-#         self.low = low
-#         self.high = high
-#         self.state = np.ones(self.action_dim) * self.mu
-#
-#     def reset(self):
-#         self.state = np.ones(self.action_dim) * self.mu
-#
-#     def evolve_state(self):
-#         x = self.state
-#         dx = self.theta * (self.mu - x) + self.sigma * np.random.randn(self.action_dim)
-#         self.state = x + dx
-#         return self.state
-#
-#     def get_action(self, action, t=0):
-#         ou_state = self.evolve_state()
-#         self.sigma = self.max_sigma - (self.max_sigma - self.min_sigma) * min(1.0, t / self.decay_period)
-#         return np.clip(action + ou_state, self.low, self.high)
 
 
 class CriticViz(gym.Wrapper):

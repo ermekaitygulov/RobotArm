@@ -11,10 +11,8 @@ from environments.pyrep_env import RozumEnv
 from common.wrappers import *
 
 
-def make_dqn_env(name, epsilon=0.1, obs_space_keys=('pov', 'arm'), frame_stack=4):
-    env = RozumEnv(obs_space_keys)
-    if frame_stack > 1 and 'pov' in obs_space_keys:
-        env = FrameStack(env, frame_stack, stack_key='pov')
+def make_dqn_env(name, epsilon=0.1, **env_kwargs):
+    env = RozumEnv(**env_kwargs)
     env = RozumLogWrapper(env, 10, name)
     discrete_dict = dict()
     robot_dof = env.action_space.shape[0] - 1
@@ -32,16 +30,12 @@ def make_dqn_env(name, epsilon=0.1, obs_space_keys=('pov', 'arm'), frame_stack=4
     return env
 
 
-def make_ddpg_env(name, frame_stack=4, obs_space_keys=('pov')):
-    env = RozumEnv(obs_space_keys=obs_space_keys)
-    if frame_stack > 1 and 'pov' in obs_space_keys:
-        env = FrameStack(env, frame_stack, stack_key='pov')
+def make_ddpg_env(name, mu=0., sigma=0.1, **env_kwargs):
+    env = RozumEnv(**env_kwargs)
     env = RozumLogWrapper(env, 10, name)
-    mu = np.zeros_like(env.action_space.low)
-    sigma = np.ones_like(env.action_space.low) * 0.1
-    theta = np.ones_like(env.action_space.low) * 0.15
-    theta[-1] = 0.1
-    env = CorrelatedExploration(env, mu, sigma, theta)
+    mu = np.ones_like(env.action_space.low) * mu
+    sigma = np.ones_like(env.action_space.low) * sigma
+    env = UncorrelatedExploration(env, mu, sigma)
     return env
 
 
