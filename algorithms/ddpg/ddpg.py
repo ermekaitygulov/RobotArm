@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import tensorflow as tf
 from algorithms.base.td_base import TDPolicy
@@ -109,9 +111,13 @@ class DDPG(TDPolicy):
         return target
 
     def save(self, out_dir=None):
-        #self.online_critic.save_weights(out_dir)
-        self.online_actor.save_weights(out_dir)
+        name = self.online_critic.name + '.ckpt'
+        self.online_critic.save_weights(os.path.join(out_dir, name))
+        name = self.online_actor.name + '.ckpt'
+        self.online_actor.save_weights(os.path.join(out_dir, name))
 
-    def load(self, out_dir=None):
-        #self.online_critic.load_weights(out_dir)
-        self.online_actor.load_weights(out_dir)
+    def load(self, actor_path=None, critic_path=None):
+        if actor_path:
+            self.online_actor.load_weights(actor_path)
+        if critic_path:
+            self.online_critic.load_weights(critic_path)

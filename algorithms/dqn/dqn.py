@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import tensorflow as tf
 from common.tf_util import take_vector_elements, huber_loss
@@ -77,7 +79,8 @@ class DQN(TDPolicy):
         self.target_model.set_weights(self.online_model.get_weights())
 
     def save(self, out_dir=None):
-        self.online_model.save_weights(out_dir)
+        name = self.online_model.name + '.ckpt'
+        self.online_model.save_weights(os.path.join(out_dir, name))
 
-    def load(self, out_dir=None):
-        self.online_model.load_weights(out_dir)
+    def load(self, path=None):
+        self.online_model.load_weights(path)

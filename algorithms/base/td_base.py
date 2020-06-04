@@ -32,7 +32,7 @@ class TDPolicy:
         self.target_models = list()
 
     # RL methods
-    def train(self, env, episodes=200, name="train/max_model.ckpt", save_window=25):
+    def train(self, env, episodes=200, save_dir="train/max_model/", save_window=25):
         max_reward = - np.inf
         counter = 0
         window = deque([], maxlen=save_window)
@@ -44,7 +44,7 @@ class TDPolicy:
             if avg_reward >= max_reward:
                 print("MaxAvg reward moved from {:.2f} to {:.2f} (save model)".format(max_reward, avg_reward))
                 max_reward = avg_reward
-                self.save(name)
+                self.save(save_dir)
             stop_time = timeit.default_timer()
             print("episode: {}  score: {}  counter: {}  max: {}"
                   .format(e, score, counter, max_reward))
@@ -145,7 +145,7 @@ class TDPolicy:
     def save(self, out_dir=None):
         raise NotImplementedError
 
-    def load(self, out_dir=None):
+    def load(self, path=None):
         raise NotImplementedError
 
     # Functions below are needed for apex
