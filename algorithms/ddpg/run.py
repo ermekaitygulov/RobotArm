@@ -49,6 +49,8 @@ def ddpg_run(config_path):
     agent = DDPG(make_critic, make_actor, env.observation_space, env.action_space,
                  replay_buff=replay_buffer, dtype_dict=dtype_dict, **config['agent'])
 
+    if 'pretrain_weights' in config:
+        agent.load(**config['pretrain_weights'])
     train_config = config['train']
     summary_writer = tf.summary.create_file_writer(train_config.pop('log_dir'))
     with summary_writer.as_default():
