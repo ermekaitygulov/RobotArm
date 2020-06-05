@@ -358,9 +358,9 @@ class CriticViz(gym.Wrapper):
 
 
 if __name__ == '__main__':
-    noise = OrnsteinUhlenbeckActionNoise(np.zeros(1), 0.01, 0.0, 1., theta=1., dt=1.)
+    noise = OrnsteinUhlenbeckActionNoise(np.zeros(1), 0.1, -0.5, 0.5, theta=1., dt=1.)
     exploration = list()
     for i in range(1000):
-        exploration.append(noise(0.5))
+        exploration.append(noise(0.)*180)
     plt.plot(exploration)
     plt.show()
