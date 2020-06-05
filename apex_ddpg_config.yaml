@@ -1,12 +1,12 @@
 gpu: 1
+base: ddpg
 env:
   obs_space_keys: ["cube", "arm"]
-  sigma: 0.1
 buffer:
   size: 1000000
 neural_network:
-  critic: "Critic_uni"
-  actor: "Actor_uni"
+  build_critic: "Critic_uni"
+  build_actor: "Actor_uni"
 learner:
   polyak: 0.001
   gamma: 0.99

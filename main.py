@@ -1,14 +1,13 @@
 from algorithms.dqn.run import dqn_run
-from algorithms.apex.run import apex_dqn_run, apex_ddpg_run
+from algorithms.apex.run import apex_run
 from algorithms.ddpg.run import ddpg_run
 from algorithms.td3.run import td3_run
 from argparse import ArgumentParser
 import os
 
 algorithms = {'dqn': dqn_run,
-              'apex-dqn': apex_dqn_run,
+              'apex': apex_run,
               'ddpg': ddpg_run,
-              'apex-ddpg': apex_ddpg_run,
               'td3': td3_run}
 
 if __name__ == '__main__':
@@ -23,4 +22,3 @@ if __name__ == '__main__':
     args = parser.parse_args()
     algorithm_run = algorithms[args.alg]
     algorithm_run(args.config_path)
-
