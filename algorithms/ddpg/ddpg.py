@@ -96,7 +96,7 @@ class DDPG(TDPolicy):
             self.update_metrics('Critic_Gradient_norm', tf.norm(g))
             gradients[i] = tf.clip_by_norm(g, 10)
         self.q_optimizer.apply_gradients(zip(gradients, critic_variables))
-        priorities = tf.abs(ntd_loss)
+        priorities = tf.abs(ntd_loss) + tf.abs(td_loss)
         return priorities
 
     @tf.function
@@ -116,8 +116,13 @@ class DDPG(TDPolicy):
         name = self.online_actor.name + '.ckpt'
         self.online_actor.save_weights(os.path.join(out_dir, name))
 
-    def load(self, actor_path=None, critic_path=None):
-        if actor_path:
-            self.online_actor.load_weights(actor_path)
-        if critic_path:
-            self.online_critic.load_weights(critic_path)
+    def load(self, online_actor_path=None, online_critic_path=None,
+             target_actor_path=None, target_critic_path=None             ):
+        if online_actor_path:
+            self.online_actor.load_weights(online_actor_path)
+        if online_critic_path:
+            self.online_critic.load_weights(online_critic_path)
+        if target_actor_path:
+            self.target_actor.load_weights(online_actor_path)
+        if target_critic_path:
+            self.target_critic.load_weights(online_critic_path)
