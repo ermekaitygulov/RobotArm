@@ -96,7 +96,7 @@ class DDPG(TDPolicy):
             self.update_metrics('Critic_Gradient_norm', tf.norm(g))
             gradients[i] = tf.clip_by_norm(g, 10)
         self.q_optimizer.apply_gradients(zip(gradients, critic_variables))
-        priorities = tf.abs(ntd_loss) + tf.abs(td_loss)
+        priorities = tf.abs(ntd_loss)
         return priorities
 
     @tf.function
