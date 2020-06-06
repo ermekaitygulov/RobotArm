@@ -322,17 +322,19 @@ class CriticViz(gym.Wrapper):
         self.episode = 0
 
     def step(self, action):
-        obs, reward, done, info = self.env.step(action)
-        inputs = {key: np.array(value)[None] for key, value in obs.items()}
-        online_action = self.online_actor(inputs)[0]
         target_action = action
-        inputs = {key: np.repeat(value, self.x_axis.shape[0], axis=0) for key, value in inputs.items()}
-        action_batch = target_action * self.x_axis + online_action * (1 - self.x_axis)
+        inputs = {key: np.repeat(value, self.x_axis.shape[0], axis=0) for key, value in self.inputs.items()}
+        action_batch = target_action * self.x_axis + self.online_action * (1 - self.x_axis)
         self.online_values.append(self.online_critic({'state': inputs, 'action': action_batch}))
+        obs, reward, done, info = self.env.step(self.online_action)
+        self.inputs = {key: np.array(value)[None] for key, value in obs.items()}
+        self.online_action = self.online_actor(inputs)[0]
         return obs, reward, done, info
 
     def reset(self):
         obs = self.env.reset()
+        self.inputs = {key: np.array(value)[None] for key, value in obs.items()}
+        self.online_action = self.online_actor(self.inputs)[0]
         if len(self.online_values) > 0:
             y = np.arange(len(self.online_values))
             self.vis3d(self.online_values, self.x_axis, y)
@@ -355,9 +357,9 @@ class CriticViz(gym.Wrapper):
 
 
 if __name__ == '__main__':
-    noise = OrnsteinUhlenbeckActionNoise(np.zeros(1), 0.1, -0.5, 0.5, theta=1., dt=1.)
+    noise = OrnsteinUhlenbeckActionNoise(np.zeros(1), 0.25**1.7, 0.0, 1.0, theta=1., dt=1.)
     exploration = list()
     for i in range(1000):
-        exploration.append(noise(0.)*180)
+        exploration.append(noise(0.))
     plt.plot(exploration)
     plt.show()

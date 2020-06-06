@@ -32,12 +32,17 @@ def make_dqn_env(name, epsilon=0.1, **env_kwargs):
     return env
 
 
-def make_ddpg_env(name, mu=0., sigma=0.1, **env_kwargs):
+def make_ddpg_env(name, mu=0., sigma_arm_ee=(0.1, 0.25), **env_kwargs):
     env = RozumEnv(**env_kwargs)
     env = RozumLogWrapper(env, 10, name)
     mu = np.ones_like(env.action_space.low) * mu
-    sigma = np.ones_like(env.action_space.low) * sigma
-    env = UncorrelatedExploration(env, mu, sigma)
+    try:
+        exploration = np.ones_like(env.action_space.low)
+        exploration[:-1] *= sigma_arm_ee[0]
+        exploration[-1] *= sigma_arm_ee[1]
+    except TypeError:
+        exploration = np.ones_like(env.action_space.low) * sigma_arm_ee
+    env = UncorrelatedExploration(env, mu, exploration)
     return env
 
 
@@ -109,9 +114,9 @@ def make_remote_base(config, n_actors):
         base, make_env = {'ddpg': (DDPG, make_ddpg_env),
                           'dqn': (DQN, make_dqn_env),
                           'td3': (TD3, make_ddpg_env)}[config['base']]
-        exploration_name, exploration_value = {'ddpg': ('sigma', 0.1),
+        exploration_name, exploration_value = {'ddpg': ('sigma_arm_ee', (0.1, 0.25)),
                                                'dqn': ('epsilon', 0.4),
-                                               'td3': ('sigma', 0.1)}[config['base']]
+                                               'td3': ('sigma_arm_ee', (0.1, 0.25))}[config['base']]
     except KeyError:
         base, make_env = DQN, make_dqn_env
         exploration_name, exploration_value = 'epsilon', 0.4
@@ -136,6 +141,7 @@ def make_remote_base(config, n_actors):
                              **config['learner'], **network_kwargs)
     if 'exploration' in config:
         exploration_value = config['exploration']
+    exploration_value = np.array(exploration_value) # TD3 and DDPG case, when there is two control values
     actors = [Actor.remote(thread_id=i, base=base, make_env=make_env,
                            config_env={exploration_name:
                                        exploration_range(exploration_value, i, n_actors),

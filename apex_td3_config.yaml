@@ -14,7 +14,7 @@ learner:
   log_freq: 1000
   noise_sigma: 0.02
   noise_clip: 0.056
-exploration: 0.1
+exploration: [0.1, 0.25]
 actors:
   num: 32
   rollout_size: 70
