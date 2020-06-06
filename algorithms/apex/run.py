@@ -134,6 +134,8 @@ def make_remote_base(config, n_actors):
                                     state_keys=state_keys)
     learner = Learner.remote(base=base, obs_space=obs_space, action_space=action_space,
                              **config['learner'], **network_kwargs)
+    if 'exploration' in config:
+        exploration_value = config['exploration']
     actors = [Actor.remote(thread_id=i, base=base, make_env=make_env,
                            config_env={exploration_name:
                                        exploration_range(exploration_value, i, n_actors),

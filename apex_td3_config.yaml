@@ -9,15 +9,17 @@ neural_network:
   build_actor: "Actor_uni"
 learner:
   polyak: 0.001
-  gamma: 0.99
   learning_rate: 0.0001
   actor_lr: 0.0001
   log_freq: 1000
+  noise_sigma: 0.02
+  noise_clip: 0.056
+exploration: 0.1
 actors:
   num: 32
   rollout_size: 70
-  gamma: 0.99
-  n_step: 10
+  noise_sigma: 0.02
+  noise_clip: 0.056
 train:
   max_eps: 3000
   replay_start_size: 10000
