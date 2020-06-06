@@ -117,12 +117,12 @@ class DDPG(TDPolicy):
         self.online_actor.save_weights(os.path.join(out_dir, name))
 
     def load(self, online_actor_path=None, online_critic_path=None,
-             target_actor_path=None, target_critic_path=None             ):
+             target_actor_path=None, target_critic_path=None):
         if online_actor_path:
             self.online_actor.load_weights(online_actor_path)
         if online_critic_path:
             self.online_critic.load_weights(online_critic_path)
         if target_actor_path:
-            self.target_actor.load_weights(online_actor_path)
+            self.target_actor.load_weights(target_actor_path)
         if target_critic_path:
-            self.target_critic.load_weights(online_critic_path)
+            self.target_critic.load_weights(target_critic_path)
