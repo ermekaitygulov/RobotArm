@@ -51,8 +51,12 @@ def ddpg_run(config_path):
 
     if 'pretrain_weights' in config:
         agent.load(**config['pretrain_weights'])
+    if 'CriticViz' in config:
+        env = CriticViz(env, agent.online_actor, agent.target_actor,
+                        agent.online_critic, config['CriticViz'])
     train_config = config['train']
     summary_writer = tf.summary.create_file_writer(train_config.pop('log_dir'))
     with summary_writer.as_default():
         agent.train(env, **train_config)
+    env.reset()
     env.close()

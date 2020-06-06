@@ -1,0 +1,27 @@
+gpu: 1
+env:
+  obs_space_keys: ["cube", "arm"]
+buffer:
+  size: 100000
+neural_network:
+  critic: "Critic_uni"
+  actor: "Actor_uni"
+agent:
+  train_freq: 100
+  train_quantity: 100
+  log_freq: 50
+  polyak: 0.005
+  batch_size: 32
+  replay_start_size: 1000
+  gamma: 0.99
+  learning_rate: 0.0001
+  n_step: 10
+pretrain_weights:
+  online_actor_path: 'weights/td3/Online_actor.ckpt'
+  online_critic_path: 'weights/td3/twin_critic.ckpt'
+  target_actor_path: 'weights/td3/Target_actor.ckpt'
+  target_critic_path: 'weights/td3/twin_critic_1.ckpt'
+train:
+  log_dir: "train/"
+  episodes: 1
+CriticViz: "weights/td3/td3"

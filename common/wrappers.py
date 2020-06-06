@@ -310,50 +310,47 @@ class OrnsteinUhlenbeckActionNoise:
 
 
 class CriticViz(gym.Wrapper):
-    def __init__(self, env, online_actor, target_actor, online_critic, target_critic):
+    def __init__(self, env, online_actor, target_actor, online_critic, name):
         super(CriticViz, self).__init__(env)
         self.online_actor = online_actor
         self.target_actor = target_actor
         self.online_critic = online_critic
-        self.target_critic = target_critic
         self.x_axis = np.expand_dims(np.linspace(-2, 2,60), axis=-1)
         self.y_axis = np.expand_dims(np.linspace(-2, 2, 60), axis=-1)
-        self.target_values = list()
         self.online_values = list()
+        self.name = name
+        self.episode = 0
 
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
         inputs = {key: np.array(value)[None] for key, value in obs.items()}
         online_action = self.online_actor(inputs)[0]
-        target_action = self.target_actor(inputs)[0]
+        target_action = action
         inputs = {key: np.repeat(value, self.x_axis.shape[0], axis=0) for key, value in inputs.items()}
         action_batch = target_action * self.x_axis + online_action * (1 - self.x_axis)
-        self.target_values.append(self.target_critic({'state': inputs, 'action': action_batch}))
         self.online_values.append(self.online_critic({'state': inputs, 'action': action_batch}))
         return obs, reward, done, info
 
     def reset(self):
         obs = self.env.reset()
-        if len(self.target_values) > 0:
-            y = np.arange(len(self.target_values))
-            self.vis3d(self.target_values, self.online_values, self.x_axis, y)
-            self.target_values = list()
+        if len(self.online_values) > 0:
+            y = np.arange(len(self.online_values))
+            self.vis3d(self.online_values, self.x_axis, y)
             self.online_values = list()
+        self.episode += 1
         return obs
 
-    def vis3d(self, target_values, online_values, x_axis, y_axis):
+    def vis3d(self, online_values, x_axis, y_axis):
         fig = plt.figure()
         X, Y = np.meshgrid(np.squeeze(x_axis), np.squeeze(y_axis))
 
-        ax = fig.add_subplot(1, 2, 1, projection='3d')
-        Z = np.squeeze(np.stack(target_values, axis=0))
-        ax.plot_surface(X, Y, Z, cmap=cm.coolwarm)
-
-        ax = fig.add_subplot(1, 2, 2, projection='3d')
+        ax = fig.add_subplot(1, 1, 1, projection='3d')
         Z = np.squeeze(np.stack(online_values, axis=0))
+        if len(Z.shape) == 3:
+            # TD3 case
+            Z = np.min(Z, axis=1)
         ax.plot_surface(X, Y, Z, cmap=cm.coolwarm)
-
-        plt.show()
+        plt.savefig(self.name + '_{}'.format(self.episode))
 
 
 
