@@ -18,8 +18,8 @@ exploration: [0.1, 0.25]
 actors:
   num: 32
   rollout_size: 70
-  noise_sigma: 0.01
-  noise_clip: 0.056
+  noise_sigma: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.35]
+  noise_clip: [0.056, 0.056, 0.056, 0.056, 0.056, 0.056, 1.]
 train:
   max_eps: 3000
   replay_start_size: 10000

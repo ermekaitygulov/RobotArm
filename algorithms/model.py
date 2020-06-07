@@ -123,8 +123,7 @@ class TwinCritic(tf.keras.Model):
         self.twin1 = build_function(name + '_1', obs_space, action_space, reg, noisy_head)
         self.twin2 = build_function(name + '_2', obs_space, action_space, reg, noisy_head)
 
-    @tf.function
-    def call(self, inputs):
+    def call(self, inputs, **kwargs):
         return self.twin1(inputs), self.twin2(inputs)
 
 

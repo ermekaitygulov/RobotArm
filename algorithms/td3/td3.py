@@ -9,8 +9,8 @@ class TD3(DDPG):
     def __init__(self, build_critic, build_actor, obs_space, action_space,
                  polyak=0.001, actor_lr=1e-4, delay=2, noise_sigma=0.05, noise_clip=0.1,
                  *args, **kwargs):
-        self.noise_sigma = noise_sigma
-        self.noise_clip = noise_clip
+        self.noise_sigma = np.array(noise_sigma)
+        self.noise_clip = np.array(noise_clip)
         build_twin_critic = make_twin(build_critic)
         super(TD3, self).__init__(build_twin_critic, build_actor, obs_space, action_space,
                                   polyak, actor_lr, *args, **kwargs)
