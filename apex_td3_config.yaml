@@ -18,7 +18,7 @@ exploration: [0.1, 0.25]
 actors:
   num: 32
   rollout_size: 70
-  noise_sigma: 0.02
+  noise_sigma: 0.01
   noise_clip: 0.056
 train:
   max_eps: 3000
