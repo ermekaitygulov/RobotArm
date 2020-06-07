@@ -12,8 +12,8 @@ learner:
   learning_rate: 0.0001
   actor_lr: 0.0001
   log_freq: 1000
-  noise_sigma: 0.01
-  noise_clip: 0.056
+  noise_sigma: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.35]
+  noise_clip: [0.056, 0.056, 0.056, 0.056, 0.056, 0.056, 1.]
 exploration: [0.1, 0.25]
 actors:
   num: 32
