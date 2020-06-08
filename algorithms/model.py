@@ -122,18 +122,18 @@ class NoisyDense(Dense):
 
 
 class TwinCritic(tf.keras.Model):
-    def __init__(self, build_function, name, obs_space, action_space, reg=1e-6, noisy_head=True):
+    def __init__(self, build_function, name, obs_space, action_space):
         super(TwinCritic, self).__init__()
-        self.twin1 = build_function(name + '_1', obs_space, action_space, reg, noisy_head)
-        self.twin2 = build_function(name + '_2', obs_space, action_space, reg, noisy_head)
+        self.twin1 = build_function(name + '_1', obs_space, action_space)
+        self.twin2 = build_function(name + '_2', obs_space, action_space)
 
     def call(self, inputs, **kwargs):
         return self.twin1(inputs), self.twin2(inputs)
 
 
 def make_twin(build_critic):
-    def thunk(name, obs_space, action_space, reg=1e-6, noisy_head=True):
-        return TwinCritic(build_critic, name, obs_space, action_space, reg, noisy_head)
+    def thunk(name, obs_space, action_space):
+        return TwinCritic(build_critic, name, obs_space, action_space)
     return thunk
 
 
