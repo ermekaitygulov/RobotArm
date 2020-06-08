@@ -22,7 +22,7 @@ actors:
   noise_sigma: 0.01
   noise_clip: 0.056
 train:
-  max_eps: 6000
+  max_eps: 12000
   replay_start_size: 10000
   batch_size: 256
   sync_nn_mod: 100
