@@ -68,7 +68,8 @@ def apex_run(config_path):
     priority_dict, ds = None, None
 
     train_config = dict(max_eps=1000, replay_start_size=1000,
-                        batch_size=128, sync_nn_mod=100, number_of_batchs=16)
+                        batch_size=128, sync_nn_mod=100, number_of_batchs=16,
+                        beta=0.4)
     if 'train' in config.keys():
         for key, value in config['train'].items():
             assert key in train_config.keys()
@@ -88,7 +89,8 @@ def apex_run(config_path):
             indexes = indexes.copy()
             priorities = priorities.copy()
             replay_buffer.update_priorities(indexes=indexes, priorities=priorities)
-            ds = replay_buffer.sample(train_config['number_of_batchs'] * train_config['batch_size'])
+            ds = replay_buffer.sample(train_config['number_of_batchs'] * train_config['batch_size'],
+                                      train_config['beta'])
         else:
             rollouts[first.rollout.remote(online_weights, target_weights)] = first
             data, priorities = ray.get(first_id)
@@ -96,9 +98,11 @@ def apex_run(config_path):
             replay_buffer.add(priorities=priorities, **data)
         if replay_buffer.get_stored_size() > train_config['replay_start_size'] and not start_learner:
             start_time = timeit.default_timer()
-            ds = replay_buffer.sample(train_config['number_of_batchs'] * train_config['batch_size'])
+            ds = replay_buffer.sample(train_config['number_of_batchs'] * train_config['batch_size'],
+                                      train_config['beta'])
             rollouts[learner.update_from_ds.remote(ds, start_time, train_config['batch_size'])] = learner
-            ds = replay_buffer.sample(train_config['number_of_batchs'] * train_config['batch_size'])
+            ds = replay_buffer.sample(train_config['number_of_batchs'] * train_config['batch_size'],
+                                      train_config['beta'])
             start_learner = True
         episodes_done = ray.get(counter.get_value.remote())
     ray.timeline()

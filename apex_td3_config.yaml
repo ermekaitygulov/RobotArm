@@ -27,3 +27,4 @@ train:
   batch_size: 256
   sync_nn_mod: 100
   number_of_batchs: 16
+  beta: 0.8
