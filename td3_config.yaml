@@ -4,8 +4,8 @@ env:
 buffer:
   size: 100000
 neural_network:
-  critic: "Critic_uni"
-  actor: "Actor_uni"
+  build_critic: "Critic_uni"
+  build_actor: "Actor_uni"
 agent:
   train_freq: 100
   train_quantity: 100

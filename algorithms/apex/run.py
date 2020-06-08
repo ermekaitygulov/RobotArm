@@ -134,7 +134,10 @@ def make_remote_base(config, n_actors):
     counter = Counter.remote()
     network_kwargs = dict()
     for key, value in config['neural_network'].items():
-        network_kwargs[key] = get_network_builder(value)
+        if isinstance(value, dict):
+            network_kwargs[key] = get_network_builder(**value)
+        else:
+            network_kwargs[key] = get_network_builder(value)
     dtype_dict['indexes'] = 'uint64'
     replay_buffer = cppPER(env_dict=env_dict, **config['buffer'])
     if isinstance(test_env.observation_space, gym.spaces.Dict):

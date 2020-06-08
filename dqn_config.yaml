@@ -3,7 +3,8 @@ env:
   obs_space_keys: ["cube", "arm"]
 buffer:
   size: 100000
-neural_network: "DuelingDQN_arm_cube"
+neural_network:
+  build_model: "DuelingDQN_arm_cube"
 agent:
   update_target_nn_mod: 1000
 train:

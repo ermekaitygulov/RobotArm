@@ -17,7 +17,7 @@ def register(name):
     return _thunk
 
 
-def get_network_builder(name):
+def get_network_builder(name, *args, **kwargs):
     """
     If you want to register your own network outside model.py, you just need:
     Usage Example:
@@ -31,9 +31,13 @@ def get_network_builder(name):
     if callable(name):
         return name
     elif name in mapping:
-        return mapping[name]
+        func = mapping[name]
     else:
         raise ValueError('Unknown network type: {}'.format(name))
+
+    def thunk(name, obs_space, act_space):
+        return func(name, obs_space, act_space, *args, **kwargs)
+    return thunk
 
 
 class DuelingModel(tf.keras.Model):

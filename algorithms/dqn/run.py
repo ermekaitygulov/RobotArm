@@ -49,9 +49,15 @@ def dqn_run(config_path):
         state_keys = env.observation_space.spaces.keys()
         replay_buffer = DictWrapper(replay_buffer, state_prefix=('', 'next_', 'n_'),
                                     state_keys=state_keys)
-    make_model = get_network_builder(config['neural_network'])
-    agent = DQN(make_model, env.observation_space, env.action_space, replay_buff=replay_buffer,
-                dtype_dict=dtype_dict, **config['agent'])
+    network_kwargs = dict()
+    for key, value in config['neural_network'].items():
+        if isinstance(value, dict):
+            network_kwargs[key] = get_network_builder(**value)
+        else:
+            network_kwargs[key] = get_network_builder(value)
+    agent = DQN(obs_space=env.observation_space, action_space=env.action_space,
+                replay_buff=replay_buffer, dtype_dict=dtype_dict,
+                **config['agent'], **network_kwargs)
 
     if 'pretrain_weights' in config:
         agent.load(**config['pretrain_weights'])
