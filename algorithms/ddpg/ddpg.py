@@ -8,16 +8,16 @@ from common.tf_util import huber_loss, update_target_variables
 
 class DDPG(TDPolicy):
     def __init__(self, build_critic, build_actor, obs_space, action_space,
-                 polyak=0.005, actor_lr=1e-4, *args, **kwargs):
+                 polyak=0.005, actor_lr=1e-4, critic_reg=1e-6, actor_reg=1e-6, *args, **kwargs):
         super(DDPG, self).__init__(*args, **kwargs)
-        self.online_critic = build_critic('Online_Q', obs_space, action_space)
+        self.online_critic = build_critic('Online_Q', obs_space, action_space, reg=critic_reg)
         self.online_models.append(self.online_critic)
-        self.target_critic = build_critic('Target_Q', obs_space, action_space)
+        self.target_critic = build_critic('Target_Q', obs_space, action_space, reg=critic_reg)
         self.target_models.append(self.target_critic)
         update_target_variables(self.target_critic.weights, self.online_critic.weights)
-        self.online_actor = build_actor('Online_actor', obs_space, action_space)
+        self.online_actor = build_actor('Online_actor', obs_space, action_space, reg=actor_reg)
         self.online_models.append(self.online_actor)
-        self.target_actor = build_actor('Target_actor', obs_space, action_space)
+        self.target_actor = build_actor('Target_actor', obs_space, action_space, reg=actor_reg)
         self.target_models.append(self.target_actor)
         update_target_variables(self.target_actor.weights, self.online_actor.weights)
         self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr)

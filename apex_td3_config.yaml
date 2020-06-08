@@ -11,15 +11,16 @@ learner:
   polyak: 0.001
   learning_rate: 0.0001
   actor_lr: 0.0001
+  actor_reg: 1e-5
   log_freq: 1000
-  noise_sigma: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.35]
-  noise_clip: [0.056, 0.056, 0.056, 0.056, 0.056, 0.056, 1.]
+  noise_sigma: 0.01
+  noise_clip: 0.056
 exploration: [0.1, 0.25]
 actors:
   num: 32
   rollout_size: 70
-  noise_sigma: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.35]
-  noise_clip: [0.056, 0.056, 0.056, 0.056, 0.056, 0.056, 1.]
+  noise_sigma: 0.01
+  noise_clip: 0.056
 train:
   max_eps: 3000
   replay_start_size: 10000
