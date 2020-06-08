@@ -11,12 +11,11 @@ learner:
   polyak: 0.001
   learning_rate: 0.0001
   actor_lr: 0.0001
-  actor_reg: 1e-5
   log_freq: 1000
   noise_sigma: 0.01
   noise_clip: 0.056
-  delay: 4
-exploration: [0.05, 0.25]
+  delay: 2
+exploration: [0.1, 0.25]
 actors:
   num: 32
   rollout_size: 70
