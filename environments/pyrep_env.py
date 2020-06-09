@@ -116,7 +116,7 @@ class RozumEnv(gym.Env):
 
         tx, ty, tz = self.cube.get_position()
         current_distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
-        reward = tolerance(current_distance, (0.0, 0.01), 0.25)/20
+        reward = tolerance(current_distance, (0.0, 0.01), 0.1)/20
         state = self.render()
 
         info['distance'] = current_distance
@@ -135,7 +135,7 @@ class RozumEnv(gym.Env):
         self._pyrep.stop()
         self._pyrep.start()
         pose = self.init_cube_pose.copy()
-        pose[0] += np.random.uniform(-0.05, 0.05)
+        pose[0] += np.random.uniform(-0.05, 0.1)
         pose[1] += np.random.uniform(-0.1, 0.1)
         self.cube.set_pose(pose)
         # self.cube.set_color([0.,np.random.uniform(0., 255.),0.])
