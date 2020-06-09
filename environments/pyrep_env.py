@@ -47,8 +47,8 @@ class RozumEnv(gym.Env):
         self._available_obs_spaces['pov'] = gym.spaces.Box(shape=self.camera.resolution + [3],
                                                            low=0, high=255, dtype=np.uint8)
         self._render_dict['pov'] = self.get_image
-        low = np.array([-angle for angle in self.angles_scale] + [0., ])
-        high = np.array([angle for angle in self.angles_scale] + [1., ])
+        low = np.array([-angle for angle in self.angles_scale] + [0., -1., -1., -1.])
+        high = np.array([angle for angle in self.angles_scale] + [1., 1., 1., 1.])
         self._available_obs_spaces['arm'] = gym.spaces.Box(low=low, high=high, dtype=np.float32)
         self._render_dict['arm'] = self.get_arm_state
         self._available_obs_spaces['cube'] = gym.spaces.Box(shape=(7,),
@@ -77,6 +77,7 @@ class RozumEnv(gym.Env):
     def get_arm_state(self):
         arm = self.rozum.get_joint_positions()
         arm.append(self.gripper.get_open_amount()[0])
+        arm += self.rozum_tip.get_position()
         return arm
 
     def sample_action(self):
@@ -116,7 +117,7 @@ class RozumEnv(gym.Env):
 
         tx, ty, tz = self.cube.get_position()
         current_distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
-        reward = tolerance(current_distance, (0.0, 0.01), 0.1)/20
+        reward = tolerance(current_distance, (0.0, 0.01), 0.25)/20
         state = self.render()
 
         info['distance'] = current_distance
