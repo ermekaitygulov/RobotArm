@@ -278,7 +278,7 @@ class CorrelatedExploration(gym.Wrapper):
         try:
             inner_exploration = self.env.sample_action(action)
             return self._exploration(inner_exploration)
-        except AttributeError:
+        except TypeError: # usually sample_action does not take any arg
             return self._exploration(action)
 
 
@@ -368,7 +368,7 @@ class E3exploration(gym.Wrapper):
         try:
             inner_exploration = self.env.sample_action(action)
             return self._exploration(inner_exploration)
-        except AttributeError:
+        except TypeError: # usually sample_action does not take any arg
             return self._exploration(action)
 
     def _exploration(self, action):
