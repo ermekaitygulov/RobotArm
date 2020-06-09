@@ -1,6 +1,6 @@
 import os
 from collections import deque
-from random import random
+from random import random, randint
 
 import cv2
 import gym
@@ -275,7 +275,11 @@ class CorrelatedExploration(gym.Wrapper):
         return obs, rew, done, info
 
     def sample_action(self, action):
-        return self._exploration(action)
+        try:
+            inner_exploration = self.env.sample_action(action)
+            return self._exploration(inner_exploration)
+        except AttributeError:
+            return self._exploration(action)
 
 
 class UncorrelatedExploration(CorrelatedExploration):
@@ -355,6 +359,24 @@ class CriticViz(gym.Wrapper):
         plt.savefig(self.name + '_{}'.format(self.episode))
 
 
+class E3exploration(gym.Wrapper):
+    def __init__(self, env, epsilon=0.1):
+        super(E3exploration, self).__init__(env)
+        self.epsilon = epsilon
+
+    def sample_action(self, action):
+        try:
+            inner_exploration = self.env.sample_action(action)
+            return self._exploration(inner_exploration)
+        except AttributeError:
+            return self._exploration(action)
+
+    def _exploration(self, action):
+        if random() > self.epsilon:
+            return action
+        else:
+            action[-1] = float(randint(0,1))
+            return action
 
 if __name__ == '__main__':
     noise = OrnsteinUhlenbeckActionNoise(np.zeros(1), 0.25**1.7, 0.0, 1.0, theta=1., dt=1.)

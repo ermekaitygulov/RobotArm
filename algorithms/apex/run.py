@@ -32,17 +32,15 @@ def make_dqn_env(name, epsilon=0.1, **env_kwargs):
     return env
 
 
-def make_ddpg_env(name, mu=0., sigma_arm_ee=(0.1, 0.25), **env_kwargs):
+def make_ddpg_env(name, mu=0., sigma_arm_ee=(0.1, 0.1), **env_kwargs):
     env = RozumEnv(**env_kwargs)
     env = RozumLogWrapper(env, 10, name)
     mu = np.ones_like(env.action_space.low) * mu
-    try:
-        exploration = np.ones_like(env.action_space.low)
-        exploration[:-1] *= sigma_arm_ee[0]
-        exploration[-1] *= sigma_arm_ee[1]
-    except TypeError:
-        exploration = np.ones_like(env.action_space.low) * sigma_arm_ee
+    exploration = np.ones_like(env.action_space.low)
+    exploration[:-1] *= sigma_arm_ee[0]
+    exploration[-1] *= 0
     env = UncorrelatedExploration(env, mu, exploration)
+    env = E3exploration(env, sigma_arm_ee[1])
     return env
 
 
