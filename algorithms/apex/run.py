@@ -160,11 +160,12 @@ def make_remote_base(config, n_actors):
                            **network_kwargs,
                            **config['actors']) for i in range(n_actors)]
     evaluate = Actor.remote(thread_id='Evaluate', base=base, make_env=make_env,
-                             config_env={exploration_name: np.zeros_like(exploration_value),
-                                         **config['env']},
-                             remote_counter=counter,
-                             obs_space=obs_space,
-                             action_space=action_space,
-                             **network_kwargs,
-                             **config['actors'])
+                            config_env={exploration_name: np.zeros_like(exploration_value),
+                                        **config['env']},
+                            remote_counter=counter,
+                            obs_space=obs_space,
+                            action_space=action_space,
+                            wandb_group=config['base'],
+                            **network_kwargs,
+                            **config['actors'])
     return learner, actors, replay_buffer, counter, evaluate

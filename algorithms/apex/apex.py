@@ -7,6 +7,7 @@ from cpprb import ReplayBuffer
 
 import numpy as np
 import timeit
+import wandb
 
 from algorithms.dqn.dqn import DQN
 
@@ -51,7 +52,7 @@ class Learner:
 @ray.remote(num_gpus=0, num_cpus=2)
 class Actor:
     def __init__(self, base=DQN, thread_id=0, make_env=None, config_env=None, remote_counter=None,
-                 rollout_size=300, avg_window=10, **agent_kwargs):
+                 rollout_size=300, avg_window=10, wandb_group=None, **agent_kwargs):
         import tensorflow as tf
         self.tf = tf
         self.thread_id = thread_id
@@ -68,6 +69,11 @@ class Actor:
         self.local_ep = 0
         self.avg_reward = deque([], maxlen=avg_window)
         self.summary_writer = self.tf.summary.create_file_writer('train/{}_actor/'.format(thread_id))
+        if wandb_group:
+            self.wandb = wandb.init(anonymous='allow', project="Rozum", group=wandb_group)
+        else:
+            self.wandb = None
+
 
     def rollout(self, *weights):
         with self.summary_writer.as_default():
@@ -126,13 +132,15 @@ class Actor:
                 if done:
                     self.tf.summary.scalar('Score', score, step=self.local_ep)
                     self.tf.summary.flush()
-                    self.local_ep += 1
+                    if self.wandb:
+                        self.wandb.log({'Score': score, 'episode': self.local_ep})
                     self.avg_reward.append(score)
                     avg = sum(self.avg_reward)/len(self.avg_reward)
                     stop_time = timeit.default_timer()
                     print("Evaluate episode: {}  score: {:.3f}  {}_avg: {:.3f}"
                           .format(self.local_ep, score, self.thread_id, avg))
                     print("RunTime: {:.3f}".format(stop_time - start_time))
+                    self.local_ep += 1
 
 
 @ray.remote
