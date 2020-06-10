@@ -115,6 +115,25 @@ class Actor:
         ntd = batch['q_value'] - n_target
         return np.abs(ntd)
 
+    def test(self, *weights):
+        with self.summary_writer.as_default():
+            self.base.set_weights(*weights)
+            done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
+            while not done:
+                action, q = self.base.choose_act(state, self.env.sample_action)
+                state, reward, done, _ = self.env.step(action)
+                score += reward
+                if done:
+                    self.tf.summary.scalar('Score', score, step=self.local_ep)
+                    self.tf.summary.flush()
+                    self.local_ep += 1
+                    self.avg_reward.append(score)
+                    avg = sum(self.avg_reward)/len(self.avg_reward)
+                    stop_time = timeit.default_timer()
+                    print("Evaluate episode: {}  score: {:.3f}  {}_avg: {:.3f}"
+                          .format(self.local_ep, score, self.thread_id, avg))
+                    print("RunTime: {:.3f}".format(stop_time - start_time))
+
 
 @ray.remote
 class Counter(object):

@@ -55,12 +55,13 @@ def apex_run(config_path):
     except KeyError:
         n_actors = 1
 
-    learner, actors, replay_buffer, counter = make_remote_base(config, n_actors)
+    learner, actors, replay_buffer, counter, evaluate = make_remote_base(config, n_actors)
     online_weights, target_weights = learner.get_weights.remote()
     start_learner = False
     rollouts = {}
     for a in actors:
         rollouts[a.rollout.remote(online_weights, target_weights)] = a
+    rollouts[evaluate.test.remote(online_weights, target_weights)] = evaluate
     episodes_done = ray.get(counter.get_value.remote())
     optimization_step = 0
     priority_dict, ds = None, None
@@ -89,6 +90,8 @@ def apex_run(config_path):
             replay_buffer.update_priorities(indexes=indexes, priorities=priorities)
             ds = replay_buffer.sample(train_config['number_of_batchs'] * train_config['batch_size'],
                                       train_config['beta'])
+        elif first == evaluate:
+            rollouts[evaluate.test.remote(online_weights, target_weights)] = evaluate
         else:
             rollouts[first.rollout.remote(online_weights, target_weights)] = first
             data, priorities = ray.get(first_id)
@@ -156,4 +159,12 @@ def make_remote_base(config, n_actors):
                            action_space=action_space,
                            **network_kwargs,
                            **config['actors']) for i in range(n_actors)]
-    return learner, actors, replay_buffer, counter
+    evaluate = Actor.remote(thread_id='Evaluate', base=base, make_env=make_env,
+                             config_env={exploration_name: np.zeros_like(exploration_value),
+                                         **config['env']},
+                             remote_counter=counter,
+                             obs_space=obs_space,
+                             action_space=action_space,
+                             **network_kwargs,
+                             **config['actors'])
+    return learner, actors, replay_buffer, counter, evaluate
