@@ -19,7 +19,7 @@ learner:
   delay: 2
 exploration: [0.0, 0.1]
 actors:
-  num: 32
+  num: 16
   rollout_size: 70
   noise_sigma: 0.01
   noise_clip: 0.056
