@@ -196,12 +196,12 @@ def make_model(name, obs_space, action_space, reg):
 
 
 @register("DuelingDQN_arm_cube")
-def make_model(name, obs_space, action_space, reg=1e-6):
+def make_model(name, obs_space, action_space, reg=1e-6, noisy_head=False):
     cube = tf.keras.Input(shape=obs_space['cube'].shape)
     arm = tf.keras.Input(shape=obs_space['arm'].shape)
     features = concatenate([arm, cube])
     base = make_mlp([400, 300], 'tanh', reg)(features)
-    head = DuelingModel([512], action_space.n, reg)(base)
+    head = DuelingModel([512], action_space.n, reg, noisy=noisy_head)(base)
     model = tf.keras.Model(inputs={'cube': cube, 'arm': arm}, outputs=head, name=name)
     return model
 

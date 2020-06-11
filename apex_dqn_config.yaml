@@ -5,7 +5,9 @@ env:
 buffer:
   size: 1000000
 neural_network:
-  build_model: "DuelingDQN_arm_cube"
+  build_model:
+    name: "DuelingDQN_arm_cube"
+    noisy_head: True
 learner:
   update_target_nn_mod: 2500
   gamma: 0.99
@@ -17,7 +19,7 @@ actors:
   gamma: 0.99
   n_step: 10
 train:
-  max_eps: 12000
+  max_eps: 24000
   replay_start_size: 50000
   batch_size: 256
   sync_nn_mod: 100
