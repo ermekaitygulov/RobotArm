@@ -106,8 +106,8 @@ class NoisyDense(Dense):
         self.built = True
 
     def call(self, inputs):
-        kernel_input = self.f(K.random_normal(shape=(self.input_dim, 1)))
-        kernel_output = self.f(K.random_normal(shape=(1, self.units)))
+        kernel_input = self.f(K.random_normal(shape=(inputs.shape[0], self.input_dim, 1)))
+        kernel_output = self.f(K.random_normal(shape=(inputs.shape[0], 1, self.units)))
         kernel_epsilon = tf.matmul(kernel_input, kernel_output)
 
         w = self.kernel + self.kernel_sigma * kernel_epsilon
