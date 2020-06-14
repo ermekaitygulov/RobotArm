@@ -111,13 +111,15 @@ class NoisyDense(Dense):
         kernel_epsilon = tf.matmul(kernel_input, kernel_output)
 
         w = self.kernel + self.kernel_sigma * kernel_epsilon
-        output = K.dot(inputs, w)
+
+        output = tf.matmul(tf.expand_dims(inputs, axis=1), w)
 
         if self.use_bias:
             b = self.bias + self.bias_sigma * kernel_output
             output = output + b
         if self.activation is not None:
             output = self.activation(output)
+        output = tf.squeeze(output, axis=1)
         return output
 
 
