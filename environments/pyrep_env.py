@@ -1,3 +1,6 @@
+import os
+
+import cv2
 import gym
 from pyrep import PyRep
 from pyrep.robots.arms.arm import Arm
@@ -18,7 +21,7 @@ class RozumEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self, obs_space_keys=('pov', 'arm'), scene_file='rozum_pyrep.ttt',
-                 headless=True):
+                 headless=True, video_path='train/', frame_skip=4, frame_stack=4):
         self.obs_space_keys = (obs_space_keys,) if isinstance(obs_space_keys, str) else obs_space_keys
         self._pyrep = PyRep()
         self._pyrep.launch(scene_file, headless=headless)
@@ -72,7 +75,20 @@ class RozumEnv(gym.Env):
         self.step_limit = 200
         self.init_angles = self.rozum.get_joint_positions()
         self.init_cube_pose = self.cube.get_pose()
+
+        #Video
         self._eps_done = 0
+        self.recording = list()
+        self.current_episode = 0
+        self.rewards = [0]
+        self.path = video_path
+        if video_path:
+            def video_step():
+                self._pyrep.step()
+                self.recording.append(self.get_image()[..., ::-1])
+            self.sim_step = video_step
+        else:
+            self.sim_step = self._pyrep.step
 
     def get_arm_state(self):
         arm = self.rozum.get_joint_positions()
@@ -98,7 +114,8 @@ class RozumEnv(gym.Env):
             gripper_done = False
             while not gripper_done:
                 gripper_done = self.gripper.actuate(ee_action, velocity=0.2)
-                self._pyrep.step()
+                self.sim_step()
+                # self.recording.append(self.get_image()[..., ::-1])
                 self.current_step += 1
             if ee_action == 0.0:
                 # If gripper close action, the check for grasp.
@@ -111,7 +128,7 @@ class RozumEnv(gym.Env):
             position = list(np.clip(position, self.angles_bounds.low, self.angles_bounds.high))
             self.rozum.set_joint_target_positions(position)
             for _ in range(4):
-                self._pyrep.step()
+                self.sim_step()
                 self.current_step += 1
         x, y, z = self.rozum_tip.get_position()
 
@@ -130,6 +147,7 @@ class RozumEnv(gym.Env):
             info['grasped'] = 0
         if done:
             self._eps_done += 1
+        self.rewards.append(reward)
         return state, reward, done, info
 
     def reset(self):
@@ -139,9 +157,16 @@ class RozumEnv(gym.Env):
         pose[0] += np.random.uniform(-0.05, 0.2)
         pose[1] += np.random.uniform(-0.3, 0.1)
         self.cube.set_pose(pose)
-        # self.cube.set_color([0.,np.random.uniform(0., 255.),0.])
         state = self.render()
         self.current_step = 0
+
+        #Video
+        if len(self.recording) > 0:
+            name = str(self.current_episode).zfill(4) + "r" + str(sum(map(int, self.rewards))).zfill(4) + ".mp4"
+            full_path = os.path.join(self.path, name)
+            self.save_video(full_path, video=self.recording)
+            self.current_episode += 1
+            self.rewards = [0]
         return state
 
     def render(self, mode='human'):
@@ -160,3 +185,18 @@ class RozumEnv(gym.Env):
     def close(self):
         self._pyrep.stop()
         self._pyrep.shutdown()
+
+    @staticmethod
+    def save_video(filename, video):
+        """
+        saves video from list of np.array images
+        :param filename: filename or path to file
+        :param video: [image, ..., image]
+        :return:
+        """
+        size_x, size_y, size_z = video[0].shape
+        out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), 60.0, (size_x, size_y))
+        for image in video:
+            out.write(image)
+        out.release()
+        cv2.destroyAllWindows()
