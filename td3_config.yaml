@@ -1,11 +1,14 @@
 gpu: 1
 env:
   obs_space_keys: ["cube", "arm"]
+  sigma: 0.
 buffer:
   size: 100000
 neural_network:
   build_critic: "Critic_uni"
-  build_actor: "Actor_uni"
+  build_actor:
+    name: "Actor_uni"
+    noisy_head: True
 agent:
   train_freq: 100
   train_quantity: 100
@@ -24,4 +27,3 @@ pretrain_weights:
 train:
   log_dir: "train/"
   episodes: 1
-CriticViz: "weights/td3/td3"

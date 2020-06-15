@@ -54,16 +54,19 @@ class EpsilonExploration(gym.Wrapper):
 
 
 class FrameStack(gym.Wrapper):
-    def __init__(self, env, k, channel_order='hwc', stack_key=None):
+    def __init__(self, env, k, stack_key=None):
         """Stack k last frames.
         Returns lazy array, which is much more memory efficient.
         """
         super(FrameStack, self).__init__(env)
         self.k = k
         self.observations = deque([], maxlen=k)
-        self.stack_axis = {'hwc': 2, 'chw': 0}[channel_order]
         if stack_key:
             space = env.observation_space.spaces.copy()
+            if len(space[stack_key].shape) > 1:
+                self.stack_axis = 2
+            else:
+                self.stack_axis = 0
             low_pov = np.repeat(space[stack_key].low, k, axis=self.stack_axis)
             high_pov = np.repeat(space[stack_key].high, k, axis=self.stack_axis)
             stack_space = gym.spaces.Box(low=low_pov, high=high_pov, dtype=space[stack_key].dtype)
@@ -71,6 +74,10 @@ class FrameStack(gym.Wrapper):
             self.observation_space = gym.spaces.Dict(space)
         else:
             stack_space = env.observation_space
+            if len(stack_space.shape) > 1:
+                self.stack_axis = 2
+            else:
+                self.stack_axis = 0
             low_pov = np.repeat(stack_space.low, k, axis=self.stack_axis)
             high_pov = np.repeat(stack_space.high, k, axis=self.stack_axis)
             self.observation_space = gym.spaces.Box(low=low_pov, high=high_pov, dtype=stack_space.dtype)

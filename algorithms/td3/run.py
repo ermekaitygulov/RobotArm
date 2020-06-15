@@ -12,12 +12,23 @@ import os
 from common.tf_util import config_gpu
 
 
-def make_env(mu=0., sigma=0.1, **kwargs):
+def make_env(mu=0., sigma=0.1, frame_stack=4, **kwargs):
     env = RozumEnv(**kwargs)
     env = RozumLogWrapper(env, 10)
+    if frame_stack > 1:
+        env = stack_env(env, frame_stack)
     mu = np.ones_like(env.action_space.low) * mu
     sigma = np.ones_like(env.action_space.low) * sigma
     env = UncorrelatedExploration(env, mu, sigma)
+    return env
+
+
+def stack_env(env, k):
+    if isinstance(env.observation_space, gym.spaces.Dict):
+        for key in env.observation_space.spaces.keys():
+            env = FrameStack(env, k, key)
+    else:
+        env = FrameStack(env, k)
     return env
 
 
