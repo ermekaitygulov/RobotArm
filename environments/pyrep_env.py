@@ -92,7 +92,7 @@ class RozumEnv(gym.Env):
 
     def get_arm_state(self):
         arm = self.rozum.get_joint_positions()
-        arm += self.gripper.get_open_amount().tolist()
+        arm += self.gripper.get_open_amount()
         arm += self.rozum_tip.get_position().tolist()
         return arm
 
