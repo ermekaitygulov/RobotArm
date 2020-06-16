@@ -50,8 +50,8 @@ class RozumEnv(gym.Env):
         self._available_obs_spaces['pov'] = gym.spaces.Box(shape=self.camera.resolution + [3],
                                                            low=0, high=255, dtype=np.uint8)
         self._render_dict['pov'] = self.get_image
-        low = np.array([-angle for angle in self.angles_scale] + [0., -1., -1., -1.])
-        high = np.array([angle for angle in self.angles_scale] + [1., 1., 1., 1.])
+        low = np.array([-angle for angle in self.angles_scale] + [0., 0., -1., -1., -1.])
+        high = np.array([angle for angle in self.angles_scale] + [1., 1., 1., 1., 1.])
         self._available_obs_spaces['arm'] = gym.spaces.Box(low=low, high=high, dtype=np.float32)
         self._render_dict['arm'] = self.get_arm_state
         self._available_obs_spaces['cube'] = gym.spaces.Box(shape=(7,),
@@ -92,7 +92,7 @@ class RozumEnv(gym.Env):
 
     def get_arm_state(self):
         arm = self.rozum.get_joint_positions()
-        arm.append(self.gripper.get_open_amount()[0])
+        arm.append(self.gripper.get_open_amount())
         arm += self.rozum_tip.get_position().tolist()
         return arm
 
@@ -103,7 +103,7 @@ class RozumEnv(gym.Env):
         done = False
         info = dict()
         joint_action, ee_action = action[:-1], action[-1]
-        current_ee = (1.0 if self.gripper.get_open_amount()[0] > 0.9
+        current_ee = (1.0 if np.mean(self.gripper.get_open_amount()) > 0.9
                       else 0.0)
         grasped = False
         if ee_action > 0.5:
@@ -115,10 +115,8 @@ class RozumEnv(gym.Env):
             while not gripper_done:
                 gripper_done = self.gripper.actuate(ee_action, velocity=0.2)
                 self.sim_step()
-                # self.recording.append(self.get_image()[..., ::-1])
                 self.current_step += 1
             if ee_action == 0.0:
-                # If gripper close action, the check for grasp.
                 for g_obj in self.graspable_objects:
                     grasped = self.gripper.grasp(g_obj)
 
@@ -167,6 +165,7 @@ class RozumEnv(gym.Env):
             self.save_video(full_path, video=self.recording)
             self.current_episode += 1
             self.rewards = [0]
+        self.sim_step()
         return state
 
     def render(self, mode='human'):
