@@ -21,7 +21,7 @@ class RozumEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self, obs_space_keys=('pov', 'arm'), scene_file='rozum_pyrep.ttt',
-                 headless=True, video_path='train/'):
+                 headless=True, video_path=None):
         self.obs_space_keys = (obs_space_keys,) if isinstance(obs_space_keys, str) else obs_space_keys
         self._pyrep = PyRep()
         self._pyrep.launch(scene_file, headless=headless)
