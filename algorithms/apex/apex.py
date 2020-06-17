@@ -14,13 +14,15 @@ from algorithms.dqn.dqn import DQN
 
 @ray.remote(num_gpus=0.5)
 class Learner:
-    def __init__(self, base=DQN, **kwargs):
+    def __init__(self, base=DQN, pretrain_weights=None, **kwargs):
         import tensorflow as tf
         from common.tf_util import config_gpu
         config_gpu()
         self.tf = tf
         self.tf.config.optimizer.set_jit(True)
         self.base = base(replay_buff=None, **kwargs)
+        if pretrain_weights:
+            self.base.load(**pretrain_weights)
         self.summary_writer = tf.summary.create_file_writer('train/Learner_logger/')
 
     def update_from_ds(self, ds, start_time, batch_size):
