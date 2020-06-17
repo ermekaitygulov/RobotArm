@@ -165,6 +165,7 @@ class RozumEnv(gym.Env):
             self.save_video(full_path, video=self.recording)
             self.current_episode += 1
             self.rewards = [0]
+            self.recording = list()
         self.sim_step()
         return state
 
