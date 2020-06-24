@@ -36,13 +36,13 @@ class RozumEnv(gym.Env):
         self.rozum_tip = self.rozum.get_tip()
 
         self.angles_scale = np.array([np.pi for _ in range(self.rozum.num_joints)])
-        low = np.array([-0.5 for _ in range(self.rozum.num_joints)] + [0., ])
-        high = np.array([0.5 for _ in range(self.rozum.num_joints)] + [1., ])
+        low = np.array([-20/180 for _ in range(self.rozum.num_joints)] + [0., ])
+        high = np.array([20/180 for _ in range(self.rozum.num_joints)] + [1., ])
         self.action_space = gym.spaces.Box(low=low,
                                            high=high)
-
-        low = np.array([-0.8 * scale for scale in self.angles_scale] + [0., ])
-        high = np.array([0.8 * scale for scale in self.angles_scale] + [1., ])
+        angle_bounds = self.rozum.get_joint_intervals()[1]
+        low = np.array([bound[0] for bound in angle_bounds] + [0., ])
+        high = np.array([bound[0] + bound[1] for bound in angle_bounds] + [1., ])
         self.angles_bounds = gym.spaces.Box(low=low[:-1],
                                             high=high[:-1])
         self._available_obs_spaces = dict()
@@ -50,8 +50,8 @@ class RozumEnv(gym.Env):
         self._available_obs_spaces['pov'] = gym.spaces.Box(shape=self.camera.resolution + [3],
                                                            low=0, high=255, dtype=np.uint8)
         self._render_dict['pov'] = self.get_image
-        low = np.array([-angle for angle in self.angles_scale] + [0., 0., -1., -1., -1.])
-        high = np.array([angle for angle in self.angles_scale] + [1., 1., 1., 1., 1.])
+        low = np.array([bound[0] for bound in angle_bounds] + [0., 0., -1., -1., -1.])
+        high = np.array([bound[0] + bound[1] for bound in angle_bounds] + [1., 1., 1., 1., 1.])
         self._available_obs_spaces['arm'] = gym.spaces.Box(low=low, high=high, dtype=np.float32)
         self._render_dict['arm'] = self.get_arm_state
         self._available_obs_spaces['cube'] = gym.spaces.Box(shape=(7,),
@@ -151,6 +151,7 @@ class RozumEnv(gym.Env):
     def reset(self):
         self._pyrep.stop()
         self._pyrep.start()
+        # max distance ~ 0.76
         pose = self.init_cube_pose.copy()
         pose[0] += np.random.uniform(-0.05, 0.2)
         pose[1] += np.random.uniform(-0.3, 0.1)
