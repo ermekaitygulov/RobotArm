@@ -188,10 +188,10 @@ def make_model(name, obs_space, action_space, reg):
         else:
             feat['state'] = tf.keras.Input(shape=obs_space.shape)
     if len(feat) > 0:
-        feat_base = concatenate(feat.values())
+        feat_base = concatenate(list(feat.values()))
         bases.append(make_mlp([400, 300], 'tanh', reg)(feat_base))
     if len(img) > 0:
-        img_base = concatenate(img.values())
+        img_base = concatenate(list(img.values()))
         normalized = img_base/255
         bases.append(make_cnn([32, 32, 32, 32], [3, 3, 3, 3],
                               [2, 2, 2, 2], 'tanh', reg)(normalized))
@@ -230,13 +230,13 @@ def make_critic(name, obs_space, action_space, reg=1e-6, noisy_head=False):
         else:
             feat['state'] = tf.keras.Input(shape=obs_space.shape)
     action = tf.keras.Input(shape=action_space.shape)
-    feat_base = concatenate(feat.values())
+    feat_base = concatenate(list(feat.values()))
 
     bases.append(action)
     bases.append(layer(400, 'relu', use_bias=True,
                        kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(feat_base))
     if len(img) > 0:
-        img_base = concatenate(img.values())
+        img_base = concatenate(list(img.values()))
         normalized = img_base/255
         bases.append(make_cnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2],
                               'tanh', reg)(normalized))
@@ -266,11 +266,11 @@ def make_model(name, obs_space, action_space, reg=1e-6, noisy_head=False):
         else:
             feat['state'] = tf.keras.Input(shape=obs_space.shape)
     if len(feat) > 0:
-        feat_base = concatenate(feat.values())
+        feat_base = concatenate(list(feat.values()))
         bases.append(layer(400, 'relu', use_bias=True,
                      kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(feat_base))
     if len(img) > 0:
-        img_base = concatenate(img.values())
+        img_base = concatenate(list(img.values()))
         normalized = img_base/255
         bases.append(make_cnn([32, 32, 32, 32], [3, 3, 3, 3],
                               [2, 2, 2, 2], 'relu', reg)(normalized))
