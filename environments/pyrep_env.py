@@ -132,7 +132,8 @@ class RozumEnv(gym.Env):
 
         tx, ty, tz = self.cube.get_position()
         current_distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
-        reward = tolerance(current_distance, (0.0, 0.01), 0.1)/20
+        pose_filter = np.sqrt((x - tx) ** 2 + (y - ty) ** 2) < 0.05
+        reward = tolerance(current_distance, (0.0, 0.01), 0.25)/20 * pose_filter
         state = self.render()
 
         info['distance'] = current_distance
@@ -153,8 +154,8 @@ class RozumEnv(gym.Env):
         self._pyrep.start()
         # max distance ~ 0.76
         pose = self.init_cube_pose.copy()
-        pose[0] += np.random.uniform(-0.05, 0.2)
-        pose[1] += np.random.uniform(-0.3, 0.1)
+        pose[0] += np.random.uniform(-0.1, 0.2)
+        pose[1] += np.random.uniform(-0.15, 0.15)
         self.cube.set_pose(pose)
         state = self.render()
         self.current_step = 0
