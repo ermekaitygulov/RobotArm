@@ -106,7 +106,7 @@ class FrameStack(gym.Wrapper):
     def _get_ob(self, ob):
         assert len(self.observations) == self.k
         if self.stack_key:
-            state = ob.copy()
+            state = ob
             state[self.stack_key] = LazyFrames(list(self.observations), stack_axis=self.stack_axis)
         else:
             state = LazyFrames(list(self.observations), stack_axis=self.stack_axis)
