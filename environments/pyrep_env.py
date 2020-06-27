@@ -132,7 +132,7 @@ class RozumEnv(gym.Env):
 
         tx, ty, tz = self.cube.get_position()
         current_distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
-        pose_filter = np.sqrt((x - tx) ** 2 + (y - ty) ** 2) < 0.05
+        pose_filter = z > tz # np.sqrt((x - tx) ** 2 + (y - ty) ** 2) < 0.05
         reward = tolerance(current_distance, (0.0, 0.01), 0.25)/20 * pose_filter
         state = self.render()
 
