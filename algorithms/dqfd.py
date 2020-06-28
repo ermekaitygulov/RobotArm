@@ -1,9 +1,9 @@
-from algorithms.dqn.base import DQN
+from algorithms.dqn import DoubleDuelingDQN
 import tensorflow as tf
 from common.tf_util import take_vector_elements, huber_loss
 
 
-class DQfD(DQN):
+class DQfD(DoubleDuelingDQN):
     def __init__(self, margin, *args, **kwargs):
         super(DQfD, self).__init__(*args, **kwargs)
         self.margin_value = margin
@@ -62,7 +62,7 @@ class DQfD(DQN):
         return j_e
 
     def perceive(self, **kwargs):
-        super(DQfD, self).perceive(demo=0. ,**kwargs)
+        super(DQfD, self).perceive(demo=0., **kwargs)
 
     def add_demo(self, data_loader, *args, **kwargs):
         for s, a, r, n_s, d in data_loader.sarsd_iter(*args, **kwargs):
