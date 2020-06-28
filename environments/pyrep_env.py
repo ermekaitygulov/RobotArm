@@ -76,7 +76,7 @@ class RozumEnv(gym.Env):
         self.init_angles = self.rozum.get_joint_positions()
         self.init_cube_pose = self.cube.get_pose()
 
-        #Video
+        # Video
         self._eps_done = 0
         self.recording = list()
         self.current_episode = 0
@@ -132,7 +132,7 @@ class RozumEnv(gym.Env):
 
         tx, ty, tz = self.cube.get_position()
         current_distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
-        pose_filter = z > tz # np.sqrt((x - tx) ** 2 + (y - ty) ** 2) < 0.05
+        pose_filter = z > tz
         reward = tolerance(current_distance, (0.0, 0.01), 0.25)/20 * pose_filter
         state = self.render()
 
@@ -164,7 +164,7 @@ class RozumEnv(gym.Env):
         for _ in range(4):
             self._pyrep.step()
             self.current_step += 1
-        #Video
+        # Video
         if len(self.recording) > 0:
             name = str(self.current_episode).zfill(4) + "r" + str(sum(map(int, self.rewards))).zfill(4) + ".mp4"
             full_path = os.path.join(self.path, name)

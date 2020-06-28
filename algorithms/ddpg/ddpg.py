@@ -8,7 +8,7 @@ from common.tf_util import huber_loss, update_target_variables
 
 class DDPG(TDPolicy):
     def __init__(self, build_critic, build_actor, obs_space, action_space,
-                 polyak=0.005, actor_lr=1e-4, critic_reg=1e-6, actor_reg=1e-6, *args, **kwargs):
+                 polyak=0.005, actor_lr=1e-4, *args, **kwargs):
         super(DDPG, self).__init__(*args, **kwargs)
         self.online_critic = build_critic('Online_Q', obs_space, action_space)
         self.online_models.append(self.online_critic)

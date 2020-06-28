@@ -112,6 +112,3 @@ class TD3(DDPG):
         q_value, _ = self.online_critic({'state': inputs, 'action': action[None]}, training=False)
         q_value = q_value[0]
         return action, q_value
-
-
-
