@@ -9,12 +9,12 @@ import numpy as np
 import timeit
 import wandb
 
-from algorithms.dqn.dqn import DQN
+from algorithms.dqn import DoubleDuelingDQN
 
 
 @ray.remote(num_gpus=0.5)
 class Learner:
-    def __init__(self, base=DQN, pretrain_weights=None, **kwargs):
+    def __init__(self, base=DoubleDuelingDQN, pretrain_weights=None, **kwargs):
         import tensorflow as tf
         from common.tf_util import config_gpu
         config_gpu()
@@ -53,7 +53,7 @@ class Learner:
 
 @ray.remote(num_gpus=0, num_cpus=2)
 class Actor:
-    def __init__(self, base=DQN, thread_id=0, make_env=None, config_env=None, remote_counter=None,
+    def __init__(self, base=DoubleDuelingDQN, thread_id=0, make_env=None, config_env=None, remote_counter=None,
                  rollout_size=300, avg_window=10, wandb_group=None, **agent_kwargs):
         import tensorflow as tf
         self.tf = tf
@@ -75,7 +75,6 @@ class Actor:
             self.wandb = wandb.init(anonymous='allow', project="Rozum", group=wandb_group)
         else:
             self.wandb = None
-
 
     def rollout(self, *weights):
         with self.summary_writer.as_default():

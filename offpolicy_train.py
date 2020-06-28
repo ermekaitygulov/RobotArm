@@ -1,12 +1,8 @@
 import yaml
-from algorithms.dqn.run import dqn_run
-from algorithms.apex.run import apex_run
-from algorithms.ddpg.run import ddpg_run
+import algorithms
 from algorithms.model import get_network_builder
-from algorithms.td3.run import td3_run
 from argparse import ArgumentParser
 import tensorflow as tf
-from importlib import import_module
 
 from common.tf_util import config_gpu
 from common.wrappers import *
@@ -16,13 +12,10 @@ from cpprb import PrioritizedReplayBuffer as cppPER
 from replay_buffers.stable_baselines import PrioritizedReplayBuffer
 import os
 
-algorithms = {'dqn': dqn_run,
-              'apex': apex_run,
-              'ddpg': ddpg_run,
-              'td3': td3_run}
 
-
-def make_env(exploration_kwargs, env_kwargs, frame_stack=4, discretize=True):
+def make_env(exploration_kwargs=None, env_kwargs=None, frame_stack=4, discretize=True):
+    env_kwargs = env_kwargs if env_kwargs else {}
+    exploration_kwargs = exploration_kwargs if exploration_kwargs else {}
     environment = RozumEnv(**env_kwargs)
     environment = RozumLogWrapper(environment, 10)
     if frame_stack > 1:
@@ -71,10 +64,7 @@ def stack_env(environment, k):
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     parser = ArgumentParser()
-    available_algorithms = ', '.join(algorithms.keys())
     parser.add_argument('--config_path', action='store', help='Path to config with params for chosen alg',
                         type=str, required=True)
     args = parser.parse_args()
@@ -84,7 +74,7 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = str(config['gpu'])
     tf.config.optimizer.set_jit(True)
     config_gpu()
-    env = make_discrete_env(**config['env'])
+    env = make_env(**config['env'])
     env_dict, dtype_dict = get_dtype_dict(env)
     if 'cpp' in config['buffer'].keys() and config['buffer'].pop('cpp'):
         dtype_dict['indexes'] = 'uint64'
@@ -102,7 +92,7 @@ if __name__ == '__main__':
         else:
             network_kwargs[key] = get_network_builder(value)
 
-    base = import_module('.'.join(['algorithms', config['base']])).base
+    base = getattr(algorithms, config['base'])
     agent = base(obs_space=env.observation_space, action_space=env.action_space,
                  replay_buff=replay_buffer, dtype_dict=dtype_dict,
                  **config['agent'], **network_kwargs)
@@ -113,4 +103,5 @@ if __name__ == '__main__':
     summary_writer = tf.summary.create_file_writer(train_config.pop('log_dir'))
     with summary_writer.as_default():
         agent.train(env, **train_config)
+    env.reset()
     env.close()

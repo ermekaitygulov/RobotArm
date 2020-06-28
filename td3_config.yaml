@@ -1,7 +1,12 @@
+base: TwinDelayedDDPG
 gpu: 1
 env:
-  obs_space_keys: ["cube", "arm"]
-  sigma: 0.
+  discretize: False
+  env_kwargs:
+    obs_space_keys: ["cube", "arm"]
+    video_path: 'weights/td3_700/'
+  exploration_kwargs:
+    sigma_epsilon: [0.0, 0.1]
 buffer:
   size: 100000
 neural_network:
@@ -20,10 +25,10 @@ agent:
   learning_rate: 0.0001
   n_step: 10
 pretrain_weights:
-  online_actor_path: 'weights/td3/Online_actor.ckpt'
-  online_critic_path: 'weights/td3/twin_critic.ckpt'
-  target_actor_path: 'weights/td3/Target_actor.ckpt'
-  target_critic_path: 'weights/td3/twin_critic_1.ckpt'
+  online_actor_path: 'weights/td3_700/Online_actor.ckpt'
+  online_critic_path: 'weights/td3_700/twin_critic.ckpt'
+  target_actor_path: 'weights/td3_700/Target_actor.ckpt'
+  target_critic_path: 'weights/td3_700/twin_critic_1.ckpt'
 train:
   log_dir: "train/"
   episodes: 1

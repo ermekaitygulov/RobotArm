@@ -1,12 +1,18 @@
+base: DoubleDuelingDQN
 gpu: 1
 env:
-  obs_space_keys: ["cube", "arm"]
+  env_kwargs:
+    obs_space_keys: ["cube", "arm"]
+  exploration_kwargs:
+    epsilon: 0.
 buffer:
   size: 100000
 neural_network:
-  build_model: "DuelingDQN_arm_cube"
+  build_model:
+    name: "DuelingDQN_arm_cube"
+    noisy_head: True
 agent:
   update_target_nn_mod: 1000
 train:
   log_dir: "train/"
-  episodes: 1000
+  episodes: 1

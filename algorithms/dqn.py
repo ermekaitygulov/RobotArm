@@ -3,13 +3,13 @@ import os
 import numpy as np
 import tensorflow as tf
 from common.tf_util import take_vector_elements, huber_loss
-from algorithms.base.td_base import TDPolicy
+from algorithms.td_base import TDPolicy
 
 
-class DQN(TDPolicy):
+class DoubleDuelingDQN(TDPolicy):
     def __init__(self, build_model, obs_space, action_space, update_target_nn_mod=500, *args, **kwargs):
 
-        super(DQN, self).__init__(*args, **kwargs)
+        super(DoubleDuelingDQN, self).__init__(*args, **kwargs)
         self.online_model = build_model('Online', obs_space, action_space)
         self.online_models.append(self.online_model)
         self.target_model = build_model('Target', obs_space, action_space)

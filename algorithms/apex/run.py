@@ -3,9 +3,9 @@ import ray
 import yaml
 
 from algorithms.apex.apex import Learner, Counter, Actor
-from algorithms.ddpg.ddpg import DDPG
-from algorithms.dqn.dqn import DQN
-from algorithms.td3.td3 import TD3
+from algorithms.ddpg import DeepDPG
+from algorithms.dqn import DoubleDuelingDQN
+from algorithms.td3 import TwinDelayedDDPG
 from replay_buffers.util import DictWrapper, get_dtype_dict
 from cpprb import PrioritizedReplayBuffer as cppPER
 from algorithms.model import get_network_builder
@@ -129,14 +129,14 @@ def exploration_range(value, i, n_actors):
 def make_remote_base(config, n_actors):
     try:
         # TODO replace with registry
-        base, make_env = {'ddpg': (DDPG, make_ddpg_env),
-                          'dqn': (DQN, make_dqn_env),
-                          'td3': (TD3, make_ddpg_env)}[config['base']]
+        base, make_env = {'ddpg': (DeepDPG, make_ddpg_env),
+                          'dqn': (DoubleDuelingDQN, make_dqn_env),
+                          'td3': (TwinDelayedDDPG, make_ddpg_env)}[config['base']]
         exploration_name, exploration_value = {'ddpg': ('sigma_arm_ee', (0.1, 0.25)),
                                                'dqn': ('epsilon', 0.4),
                                                'td3': ('sigma_arm_ee', (0.1, 0.25))}[config['base']]
     except KeyError:
-        base, make_env = DQN, make_dqn_env
+        base, make_env = DoubleDuelingDQN, make_dqn_env
         exploration_name, exploration_value = 'epsilon', 0.4
 
     test_env = make_env('test_name', **config['env'])
@@ -162,7 +162,7 @@ def make_remote_base(config, n_actors):
                              **config['learner'], **network_kwargs)
     if 'exploration' in config:
         exploration_value = config['exploration']
-    exploration_value = np.array(exploration_value) # TD3 and DDPG case, when there is two control values
+    exploration_value = np.array(exploration_value)  # TD3 and DDPG case, when there is two control values
     actors = [Actor.remote(thread_id=i, base=base, make_env=make_env,
                            config_env={exploration_name:
                                        exploration_range(exploration_value, i, n_actors),

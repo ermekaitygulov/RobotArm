@@ -1,6 +1,11 @@
+base: DeepDPG
 gpu: 1
 env:
-  obs_space_keys: ["cube", "arm"]
+  discretize: False
+  env_kwargs:
+    obs_space_keys: ["cube", "arm"]
+  exploration_kwargs:
+    sigma_epsilon: [0.0, 0.1]
 buffer:
   size: 100000
 neural_network:
@@ -18,4 +23,4 @@ agent:
   n_step: 10
 train:
   log_dir: "train/"
-  episodes: 200
+  episodes: 1

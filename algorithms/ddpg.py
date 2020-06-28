@@ -2,14 +2,14 @@ import os
 
 import numpy as np
 import tensorflow as tf
-from algorithms.base.td_base import TDPolicy
+from algorithms.td_base import TDPolicy
 from common.tf_util import huber_loss, update_target_variables
 
 
-class DDPG(TDPolicy):
+class DeepDPG(TDPolicy):
     def __init__(self, build_critic, build_actor, obs_space, action_space,
                  polyak=0.005, actor_lr=1e-4, *args, **kwargs):
-        super(DDPG, self).__init__(*args, **kwargs)
+        super(DeepDPG, self).__init__(*args, **kwargs)
         self.online_critic = build_critic('Online_Q', obs_space, action_space)
         self.online_models.append(self.online_critic)
         self.target_critic = build_critic('Target_Q', obs_space, action_space)

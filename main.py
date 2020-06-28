@@ -1,14 +1,9 @@
-from algorithms.dqn.run import dqn_run
+
 from algorithms.apex.run import apex_run
-from algorithms.ddpg.run import ddpg_run
-from algorithms.td3.run import td3_run
 from argparse import ArgumentParser
 import os
 
-algorithms = {'dqn': dqn_run,
-              'apex': apex_run,
-              'ddpg': ddpg_run,
-              'td3': td3_run}
+algorithms = {'apex': apex_run}
 
 if __name__ == '__main__':
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
