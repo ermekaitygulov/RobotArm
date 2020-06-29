@@ -5,7 +5,8 @@ env:
 buffer:
   size: 1000000
 neural_network:
-  build_critic: "Critic_uni"
+  build_critic:
+    name: "Critic_uni"
     reg: 0.0000001
   build_actor:
     name: "Actor_uni"
