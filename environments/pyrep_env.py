@@ -157,13 +157,14 @@ class RozumEnv(gym.Env):
         pose[0] += np.random.uniform(-0.1, 0.2)
         pose[1] += np.random.uniform(-0.15, 0.15)
         self.cube.set_pose(pose)
-        state = self.render()
         self.current_step = 0
-        position = list(self.angles_bounds.sample())
+        random_action = np.random.normal(0., 20, len(self.init_angles)) / 180 * np.pi
+        position = [angle + action for angle, action in zip(self.init_angles, random_action)]
         self.rozum.set_joint_target_positions(position)
         for _ in range(4):
             self._pyrep.step()
             self.current_step += 1
+        state = self.render()
         # Video
         if len(self.recording) > 0:
             name = str(self.current_episode).zfill(4) + "r" + str(sum(map(int, self.rewards))).zfill(4) + ".mp4"
