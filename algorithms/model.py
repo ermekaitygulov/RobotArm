@@ -242,7 +242,7 @@ def make_critic(name, obs_space, action_space, reg=1e-6, noisy_head=False):
                               'tanh', reg)(normalized))
     base = concatenate(bases)
     base = layer(300, 'relu', use_bias=True,  kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
-
+    base = layer(300, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     head = layer(1, use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     model = tf.keras.Model(inputs={**img, **feat, 'action': action}, outputs=head, name=name)
     return model
@@ -276,6 +276,7 @@ def make_model(name, obs_space, action_space, reg=1e-6, noisy_head=False):
                               [2, 2, 2, 2], 'relu', reg)(normalized))
     base = concatenate(bases)
     base = layer(300, 'relu', use_bias=True,  kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
+    base = layer(300, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     head = layer(action_space.shape[0], 'tanh', use_bias=True,
                  kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     head = head * (action_space.high - action_space.low)/2 + (action_space.high + action_space.low)/2
