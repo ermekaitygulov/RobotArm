@@ -22,8 +22,13 @@ class Learner:
         self.tf.config.optimizer.set_jit(True)
         self.base = base(replay_buff=None, **kwargs)
         if pretrain_weights:
-            self.base.load(**pretrain_weights)
+            self.load(**pretrain_weights)
         self.summary_writer = tf.summary.create_file_writer('train/Learner_logger/')
+
+    def __getattr__(self, name):
+        if name.startswith('_'):
+            raise AttributeError("attempted to get missing private attribute '{}'".format(name))
+        return getattr(self.base, name)
 
     def update_from_ds(self, ds, start_time, batch_size):
         with self.summary_writer.as_default():
@@ -34,21 +39,21 @@ class Learner:
             ds = ds.cache()
             ds = ds.prefetch(self.tf.data.experimental.AUTOTUNE)
             for batch in ds:
-                priorities = self.base.nn_update(gamma=self.base.gamma, **batch)
+                priorities = self.nn_update(gamma=self.gamma, **batch)
                 stop_time = timeit.default_timer()
-                self.base.run_time_deque.append(stop_time - start_time)
-                self.base.schedule()
+                self.run_time_deque.append(stop_time - start_time)
+                self.schedule()
                 loss_list.append(priorities)
                 start_time = timeit.default_timer()
         return indexes, np.concatenate(loss_list)
 
     @ray.method(num_return_vals=2)
     def get_weights(self):
-        for model in self.base.online_models:
+        for model in self.online_models:
             model.save_weights('train/{}.ckpt'.format(model.name))
-        for model in self.base.target_models:
+        for model in self.target_models:
             model.save_weights('train/{}.ckpt'.format(model.name))
-        return self.base.get_online(), self.base.get_target()
+        return self.get_online(), self.get_target()
 
 
 @ray.remote(num_gpus=0, num_cpus=2)
@@ -76,18 +81,23 @@ class Actor:
         else:
             self.wandb = None
 
+    def __getattr__(self, name):
+        if name.startswith('_'):
+            raise AttributeError("attempted to get missing private attribute '{}'".format(name))
+        return getattr(self.base, name)
+
     def rollout(self, *weights):
         with self.summary_writer.as_default():
-            self.base.set_weights(*weights)
+            self.set_weights(*weights)
             if self.env_state is None:
                 done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
             else:
                 done, score, state, start_time = self.env_state
-            while self.base.replay_buff.get_stored_size() < self.base.replay_buff.get_buffer_size():
-                action, q = self.base.choose_act(state, self.env.sample_action)
+            while self.replay_buff.get_stored_size() < self.replay_buff.get_buffer_size():
+                action, q = self.choose_act(state, self.env.sample_action)
                 next_state, reward, done, _ = self.env.step(action)
                 score += reward
-                self.base.perceive(state, action, reward, next_state, done, q_value=q)
+                self.perceive(state, action, reward, next_state, done, q_value=q)
                 state = next_state
                 if done:
                     self.tf.summary.scalar('Score', score, step=self.local_ep)
@@ -100,13 +110,13 @@ class Actor:
                     print("episode: {}  score: {:.3f}  max: {:.3f}  {}_avg: {:.3f}"
                           .format(global_ep-1, score, max_reward, self.thread_id, avg))
                     print("RunTime: {:.3f}".format(stop_time - start_time))
-                    print("{} transitions collected".format(self.base.replay_buff.get_stored_size()))
+                    print("{} transitions collected".format(self.replay_buff.get_stored_size()))
                     done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
             self.env_state = [done, score, state, start_time]
-            rollout = self.base.replay_buff.get_all_transitions()
+            rollout = self.replay_buff.get_all_transitions()
             priorities = self.priority_err(rollout)
             rollout.pop('q_value')
-            self.base.replay_buff.clear()
+            self.replay_buff.clear()
             return rollout, priorities
 
     def priority_err(self, rollout):
@@ -114,20 +124,20 @@ class Actor:
                                                'n_reward', 'actual_n', 'n_state']}
         for key in ['q_value', 'n_done', 'n_reward', 'actual_n']:
             batch[key] = np.squeeze(batch[key])
-        n_target = self.base.compute_target(next_state=batch['n_state'],
-                                            done=batch['n_done'],
-                                            reward=batch['n_reward'],
-                                            actual_n=batch['actual_n'],
-                                            gamma=self.base.gamma)
+        n_target = self.compute_target(next_state=batch['n_state'],
+                                       done=batch['n_done'],
+                                       reward=batch['n_reward'],
+                                       actual_n=batch['actual_n'],
+                                       gamma=self.gamma)
         ntd = batch['q_value'] - n_target
         return np.abs(ntd)
 
     def test(self, *weights):
         with self.summary_writer.as_default():
-            self.base.set_weights(*weights)
+            self.set_weights(*weights)
             done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
             while not done:
-                action, q = self.base.choose_act(state, self.env.sample_action)
+                action, q = self.choose_act(state, self.env.sample_action)
                 state, reward, done, _ = self.env.step(action)
                 score += reward
                 if done:
