@@ -147,8 +147,6 @@ class Actor:
 @ray.remote
 class Counter(object):
     def __init__(self):
-        import tensorflow as tf
-        self.tf = tf
         self.value = 0
         self.max_reward = -np.inf
 

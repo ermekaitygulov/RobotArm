@@ -64,7 +64,6 @@ class DuelingModel(tf.keras.Model):
 
 
 class NoisyDense(Dense):
-
     # factorized noise
     def __init__(self, units, *args, **kwargs):
         self.output_dim = units
