@@ -1,6 +1,6 @@
 import yaml
 import algorithms
-from algorithms.model import get_network_builder
+from nn_models.model import get_network_builder
 from argparse import ArgumentParser
 import tensorflow as tf
 

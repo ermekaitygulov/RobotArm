@@ -11,7 +11,7 @@ from collections import defaultdict
 from offpolicy_train import stack_env, make_discrete_env, make_continuous_env
 from replay_buffers.util import DictWrapper, get_dtype_dict
 from cpprb import PrioritizedReplayBuffer as cppPER
-from algorithms.model import get_network_builder
+from nn_models.model import get_network_builder
 from environments.pyrep_env import RozumEnv
 from common.wrappers import *
 

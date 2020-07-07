@@ -2,7 +2,7 @@ from algorithms.ddpg import DeepDPG
 import tensorflow as tf
 import numpy as np
 from common.tf_util import update_target_variables, huber_loss
-from algorithms.model import make_twin
+from nn_models.building_blocks import make_twin
 
 
 class TwinDelayedDDPG(DeepDPG):
