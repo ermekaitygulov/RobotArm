@@ -15,7 +15,7 @@ env:
   exploration_kwargs:
     sigma_epsilon: [0.0, 0.1]
 buffer:
-  size: 100000
+  size: 100
 neural_network:
   build_critic:
     name: "Critic_uni"
@@ -25,9 +25,9 @@ neural_network:
     noisy_head: True
     reg: 0.0000001
 train:
-  num_actors: 3
+  num_actors: 4
   rollout_size: 70
-  max_eps: 1000
+  max_eps: 20
   replay_start_size: 10000
   batch_size: 256
   sync_nn_mod: 100

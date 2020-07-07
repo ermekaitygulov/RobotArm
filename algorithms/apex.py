@@ -2,6 +2,8 @@ from collections import deque
 
 import gym
 import ray
+
+from common.tf_util import config_gpu
 from replay_buffers.util import DictWrapper, get_dtype_dict
 from cpprb import ReplayBuffer
 
@@ -56,16 +58,15 @@ class Learner:
         return self.get_online(), self.get_target()
 
 
-@ray.remote(num_gpus=0, num_cpus=2)
+@ray.remote(num_gpus=0.1, num_cpus=2)
 class Actor:
     def __init__(self, base=DoubleDuelingDQN, thread_id=0, make_env=None,  remote_counter=None,
                  avg_window=10, wandb_group=None, **agent_kwargs):
         import tensorflow as tf
+        config_gpu()
         self.tf = tf
         self.thread_id = thread_id
         self.env = make_env()
-        env_dict, _ = get_dtype_dict(self.env)
-        env_dict['q_value'] = {"dtype": "float32"}
         self.base = base(replay_buff=self._init_buff(1), **agent_kwargs)
         self.env_state = None
         self.remote_counter = remote_counter
@@ -84,6 +85,7 @@ class Actor:
 
     def _init_buff(self, size):
         env_dict, _ = get_dtype_dict(self.env)
+        env_dict['q_value'] = {"dtype": "float32"}
         buffer = ReplayBuffer(size=size, env_dict=env_dict)
         if isinstance(self.env.observation_space, gym.spaces.Dict):
             state_keys = self.env.observation_space.spaces.keys()
@@ -92,7 +94,7 @@ class Actor:
 
     def rollout(self, rollout_size, *weights):
         if rollout_size != self.replay_buff.get_buffer_size():
-            self.replay_buff = self._init_buff(rollout_size)
+            self.base.replay_buff = self._init_buff(rollout_size)
         with self.summary_writer.as_default():
             self.set_weights(*weights)
             if self.env_state is None:

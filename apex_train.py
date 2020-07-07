@@ -92,6 +92,7 @@ if __name__ == '__main__':
         config.update(yaml.load(config_file, Loader=yaml.FullLoader))
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = str(config['gpu'])
+    os.environ["QT_DEBUG_PLUGINS"] = "0"
     ray.init(webui_host='0.0.0.0', num_gpus=1)
 
     # Preparation
