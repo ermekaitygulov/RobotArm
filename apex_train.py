@@ -96,7 +96,6 @@ def make_remote_base(remote_config, n_actors):
                                                                                   remote_counter=remote_counter,
                                                                                   obs_space=obs_space,
                                                                                   action_space=action_space,
-                                                                                  wandb_group=remote_config['base'],
                                                                                   **network_kwargs,
                                                                                   **remote_config['actors'],
                                                                                   **remote_config['alg_args'])
