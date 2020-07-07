@@ -65,20 +65,21 @@ def make_remote_base(remote_config, n_actors):
         else:
             network_kwargs[arg_name] = get_network_builder(arg_value)
     dtype_dict['indexes'] = 'uint64'
-    replay_buffer = cppPER(env_dict=env_dict, **remote_config['buffer'])
+    main_buffer = cppPER(env_dict=env_dict, **remote_config['buffer'])
     if isinstance(test_env.observation_space, gym.spaces.Dict):
         state_keys = test_env.observation_space.spaces.keys()
-        replay_buffer = DictWrapper(replay_buffer, state_prefix=('', 'next_', 'n_'),
-                                    state_keys=state_keys)
-    learner = Learner.remote(base=base, obs_space=obs_space, action_space=action_space, **remote_config['learner'],
-                             **remote_config['alg_args'], **network_kwargs)
-    actors = [Actor.remote(thread_id=i, base=base, make_env=make_env_thunk(i), remote_counter=remote_counter,
-                           obs_space=obs_space, action_space=action_space, **network_kwargs,
-                           **remote_config['actors'], **remote_config['alg_args']) for i in range(n_actors)]
-    evaluate = Actor.remote(thread_id='Evaluate', base=base, make_env=make_env_thunk(-1), remote_counter=remote_counter,
-                            obs_space=obs_space, action_space=action_space, wandb_group=remote_config['base'],
-                            **network_kwargs, **remote_config['actors'], **remote_config['alg_args'])
-    return learner, actors, replay_buffer, remote_counter, evaluate
+        main_buffer = DictWrapper(main_buffer, state_prefix=('', 'next_', 'n_'),
+                                  state_keys=state_keys)
+    remote_learner = Learner.remote(base=base, obs_space=obs_space, action_space=action_space,
+                                    **remote_config['learner'], **remote_config['alg_args'], **network_kwargs)
+    remote_actors = [Actor.remote(thread_id=i, base=base, make_env=make_env_thunk(i), remote_counter=remote_counter,
+                                  obs_space=obs_space, action_space=action_space, **network_kwargs,
+                                  **remote_config['actors'], **remote_config['alg_args']) for i in range(n_actors)]
+    remote_evaluate = Actor.remote(thread_id='Evaluate', base=base, make_env=make_env_thunk(-1),
+                                   remote_counter=remote_counter, obs_space=obs_space, action_space=action_space,
+                                   wandb_group=remote_config['base'], **network_kwargs, **remote_config['actors'],
+                                   **remote_config['alg_args'])
+    return remote_learner, remote_actors, main_buffer, remote_counter, remote_evaluate
 
 
 if __name__ == '__main__':

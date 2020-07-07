@@ -1,25 +1,26 @@
-gpu: 1
-base: ddpg
-env:
-  obs_space_keys: ["cube", "arm"]
-buffer:
-  size: 1000000
-neural_network:
-  build_critic: "Critic_uni"
-  build_actor: "Actor_uni"
-learner:
+gpu: 0
+base: DeepDPG
+alg_args:
   polyak: 0.001
   gamma: 0.99
   learning_rate: 0.0001
   actor_lr: 0.0001
   log_freq: 1000
-actors:
-  num: 32
-  rollout_size: 70
-  gamma: 0.99
-  n_step: 10
+env:
+  discretize: False
+  env_kwargs:
+    obs_space_keys: ["cube", "arm"]
+  exploration_kwargs:
+    sigma_epsilon: [0.0, 0.1]
+buffer:
+  size: 1000000
+neural_network:
+  build_critic: "Critic_uni"
+  build_actor: "Actor_uni"
 train:
-  max_eps: 3000
+  num_actors: 3
+  rollout_size: 70
+  max_eps: 1000
   replay_start_size: 10000
   batch_size: 256
   sync_nn_mod: 100

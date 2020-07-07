@@ -1,5 +1,5 @@
 gpu: 0
-base: td3
+base: TwinDelayedDDPG
 alg_args:
   polyak: 0.001
   learning_rate: 0.0001
@@ -9,7 +9,11 @@ alg_args:
   noise_clip: 0.056
   delay: 2
 env:
-  obs_space_keys: ["cube", "arm"]
+  discretize: False
+  env_kwargs:
+    obs_space_keys: ["cube", "arm"]
+  exploration_kwargs:
+    sigma_epsilon: [0.0, 0.1]
 buffer:
   size: 100000
 neural_network:
@@ -20,11 +24,10 @@ neural_network:
     name: "Actor_uni"
     noisy_head: True
     reg: 0.0000001
-exploration: [0.0, 0.1]
 train:
-  num_actors: 16
+  num_actors: 3
   rollout_size: 70
-  max_eps: 24000
+  max_eps: 1000
   replay_start_size: 10000
   batch_size: 256
   sync_nn_mod: 100

@@ -104,6 +104,7 @@ class NoisyDense(Dense):
         self.input_spec = InputSpec(min_ndim=2, axes={-1: self.input_dim})
         self.built = True
 
+    @tf.function
     def call(self, inputs):
         if inputs.shape[0]:
             kernel_input = self.f(tf.random.normal(shape=(inputs.shape[0], self.input_dim, 1)))
