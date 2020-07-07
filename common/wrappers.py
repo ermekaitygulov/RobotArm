@@ -7,9 +7,7 @@ import gym
 import numpy as np
 
 from chainerrl.wrappers.atari_wrappers import LazyFrames
-from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
-from matplotlib import cm
 
 
 class FrameSkip(gym.Wrapper):
@@ -285,7 +283,7 @@ class CorrelatedExploration(gym.Wrapper):
         try:
             inner_exploration = self.env.sample_action(action)
             return self._exploration(inner_exploration)
-        except TypeError: # usually sample_action does not take any arg
+        except TypeError:  # usually sample_action does not take any arg
             return self._exploration(action)
 
 
@@ -304,6 +302,7 @@ class OrnsteinUhlenbeckActionNoise:
         self.sigma = sigma
         self.dt = dt
         self.x0 = x0
+        self.x_prev = None
         self.reset()
 
     def __call__(self, action):
@@ -320,52 +319,6 @@ class OrnsteinUhlenbeckActionNoise:
         return 'OrnsteinUhlenbeckActionNoise(mu={}, sigma={})'.format(self.mu, self.sigma)
 
 
-class CriticViz(gym.Wrapper):
-    def __init__(self, env, online_actor, target_actor, online_critic, name):
-        super(CriticViz, self).__init__(env)
-        self.online_actor = online_actor
-        self.target_actor = target_actor
-        self.online_critic = online_critic
-        self.x_axis = np.expand_dims(np.linspace(-2, 2,60), axis=-1)
-        self.y_axis = np.expand_dims(np.linspace(-2, 2, 60), axis=-1)
-        self.online_values = list()
-        self.name = name
-        self.episode = 0
-
-    def step(self, action):
-        target_action = action
-        inputs = {key: np.repeat(value, self.x_axis.shape[0], axis=0) for key, value in self.inputs.items()}
-        action_batch = target_action * self.x_axis + self.online_action * (1 - self.x_axis)
-        self.online_values.append(self.online_critic({'state': inputs, 'action': action_batch}))
-        obs, reward, done, info = self.env.step(self.online_action)
-        self.inputs = {key: np.array(value)[None] for key, value in obs.items()}
-        self.online_action = self.online_actor(inputs)[0]
-        return obs, reward, done, info
-
-    def reset(self):
-        obs = self.env.reset()
-        self.inputs = {key: np.array(value)[None] for key, value in obs.items()}
-        self.online_action = self.online_actor(self.inputs)[0]
-        if len(self.online_values) > 0:
-            y = np.arange(len(self.online_values))
-            self.vis3d(self.online_values, self.x_axis, y)
-            self.online_values = list()
-        self.episode += 1
-        return obs
-
-    def vis3d(self, online_values, x_axis, y_axis):
-        fig = plt.figure()
-        X, Y = np.meshgrid(np.squeeze(x_axis), np.squeeze(y_axis))
-
-        ax = fig.add_subplot(1, 1, 1, projection='3d')
-        Z = np.squeeze(np.stack(online_values, axis=0))
-        if len(Z.shape) == 3:
-            # TD3 case
-            Z = np.min(Z, axis=1)
-        ax.plot_surface(X, Y, Z, cmap=cm.coolwarm)
-        plt.savefig(self.name + '_{}'.format(self.episode))
-
-
 class E3exploration(gym.Wrapper):
     def __init__(self, env, epsilon=0.1):
         super(E3exploration, self).__init__(env)
@@ -375,18 +328,19 @@ class E3exploration(gym.Wrapper):
         try:
             inner_exploration = self.env.sample_action(action)
             return self._exploration(inner_exploration)
-        except TypeError: # usually sample_action does not take any arg
+        except TypeError:  # usually sample_action does not take any arg
             return self._exploration(action)
 
     def _exploration(self, action):
         if random() > self.epsilon:
             return action
         else:
-            action[-1] = float(randint(0,1))
+            action[-1] = float(randint(0, 1))
             return action
 
+
 if __name__ == '__main__':
-    noise = OrnsteinUhlenbeckActionNoise(np.zeros(1), 0.25**1.7, 0.0, 1.0, theta=1., dt=1.)
+    noise = OrnsteinUhlenbeckActionNoise(np.zeros(1), 0.023*180, -180, 180, theta=1., dt=1.)
     exploration = list()
     for i in range(1000):
         exploration.append(noise(0.))

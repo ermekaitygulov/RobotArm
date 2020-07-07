@@ -14,11 +14,12 @@ from cpprb import PrioritizedReplayBuffer as cppPER
 from nn_models.model import get_network_builder
 from environments.pyrep_env import RozumEnv
 from common.wrappers import *
+import wandb
 
 
 def make_env(thread_id, n_actors=None, exploration_kwargs=None, env_kwargs=None, frame_stack=4, discretize=True):
     env_kwargs = env_kwargs if env_kwargs else {}
-    exploration = apex_ranging(exploration_kwargs, thread_id, n_actors) if exploration_kwargs else {}
+    expl_values = apex_ranging(exploration_kwargs, thread_id, n_actors) if exploration_kwargs else {}
     environment = RozumEnv(**env_kwargs)
     if thread_id >= 0:
         environment = RozumLogWrapper(environment, 10, '{}_thread'.format(thread_id))
@@ -27,20 +28,20 @@ def make_env(thread_id, n_actors=None, exploration_kwargs=None, env_kwargs=None,
     if frame_stack > 1:
         environment = stack_env(environment, frame_stack)
     if discretize:
-        environment = make_discrete_env(environment, **exploration)
+        environment = make_discrete_env(environment, **expl_values)
     else:
-        environment = make_continuous_env(environment, **exploration)
+        environment = make_continuous_env(environment, **expl_values)
     return environment
 
 
-def apex_ranging(exploration, i, n_actors):
-    assert isinstance(i, int)
-    assert isinstance(exploration, dict)
-    if i < 0:
-        return {expl_name: np.array(expl_value) * 0 for expl_name, expl_value in exploration.items()}
+def apex_ranging(exploration_kwargs, actor_id, n_actors):
+    assert isinstance(actor_id, int)
+    assert isinstance(exploration_kwargs, dict)
+    if actor_id < 0:
+        return {expl_name: np.array(expl_value) * 0 for expl_name, expl_value in exploration_kwargs.items()}
     else:
-        return {expl_name: np.array(expl_value) ** (1 + i / (n_actors - 1) * 0.7)
-                for expl_name, expl_value in exploration.items()}
+        return {expl_name: np.array(expl_value) ** (1 + actor_id / (n_actors - 1) * 0.7)
+                for expl_name, expl_value in exploration_kwargs.items()}
 
 
 def make_remote_base(remote_config, n_actors):
@@ -70,15 +71,43 @@ def make_remote_base(remote_config, n_actors):
         state_keys = test_env.observation_space.spaces.keys()
         main_buffer = DictWrapper(main_buffer, state_prefix=('', 'next_', 'n_'),
                                   state_keys=state_keys)
-    remote_learner = Learner.remote(base=base, obs_space=obs_space, action_space=action_space,
-                                    **remote_config['learner'], **remote_config['alg_args'], **network_kwargs)
-    remote_actors = [Actor.remote(thread_id=i, base=base, make_env=make_env_thunk(i), remote_counter=remote_counter,
-                                  obs_space=obs_space, action_space=action_space, **network_kwargs,
-                                  **remote_config['actors'], **remote_config['alg_args']) for i in range(n_actors)]
-    remote_evaluate = Actor.remote(thread_id='Evaluate', base=base, make_env=make_env_thunk(-1),
-                                   remote_counter=remote_counter, obs_space=obs_space, action_space=action_space,
-                                   wandb_group=remote_config['base'], **network_kwargs, **remote_config['actors'],
-                                   **remote_config['alg_args'])
+    if 'learner_resource' in remote_config:
+        remote_learner = Learner.options(**remote_config['learner_resource']).remote(base=base,
+                                                                                     obs_space=obs_space,
+                                                                                     action_space=action_space,
+                                                                                     **remote_config['learner'],
+                                                                                     **remote_config['alg_args'],
+                                                                                     **network_kwargs)
+    else:
+        remote_learner = Learner.remote(base=base, obs_space=obs_space, action_space=action_space,
+                                        **remote_config['learner'], **remote_config['alg_args'], **network_kwargs)
+    if 'actor_resource' in remote_config:
+        remote_actors = [Actor.options(**remote_config['actor_resource']).remote(thread_id=actor_id, base=base,
+                                                                                 make_env=make_env_thunk(actor_id),
+                                                                                 remote_counter=remote_counter,
+                                                                                 obs_space=obs_space,
+                                                                                 action_space=action_space,
+                                                                                 **network_kwargs,
+                                                                                 **remote_config['actors'],
+                                                                                 **remote_config['alg_args'])
+                         for actor_id in range(n_actors)]
+        remote_evaluate = Actor.options(**remote_config['actor_resource']).remote(thread_id='Evaluate', base=base,
+                                                                                  make_env=make_env_thunk(-1),
+                                                                                  remote_counter=remote_counter,
+                                                                                  obs_space=obs_space,
+                                                                                  action_space=action_space,
+                                                                                  wandb_group=remote_config['base'],
+                                                                                  **network_kwargs,
+                                                                                  **remote_config['actors'],
+                                                                                  **remote_config['alg_args'])
+    else:
+        remote_actors = [Actor.remote(thread_id=actor_id, base=base, make_env=make_env_thunk(actor_id),
+                                      remote_counter=remote_counter, obs_space=obs_space, action_space=action_space,
+                                      **network_kwargs, **remote_config['actors'], **remote_config['alg_args'])
+                         for actor_id in range(n_actors)]
+        remote_evaluate = Actor.remote(thread_id='Evaluate', base=base, make_env=make_env_thunk(-1),
+                                       remote_counter=remote_counter, obs_space=obs_space, action_space=action_space,
+                                       **network_kwargs, **remote_config['actors'], **remote_config['alg_args'])
     return remote_learner, remote_actors, main_buffer, remote_counter, remote_evaluate
 
 
@@ -86,6 +115,7 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--config_path', action='store', help='Path to config with params for chosen alg',
                         type=str, required=True)
+    parser.add_argument('--wandb', action='store_true', help='Use wandb')
     args = parser.parse_args()
     with open(args.config_path, "r") as config_file:
         config = defaultdict(dict)
@@ -94,6 +124,9 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = str(config['gpu'])
     os.environ["QT_DEBUG_PLUGINS"] = "0"
     ray.init(webui_host='0.0.0.0', num_gpus=1)
+    if args.wandb:
+        wandb = wandb.init(anonymous='allow', project="Rozum")
+        wandb.config.update(config)
 
     # Preparation
     train_config = dict(max_eps=1000, replay_start_size=1000,
@@ -134,6 +167,9 @@ if __name__ == '__main__':
             ds = replay_buffer.sample(train_config['number_of_batchs'] * train_config['batch_size'],
                                       train_config['beta'])
         elif first == evaluate:
+            score, eps_number = ray.get(first_id)
+            if args.wandb:
+                wandb.log({'Score': score, 'episode': eps_number})
             rollouts[evaluate.test.remote(online_weights, target_weights)] = evaluate
         else:
             rollouts[first.rollout.remote(train_config['rollout_size'], online_weights, target_weights)] = first

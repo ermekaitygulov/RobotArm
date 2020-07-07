@@ -13,21 +13,22 @@ env:
   env_kwargs:
     obs_space_keys: ["cube", "arm"]
   exploration_kwargs:
-    sigma_epsilon: [0.0, 0.1]
+    sigma_epsilon: [0.023, 0.1]
 buffer:
-  size: 100
+  size: 100000
 neural_network:
   build_critic:
     name: "Critic_uni"
     reg: 0.0000001
   build_actor:
     name: "Actor_uni"
-    noisy_head: True
     reg: 0.0000001
+actor_resource:
+  num_gpus: 0
 train:
-  num_actors: 4
+  num_actors: 16
   rollout_size: 70
-  max_eps: 20
+  max_eps: 24000
   replay_start_size: 10000
   batch_size: 256
   sync_nn_mod: 100

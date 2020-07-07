@@ -9,7 +9,6 @@ from cpprb import ReplayBuffer
 
 import numpy as np
 import timeit
-import wandb
 
 from algorithms.dqn import DoubleDuelingDQN
 
@@ -60,8 +59,8 @@ class Learner:
 
 @ray.remote(num_gpus=0.1, num_cpus=2)
 class Actor:
-    def __init__(self, base=DoubleDuelingDQN, thread_id=0, make_env=None,  remote_counter=None,
-                 avg_window=10, wandb_group=None, **agent_kwargs):
+    def __init__(self, base=DoubleDuelingDQN, thread_id=0, make_env=None, remote_counter=None,
+                 avg_window=10, **agent_kwargs):
         import tensorflow as tf
         config_gpu()
         self.tf = tf
@@ -73,10 +72,6 @@ class Actor:
         self.local_ep = 0
         self.avg_reward = deque([], maxlen=avg_window)
         self.summary_writer = self.tf.summary.create_file_writer('train/{}_actor/'.format(thread_id))
-        if wandb_group:
-            self.wandb = wandb.init(anonymous='allow', project="Rozum", group=wandb_group)
-        else:
-            self.wandb = None
 
     def __getattr__(self, name):
         if name.startswith('_'):
@@ -151,8 +146,6 @@ class Actor:
                 if done:
                     self.tf.summary.scalar('Score', score, step=self.local_ep)
                     self.tf.summary.flush()
-                    if self.wandb:
-                        self.wandb.log({'Score': score, 'episode': self.local_ep})
                     self.avg_reward.append(score)
                     avg = sum(self.avg_reward)/len(self.avg_reward)
                     stop_time = timeit.default_timer()
@@ -160,6 +153,7 @@ class Actor:
                           .format(self.local_ep, score, self.thread_id, avg))
                     print("RunTime: {:.3f}".format(stop_time - start_time))
                     self.local_ep += 1
+        return score, self.local_ep
 
 
 @ray.remote
