@@ -1,7 +1,4 @@
-from typing import Any, Union
-
 import tensorflow as tf
-from tensorflow.python import PartitionedVariable
 from tensorflow.python.keras import Sequential
 from tensorflow.python.keras.layers import Dense, Conv2D, Flatten
 from tensorflow.python.keras.regularizers import l2
@@ -31,11 +28,6 @@ class DuelingModel(tf.keras.Model):
 
 
 class NoisyDense(Dense):
-    bias_sigma: Union[Union[PartitionedVariable, ], Any]
-    kernel_sigma: Union[Union[PartitionedVariable, ], Any]
-    kernel: Union[Union[PartitionedVariable, ], Any]
-    input_dim: object
-
     # factorized noise
     def __init__(self, units, *args, **kwargs):
         self.output_dim = units
