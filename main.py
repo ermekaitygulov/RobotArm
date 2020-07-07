@@ -1,5 +1,5 @@
 
-from algorithms.apex.run import apex_run
+from apex_train import apex_run
 from argparse import ArgumentParser
 import os
 

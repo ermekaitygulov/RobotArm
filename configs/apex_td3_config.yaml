@@ -1,5 +1,13 @@
 gpu: 0
 base: td3
+alg_args:
+  polyak: 0.001
+  learning_rate: 0.0001
+  actor_lr: 0.0001
+  log_freq: 1000
+  noise_sigma: 0.015
+  noise_clip: 0.056
+  delay: 2
 env:
   obs_space_keys: ["cube", "arm"]
 buffer:
@@ -12,21 +20,10 @@ neural_network:
     name: "Actor_uni"
     noisy_head: True
     reg: 0.0000001
-learner:
-  polyak: 0.001
-  learning_rate: 0.0001
-  actor_lr: 0.0001
-  log_freq: 1000
-  noise_sigma: 0.015
-  noise_clip: 0.056
-  delay: 2
 exploration: [0.0, 0.1]
-actors:
-  num: 16
-  rollout_size: 70
-  noise_sigma: 0.015
-  noise_clip: 0.056
 train:
+  num_actors: 16
+  rollout_size: 70
   max_eps: 24000
   replay_start_size: 10000
   batch_size: 256

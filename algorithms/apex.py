@@ -14,13 +14,13 @@ from algorithms.dqn import DoubleDuelingDQN
 
 @ray.remote(num_gpus=0.5)
 class Learner:
-    def __init__(self, base=DoubleDuelingDQN, pretrain_weights=None, **kwargs):
+    def __init__(self, base=DoubleDuelingDQN, pretrain_weights=None, **actor_kwargs):
         import tensorflow as tf
         from common.tf_util import config_gpu
         config_gpu()
         self.tf = tf
         self.tf.config.optimizer.set_jit(True)
-        self.base = base(replay_buff=None, **kwargs)
+        self.base = base(replay_buff=None, **actor_kwargs)
         if pretrain_weights:
             self.load(**pretrain_weights)
         self.summary_writer = tf.summary.create_file_writer('train/Learner_logger/')
@@ -58,19 +58,15 @@ class Learner:
 
 @ray.remote(num_gpus=0, num_cpus=2)
 class Actor:
-    def __init__(self, base=DoubleDuelingDQN, thread_id=0, make_env=None, config_env=None, remote_counter=None,
-                 rollout_size=300, avg_window=10, wandb_group=None, **agent_kwargs):
+    def __init__(self, base=DoubleDuelingDQN, thread_id=0, make_env=None,  remote_counter=None,
+                 avg_window=10, wandb_group=None, **agent_kwargs):
         import tensorflow as tf
         self.tf = tf
         self.thread_id = thread_id
-        self.env = make_env('{}_thread'.format(thread_id), **config_env)
+        self.env = make_env()
         env_dict, _ = get_dtype_dict(self.env)
         env_dict['q_value'] = {"dtype": "float32"}
-        buffer = ReplayBuffer(size=rollout_size, env_dict=env_dict)
-        if isinstance(self.env.observation_space, gym.spaces.Dict):
-            state_keys = self.env.observation_space.spaces.keys()
-            buffer = DictWrapper(buffer, state_prefix=('', 'next_', 'n_'), state_keys=state_keys)
-        self.base = base(replay_buff=buffer, **agent_kwargs)
+        self.base = base(replay_buff=self._init_buff(1), **agent_kwargs)
         self.env_state = None
         self.remote_counter = remote_counter
         self.local_ep = 0
@@ -86,7 +82,17 @@ class Actor:
             raise AttributeError("attempted to get missing private attribute '{}'".format(name))
         return getattr(self.base, name)
 
-    def rollout(self, *weights):
+    def _init_buff(self, size):
+        env_dict, _ = get_dtype_dict(self.env)
+        buffer = ReplayBuffer(size=size, env_dict=env_dict)
+        if isinstance(self.env.observation_space, gym.spaces.Dict):
+            state_keys = self.env.observation_space.spaces.keys()
+            buffer = DictWrapper(buffer, state_prefix=('', 'next_', 'n_'), state_keys=state_keys)
+        return buffer
+
+    def rollout(self, rollout_size, *weights):
+        if rollout_size != self.replay_buff.get_buffer_size():
+            self.replay_buff = self._init_buff(rollout_size)
         with self.summary_writer.as_default():
             self.set_weights(*weights)
             if self.env_state is None:
