@@ -1,7 +1,7 @@
 # Robot arm project
 **Algorithms:**
 * DDDQN 
-* APEX-DQN/DDPG/TD3 (asynchronus DQN/DDPG) implementation with [Ray](https://docs.ray.io/en/latest/)
+* APEX-DQN/DDPG/TD3 (asynchronus train) implementation with [Ray](https://docs.ray.io/en/latest/)
 * DDPG
 * TD3 (DDPG with twin critic, with delay updates, with noise in target. It is easier to use TD3 than tune DDPG)
 
