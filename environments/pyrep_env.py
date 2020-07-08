@@ -123,15 +123,14 @@ class RozumEnv(gym.Env):
             if ee_action == 0.0:
                 for g_obj in self.graspable_objects:
                     grasped = self.gripper.grasp(g_obj)
-
-        else:
-            position = [j + a * scale for j, a, scale in zip(self.rozum.get_joint_positions(),
-                                                             joint_action, self.angles_scale)]
-            position = list(np.clip(position, self.angles_bounds.low, self.angles_bounds.high))
-            self.rozum.set_joint_target_positions(position)
-            for _ in range(4):
-                self.sim_step()
-                self.current_step += 1
+        # else:
+        position = [j + a * scale for j, a, scale in zip(self.rozum.get_joint_positions(),
+                                                         joint_action, self.angles_scale)]
+        position = list(np.clip(position, self.angles_bounds.low, self.angles_bounds.high))
+        self.rozum.set_joint_target_positions(position)
+        for _ in range(4):
+            self.sim_step()
+            self.current_step += 1
         x, y, z = self.rozum_tip.get_position()
 
         tx, ty, tz = self.cube.get_position()
