@@ -66,4 +66,8 @@ class DQfD(DoubleDuelingDQN):
 
     def add_demo(self, data_loader, *args, **kwargs):
         for s, a, r, n_s, d in data_loader.sarsd_iter(*args, **kwargs):
-            super(DQfD, self).perceive(s, a, r, n_s, d, demo=1.)
+            transition = dict(state=s, action=a, reward=r,
+                              next_state=n_s, done=d)
+            to_add = self.n_step(transition)
+            for n_transition in to_add:
+                self.replay_buff.add_demo(demo=1., **n_transition)

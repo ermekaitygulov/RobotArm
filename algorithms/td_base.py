@@ -69,7 +69,13 @@ class TDPolicy:
     def perceive(self, state, action, reward, next_state, done, **kwargs):
         transition = dict(state=state, action=action, reward=reward,
                           next_state=next_state, done=done, **kwargs)
+        to_add = self.n_step(transition)
+        for n_transition in to_add:
+            self.replay_buff.add(**n_transition)
+
+    def n_step(self, transition):
         self.n_deque.append(transition)
+        to_add = list()
         if len(self.n_deque) == self.n_deque.maxlen or transition['done']:
             while len(self.n_deque) != 0:
                 n_step_state = self.n_deque[-1]['next_state']
@@ -79,9 +85,10 @@ class TDPolicy:
                 self.n_deque[0]['n_reward'] = n_step_r
                 self.n_deque[0]['n_done'] = n_step_done
                 self.n_deque[0]['actual_n'] = len(self.n_deque)
-                self.replay_buff.add(**self.n_deque.popleft())
+                to_add.append(self.n_deque.popleft())
                 if not n_step_done:
                     break
+        return to_add
 
     def choose_act(self, state, action_sampler=None):
         raise NotImplementedError

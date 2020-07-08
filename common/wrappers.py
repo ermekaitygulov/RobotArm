@@ -31,6 +31,8 @@ class DataSave(gym.Wrapper):
     def reset(self):
         obs = super(DataSave, self).reset()
         if len(self.data) > 0:
+            self.data['obs_space'] = self.observation_space
+            self.data['acs_space'] = self.action_space
             score = sum(map(int, self.data['reward']))
             name = str(self.current_idx).zfill(4) + "r" + str(score).zfill(4)
             path = os.path.join(self.path, name)
