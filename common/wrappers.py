@@ -1,5 +1,6 @@
 import os
-from collections import deque
+import pickle
+from collections import deque, defaultdict
 from random import random, randint
 
 import cv2
@@ -8,6 +9,40 @@ import numpy as np
 
 from chainerrl.wrappers.atari_wrappers import LazyFrames
 import matplotlib.pyplot as plt
+
+
+class DataSave(gym.Wrapper):
+    def __init__(self, env, path, index_increment=1, start_index=0):
+        super(DataSave, self).__init__(env)
+        self.path = path
+        self.idx_increment = index_increment
+        self.current_idx = start_index
+        self.data = defaultdict(list)
+
+    def step(self, action):
+        obs, rew, done, info = super(DataSave, self).step(action)
+        self.data['observation'].append(obs)
+        self.data['action'].append(action)
+        self.data['reward'].append(rew)
+        self.data['done'].append(done)
+        self.data['info'].append(info)
+        return obs, rew, done, info
+
+    def reset(self):
+        obs = super(DataSave, self).reset()
+        if len(self.data) > 0:
+            score = sum(map(int, self.data['reward']))
+            name = str(self.current_idx).zfill(4) + "r" + str(score).zfill(4)
+            path = os.path.join(self.path, name)
+            self.save_obj(self.data, path)
+            self.data.clear()
+            self.current_idx += self.idx_increment
+        return obs
+
+    @staticmethod
+    def save_obj(data, path):
+        with open(path + '.pkl', 'wb') as f:
+            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
 
 
 class FrameSkip(gym.Wrapper):

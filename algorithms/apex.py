@@ -60,13 +60,15 @@ class Learner:
 @ray.remote(num_gpus=0.1, num_cpus=2)
 class Actor:
     def __init__(self, base=DoubleDuelingDQN, thread_id=0, make_env=None, remote_counter=None,
-                 avg_window=10, **agent_kwargs):
+                 avg_window=10, pretrain_weights=None, **agent_kwargs):
         import tensorflow as tf
         config_gpu()
         self.tf = tf
         self.thread_id = thread_id
         self.env = make_env()
         self.base = base(replay_buff=self._init_buff(1), **agent_kwargs)
+        if pretrain_weights:
+            self.load(**pretrain_weights)
         self.env_state = None
         self.remote_counter = remote_counter
         self.local_ep = 0
@@ -90,8 +92,9 @@ class Actor:
     def rollout(self, rollout_size, *weights):
         if rollout_size != self.replay_buff.get_buffer_size():
             self.base.replay_buff = self._init_buff(rollout_size)
-        with self.summary_writer.as_default():
+        if weights:
             self.set_weights(*weights)
+        with self.summary_writer.as_default():
             if self.env_state is None:
                 done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
             else:
@@ -136,8 +139,9 @@ class Actor:
         return np.abs(ntd)
 
     def test(self, *weights):
-        with self.summary_writer.as_default():
+        if weights:
             self.set_weights(*weights)
+        with self.summary_writer.as_default():
             done, score, state, start_time = False, 0, self.env.reset(), timeit.default_timer()
             while not done:
                 action, q = self.choose_act(state, self.env.sample_action)
