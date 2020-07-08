@@ -21,8 +21,9 @@ class RozumEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self, obs_space_keys=('pov', 'arm'), scene_file='rozum_pyrep.ttt',
-                 headless=True, video_path=None):
+                 headless=True, video_path=None, pose_sigma=20):
         self.obs_space_keys = (obs_space_keys,) if isinstance(obs_space_keys, str) else obs_space_keys
+        # PyRep
         self._pyrep = PyRep()
         self._pyrep.launch(scene_file, headless=headless)
         self._pyrep.start()
@@ -35,6 +36,7 @@ class RozumEnv(gym.Env):
         self.camera = VisionSensor("render")
         self.rozum_tip = self.rozum.get_tip()
 
+        # Action and Observation spaces
         self.angles_scale = np.array([np.pi for _ in range(self.rozum.num_joints)])
         low = np.array([-20/180 for _ in range(self.rozum.num_joints)] + [0., ])
         high = np.array([20/180 for _ in range(self.rozum.num_joints)] + [1., ])
@@ -70,14 +72,16 @@ class RozumEnv(gym.Env):
             message += ", ".join(self._available_obs_spaces.keys())
             err.args = (message,)
             raise
+
+        # Environment settings
         self.reward_range = None
         self.current_step = 0
         self.step_limit = 200
         self.init_angles = self.rozum.get_joint_positions()
         self.init_cube_pose = self.cube.get_pose()
+        self.pose_sigma = pose_sigma
 
         # Video
-        self._eps_done = 0
         self.recording = list()
         self.current_episode = 0
         self.rewards = [0]
@@ -144,27 +148,25 @@ class RozumEnv(gym.Env):
         elif self.current_step >= self.step_limit:
             done = True
             info['grasped'] = 0
-        if done:
-            self._eps_done += 1
         self.rewards.append(reward)
         return state, reward, done, info
 
     def reset(self):
         self._pyrep.stop()
         self._pyrep.start()
-        # max distance ~ 0.76
+        # Initialize scene
         pose = self.init_cube_pose.copy()
-        pose[0] += np.random.uniform(-0.1, 0.2)
+        pose[0] += np.random.uniform(-0.1, 0.2)  # max distance ~ 0.76
         pose[1] += np.random.uniform(-0.15, 0.15)
         self.cube.set_pose(pose)
-        self.current_step = 0
-        random_action = np.random.normal(0., 20, len(self.init_angles)) / 180 * np.pi
+        random_action = np.random.normal(0., self.pose_sigma, len(self.init_angles)) / 180 * np.pi
         position = [angle + action for angle, action in zip(self.init_angles, random_action)]
         self.rozum.set_joint_target_positions(position)
         for _ in range(4):
             self._pyrep.step()
-            self.current_step += 1
+        self.current_step = 0
         state = self.render()
+
         # Video
         if len(self.recording) > 0:
             name = str(self.current_episode).zfill(4) + "r" + str(sum(map(int, self.rewards))).zfill(4) + ".mp4"
@@ -202,7 +204,7 @@ class RozumEnv(gym.Env):
         :return:
         """
         size_x, size_y, size_z = video[0].shape
-        out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), 60.0, (size_x, size_y))
+        out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), 30.0, (size_x, size_y))
         for image in video:
             out.write(image)
         out.release()
