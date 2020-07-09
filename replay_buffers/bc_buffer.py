@@ -7,14 +7,14 @@ class DQfDBuffer(PrioritizedReplayBuffer):
         self._demo_eps = demo_eps
         self._demo_border = 0
 
-    def add(self, **kwargs):
+    def add_single_transition(self, priority, **kwargs):
         self._next_idx = max(self._next_idx, self._demo_border)
-        super(DQfDBuffer, self).add(**kwargs)
+        super(DQfDBuffer, self).add_single_transition(priority, **kwargs)
 
     def add_demo(self, **kwargs):
         if self._next_idx > self._demo_border:
             self._next_idx = 0
-        super(DQfDBuffer, self).add(**kwargs)
+        super(DQfDBuffer, self).add_single_transition(self._max_priority, **kwargs)
         self._demo_border = min(self._demo_border + 1, self._maxsize)
 
     def update_priorities(self, indexes, priorities):

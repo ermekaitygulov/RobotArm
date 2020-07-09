@@ -1,13 +1,14 @@
 # Robot arm project
 **Algorithms:**
-* DDDQN 
-* APEX-DQN/DDPG/TD3 (asynchronus train) implementation with [Ray](https://docs.ray.io/en/latest/)
+* DDDQN
 * DDPG
 * TD3 (DDPG with twin critic, with delay updates, with noise in target. It is easier to use TD3 than tune DDPG)
+* DQfD 
+* APEX-DQN/DDPG/TD3 (asynchronus train) implementation with [Ray](https://docs.ray.io/en/latest/)
+
 
 **Implementation details:**
-* Two variants of buffer can be used in DQN and DDPG (support of sb implementation
- in APEX is in process):
+* Two variants of buffer can be used in DQN and DDPG:
  
 | [ccprb](https://ymd_h.gitlab.io/cpprb/) (C++ realization of replay buffers) | stable_baselines |
 |------------|-----------------|
@@ -28,3 +29,4 @@ They can be accessed with get_network_builder(name) function. There is ***_uni**
 **TODO**:
 * Unity environment for Rozum model
  to speed up training on server in headless mode
+* Demonstrations usage
