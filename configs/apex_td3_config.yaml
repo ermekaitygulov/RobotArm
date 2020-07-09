@@ -16,6 +16,7 @@ env:
     sigma_epsilon: [0.023, 0.1]
 buffer:
   size: 100000
+  cpp: True
 neural_network:
   build_critic:
     name: "Critic_uni"

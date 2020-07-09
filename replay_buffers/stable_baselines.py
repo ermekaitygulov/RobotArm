@@ -15,7 +15,15 @@ class ReplayBuffer(object):
         self._storage = []
         self._maxsize = size
         self._next_idx = 0
-        self.env_dict = env_dict
+        self.env_dict = env_dict.copy()
+        for key, value in self.env_dict.items():
+            assert 'dtype' in value
+            if 'shape' not in value:
+                value['shape'] = (1,)
+            elif isinstance(value['shape'], int):
+                value['shape'] = (value['shape'],)
+            else:
+                value['shape'] = tuple(value['shape'])
 
     def get_stored_size(self):
         return len(self._storage)
@@ -99,10 +107,51 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 
     def add(self, **kwargs):
         """See ReplayBuffer.store_effect"""
+        quantity = self.get_quantity(kwargs)
+        if 'priorities' in kwargs:
+            priorities = kwargs.pop('priorities')
+        else:
+            priorities = [self._max_priority, ] * quantity
+        if quantity == 1:
+            priority = priorities[0]
+            self.add_single_transition(priority, **kwargs)
+        else:
+            for i in range(quantity):
+                self.add_single_transition(priorities[i], **{key: value[i] for key, value in kwargs.items()})
+
+    def add_single_transition(self, priority, **kwargs):
         idx = self._next_idx
         super().add(**kwargs)
-        self._it_sum[idx] = self._max_priority ** self._alpha
-        self._it_min[idx] = self._max_priority ** self._alpha
+        self._it_sum[idx] = priority ** self._alpha
+        self._it_min[idx] = priority ** self._alpha
+
+    def get_quantity(self, transitions):
+        """Return 1 if shapes of values
+        in transitions match desired shapes.
+        Elif shapes don't match return first dimension of shape.
+        It is not accurate transitions quantity computing,
+        but simple and doesn't need special manipulations
+        for LazyFrame-case.
+        Parameters
+        ----------
+        transitions: dict
+        Returns
+        -------
+        quantity: int
+        """
+        quantity = list()
+        for key, value in self.env_dict.items():
+            desired_shape = value['shape']
+            transition_shape = np.array(transitions[key]).shape
+            if transition_shape == desired_shape:
+                quantity.append(1)
+            elif desired_shape == (1,) and transition_shape == ():
+                quantity.append(1)
+            else:
+                quantity.append(transition_shape[0])
+        assert all([q == quantity[0] for q in quantity])
+        quantity = quantity[0]
+        return quantity
 
     def _sample_proportional(self, batch_size):
         res = []
@@ -143,7 +192,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         weights = (p_sample*len(self._storage)) ** (- beta)
         weights = weights / max_weight
         encoded_sample = self._encode_sample(idxes)
-        encoded_sample['weights'] = weights
+        encoded_sample['weights'] = weights.astype('float32')
         encoded_sample['indexes'] = idxes
         return encoded_sample
 

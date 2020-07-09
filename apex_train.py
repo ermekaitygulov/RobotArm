@@ -6,15 +6,16 @@ import yaml
 
 import algorithms
 from algorithms.apex import Learner, Counter, Actor
-from collections import defaultdict
 
 from offpolicy_train import stack_env, make_discrete_env, make_continuous_env
+from replay_buffers.stable_baselines import PrioritizedReplayBuffer
 from replay_buffers.util import DictWrapper, get_dtype_dict
 from cpprb import PrioritizedReplayBuffer as cppPER
 from nn_models.model import get_network_builder
 from environments.pyrep_env import RozumEnv
 from common.wrappers import *
 import wandb
+from collections import defaultdict
 
 
 def make_env(thread_id, n_actors=None, exploration_kwargs=None, env_kwargs=None, frame_stack=4, discretize=True):
@@ -65,8 +66,11 @@ def make_remote_base(remote_config, n_actors):
             network_kwargs[arg_name] = get_network_builder(**arg_value)
         else:
             network_kwargs[arg_name] = get_network_builder(arg_value)
-    dtype_dict['indexes'] = 'uint64'
-    main_buffer = cppPER(env_dict=env_dict, **remote_config['buffer'])
+    if 'cpp' in config['buffer'].keys() and config['buffer'].pop('cpp'):
+        dtype_dict['indexes'] = 'uint64'
+        main_buffer = cppPER(env_dict=env_dict, **config['buffer'])
+    else:
+        main_buffer = PrioritizedReplayBuffer(env_dict=env_dict, **config['buffer'])
     if isinstance(test_env.observation_space, gym.spaces.Dict):
         state_keys = test_env.observation_space.spaces.keys()
         main_buffer = DictWrapper(main_buffer, state_prefix=('', 'next_', 'n_'),
