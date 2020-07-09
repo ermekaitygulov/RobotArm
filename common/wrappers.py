@@ -29,7 +29,6 @@ class DataSave(gym.Wrapper):
         return obs, rew, done, info
 
     def reset(self):
-        obs = super(DataSave, self).reset()
         if len(self.data) > 0:
             self.data['obs_space'] = self.observation_space
             self.data['acs_space'] = self.action_space
@@ -39,6 +38,8 @@ class DataSave(gym.Wrapper):
             self.save_obj(self.data, path)
             self.data.clear()
             self.current_idx += self.idx_increment
+        obs = super(DataSave, self).reset()
+        self.data['observation'].append(obs)
         return obs
 
     @staticmethod
