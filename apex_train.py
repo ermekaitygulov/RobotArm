@@ -49,7 +49,7 @@ def make_remote_base(apex_config):
     filler_config = defaultdict(dict)
     filler_config.update(apex_config)
     base = getattr(algorithms, apex_config['base'])
-    n_actors = apex_config['n_actors']
+    n_actors = apex_config['num_actors']
 
     def make_env_thunk(index):
         def thunk():
