@@ -45,8 +45,9 @@ def apex_ranging(exploration_kwargs, actor_id, n_actors):
                 for expl_name, expl_value in exploration_kwargs.items()}
 
 
-def make_remote_base(remote_config, n_actors):
+def make_remote_base(remote_config):
     base = getattr(algorithms, remote_config['base'])
+    n_actors = remote_config['n_actors']
 
     def make_env_thunk(index):
         def thunk():
@@ -66,11 +67,11 @@ def make_remote_base(remote_config, n_actors):
             network_kwargs[arg_name] = get_network_builder(**arg_value)
         else:
             network_kwargs[arg_name] = get_network_builder(arg_value)
-    if 'cpp' in config['buffer'].keys() and config['buffer'].pop('cpp'):
+    if 'cpp' in remote_config['buffer'].keys() and remote_config['buffer'].pop('cpp'):
         dtype_dict['indexes'] = 'uint64'
-        main_buffer = cppPER(env_dict=env_dict, **config['buffer'])
+        main_buffer = cppPER(env_dict=env_dict, **remote_config['buffer'])
     else:
-        main_buffer = PrioritizedReplayBuffer(env_dict=env_dict, **config['buffer'])
+        main_buffer = PrioritizedReplayBuffer(env_dict=env_dict, **remote_config['buffer'])
     if isinstance(test_env.observation_space, gym.spaces.Dict):
         state_keys = test_env.observation_space.spaces.keys()
         main_buffer = DictWrapper(main_buffer, state_prefix=('', 'next_', 'n_'),
@@ -114,6 +115,56 @@ def make_remote_base(remote_config, n_actors):
     return remote_learner, remote_actors, main_buffer, remote_counter, remote_evaluate
 
 
+def apex(remote_learner, remote_actors, main_buffer, remote_counter, remote_evaluate,
+         log_wandb=False, max_eps=1000, replay_start_size=1000, batch_size=128,
+         sync_nn_mod=100, number_of_batchs=16, beta=0.4, rollout_size=70):
+    # Start tasks
+    online_weights, target_weights = remote_learner.get_weights.remote()
+    start_learner = False
+    rollouts = {}
+    for a in remote_actors:
+        rollouts[a.rollout.remote(rollout_size, online_weights, target_weights)] = a
+    rollouts[remote_evaluate.test.remote(online_weights, target_weights)] = remote_evaluate
+    episodes_done = ray.get(remote_counter.get_value.remote())
+    optimization_step = 0
+    priority_dict, ds = None, None
+
+    # Main train process
+    while episodes_done < max_eps:
+        ready_ids, _ = ray.wait(list(rollouts))
+        first_id = ready_ids[0]
+        first = rollouts.pop(first_id)
+        if first == remote_learner:
+            optimization_step += 1
+            start_time = timeit.default_timer()
+            if optimization_step % sync_nn_mod == 0:
+                online_weights, target_weights = first.get_weights.remote()
+            rollouts[first.update_from_ds.remote(ds, start_time, batch_size)] = first
+            indexes, priorities = ray.get(first_id)
+            indexes = indexes.copy()
+            priorities = priorities.copy()
+            main_buffer.update_priorities(indexes=indexes, priorities=priorities)
+            ds = main_buffer.sample(number_of_batchs * batch_size, beta)
+        elif first == remote_evaluate:
+            score, eps_number = ray.get(first_id)
+            if log_wandb:
+                wandb.log({'Score': score, 'episode': eps_number})
+            rollouts[remote_evaluate.test.remote(online_weights, target_weights)] = remote_evaluate
+        else:
+            rollouts[first.rollout.remote(rollout_size, online_weights, target_weights)] = first
+            data, priorities = ray.get(first_id)
+            priorities = priorities.copy()
+            main_buffer.add(priorities=priorities, **data)
+        if main_buffer.get_stored_size() > replay_start_size and not start_learner:
+            start_time = timeit.default_timer()
+            ds = main_buffer.sample(number_of_batchs * batch_size, beta)
+            rollouts[remote_learner.update_from_ds.remote(ds, start_time, batch_size)] = remote_learner
+            ds = main_buffer.sample(number_of_batchs * batch_size, beta)
+            start_learner = True
+        episodes_done = ray.get(remote_counter.get_value.remote())
+    ray.timeline()
+
+
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--config_path', action='store', help='Path to config with params for chosen alg',
@@ -131,61 +182,5 @@ if __name__ == '__main__':
         wandb = wandb.init(anonymous='allow', project="Rozum")
         wandb.config.update(config)
 
-    # Preparation
-    train_config = dict(max_eps=1000, replay_start_size=1000,
-                        batch_size=128, sync_nn_mod=100, number_of_batchs=16,
-                        beta=0.4, num_actors=4, rollout_size=70)
-    if 'train' in config.keys():
-        for key, value in config['train'].items():
-            assert key in train_config.keys()
-            train_config[key] = value
-    learner, actors, replay_buffer, counter, evaluate = make_remote_base(config, train_config['num_actors'])
-
-    # Start tasks
-    online_weights, target_weights = learner.get_weights.remote()
-    start_learner = False
-    rollouts = {}
-    for a in actors:
-        rollouts[a.rollout.remote(train_config['rollout_size'], online_weights, target_weights)] = a
-    rollouts[evaluate.test.remote(online_weights, target_weights)] = evaluate
-    episodes_done = ray.get(counter.get_value.remote())
-    optimization_step = 0
-    priority_dict, ds = None, None
-
-    # Main train process
-    while episodes_done < train_config['max_eps']:
-        ready_ids, _ = ray.wait(list(rollouts))
-        first_id = ready_ids[0]
-        first = rollouts.pop(first_id)
-        if first == learner:
-            optimization_step += 1
-            start_time = timeit.default_timer()
-            if optimization_step % train_config['sync_nn_mod'] == 0:
-                online_weights, target_weights = first.get_weights.remote()
-            rollouts[first.update_from_ds.remote(ds, start_time, train_config['batch_size'])] = first
-            indexes, priorities = ray.get(first_id)
-            indexes = indexes.copy()
-            priorities = priorities.copy()
-            replay_buffer.update_priorities(indexes=indexes, priorities=priorities)
-            ds = replay_buffer.sample(train_config['number_of_batchs'] * train_config['batch_size'],
-                                      train_config['beta'])
-        elif first == evaluate:
-            score, eps_number = ray.get(first_id)
-            if args.wandb:
-                wandb.log({'Score': score, 'episode': eps_number})
-            rollouts[evaluate.test.remote(online_weights, target_weights)] = evaluate
-        else:
-            rollouts[first.rollout.remote(train_config['rollout_size'], online_weights, target_weights)] = first
-            data, priorities = ray.get(first_id)
-            priorities = priorities.copy()
-            replay_buffer.add(priorities=priorities, **data)
-        if replay_buffer.get_stored_size() > train_config['replay_start_size'] and not start_learner:
-            start_time = timeit.default_timer()
-            ds = replay_buffer.sample(train_config['number_of_batchs'] * train_config['batch_size'],
-                                      train_config['beta'])
-            rollouts[learner.update_from_ds.remote(ds, start_time, train_config['batch_size'])] = learner
-            ds = replay_buffer.sample(train_config['number_of_batchs'] * train_config['batch_size'],
-                                      train_config['beta'])
-            start_learner = True
-        episodes_done = ray.get(counter.get_value.remote())
-    ray.timeline()
+    learner, actors, replay_buffer, counter, evaluate = make_remote_base(config)
+    apex(learner, actors, replay_buffer, counter, evaluate, args.wandb, **config['train'])

@@ -1,5 +1,6 @@
 gpu: 0
 base: DeepDPG
+num_actors: 3
 alg_args:
   polyak: 0.001
   gamma: 0.99
@@ -18,7 +19,6 @@ neural_network:
   build_critic: "Critic_uni"
   build_actor: "Actor_uni"
 train:
-  num_actors: 3
   rollout_size: 70
   max_eps: 1000
   replay_start_size: 10000

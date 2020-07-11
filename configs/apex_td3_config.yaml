@@ -1,5 +1,6 @@
 gpu: 0
 base: TwinDelayedDDPG
+num_actors: 16
 alg_args:
   polyak: 0.001
   learning_rate: 0.0001
@@ -33,7 +34,6 @@ learner:
     target_actor_path: 'train/Target_actor.ckpt'
     target_critic_path: 'train/twin_critic_1.ckpt'
 train:
-  num_actors: 16
   rollout_size: 70
   max_eps: 24000
   replay_start_size: 10000

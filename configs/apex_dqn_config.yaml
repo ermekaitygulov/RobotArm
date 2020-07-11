@@ -1,5 +1,6 @@
 gpu: 0
 base: DoubleDuelingDQN
+num_actors: 3
 alg_args:
   update_target_nn_mod: 2500
   gamma: 0.99
@@ -17,7 +18,6 @@ neural_network:
     name: "DuelingDQN_arm_cube"
     noisy_head: True
 train:
-  num_actors: 3
   rollout_size: 100
   max_eps: 1000
   replay_start_size: 50000
