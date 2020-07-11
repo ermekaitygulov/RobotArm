@@ -67,7 +67,7 @@ class TwinDelayedDDPG(DeepDPG):
             self.update_metrics('Critic_Gradient_norm', tf.norm(g))
             gradients[i] = tf.clip_by_norm(g, 10)
         self.q_optimizer.apply_gradients(zip(gradients, critic_variables))
-        priorities = tf.abs(ntd_loss1 + ntd_loss2)
+        priorities = tf.abs(ntd_loss1)
         return priorities
 
     @tf.function

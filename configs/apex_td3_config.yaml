@@ -27,12 +27,6 @@ neural_network:
     reg: 0.0000001
 actor_resource:
   num_gpus: 0
-learner:
-  pretrain_weights:
-    online_actor_path: 'train/Online_actor.ckpt'
-    online_critic_path: 'train/twin_critic.ckpt'
-    target_actor_path: 'train/Target_actor.ckpt'
-    target_critic_path: 'train/twin_critic_1.ckpt'
 train:
   rollout_size: 70
   max_eps: 24000
