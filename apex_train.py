@@ -45,13 +45,15 @@ def apex_ranging(exploration_kwargs, actor_id, n_actors):
                 for expl_name, expl_value in exploration_kwargs.items()}
 
 
-def make_remote_base(remote_config):
-    base = getattr(algorithms, remote_config['base'])
-    n_actors = remote_config['n_actors']
+def make_remote_base(apex_config):
+    filler_config = defaultdict(dict)
+    filler_config.update(apex_config)
+    base = getattr(algorithms, apex_config['base'])
+    n_actors = apex_config['n_actors']
 
     def make_env_thunk(index):
         def thunk():
-            return make_env(index, n_actors, **remote_config['env'])
+            return make_env(index, n_actors, **filler_config['env'])
         return thunk
 
     test_env = make_env_thunk(-2)()
@@ -62,56 +64,56 @@ def make_remote_base(remote_config):
 
     remote_counter = Counter.remote()
     network_kwargs = dict()
-    for arg_name, arg_value in remote_config['neural_network'].items():
+    for arg_name, arg_value in filler_config['neural_network'].items():
         if isinstance(arg_value, dict):
             network_kwargs[arg_name] = get_network_builder(**arg_value)
         else:
             network_kwargs[arg_name] = get_network_builder(arg_value)
-    if 'cpp' in remote_config['buffer'].keys() and remote_config['buffer'].pop('cpp'):
+    if 'cpp' in filler_config['buffer'].keys() and filler_config['buffer'].pop('cpp'):
         dtype_dict['indexes'] = 'uint64'
-        main_buffer = cppPER(env_dict=env_dict, **remote_config['buffer'])
+        main_buffer = cppPER(env_dict=env_dict, **filler_config['buffer'])
     else:
-        main_buffer = PrioritizedReplayBuffer(env_dict=env_dict, **remote_config['buffer'])
+        main_buffer = PrioritizedReplayBuffer(env_dict=env_dict, **filler_config['buffer'])
     if isinstance(test_env.observation_space, gym.spaces.Dict):
         state_keys = test_env.observation_space.spaces.keys()
         main_buffer = DictWrapper(main_buffer, state_prefix=('', 'next_', 'n_'),
                                   state_keys=state_keys)
-    if 'learner_resource' in remote_config:
-        remote_learner = Learner.options(**remote_config['learner_resource']).remote(base=base,
+    if 'learner_resource' in filler_config:
+        remote_learner = Learner.options(**filler_config['learner_resource']).remote(base=base,
                                                                                      obs_space=obs_space,
                                                                                      action_space=action_space,
-                                                                                     **remote_config['learner'],
-                                                                                     **remote_config['alg_args'],
+                                                                                     **filler_config['learner'],
+                                                                                     **filler_config['alg_args'],
                                                                                      **network_kwargs)
     else:
         remote_learner = Learner.remote(base=base, obs_space=obs_space, action_space=action_space,
-                                        **remote_config['learner'], **remote_config['alg_args'], **network_kwargs)
-    if 'actor_resource' in remote_config:
-        remote_actors = [Actor.options(**remote_config['actor_resource']).remote(thread_id=actor_id, base=base,
+                                        **filler_config['learner'], **filler_config['alg_args'], **network_kwargs)
+    if 'actor_resource' in filler_config:
+        remote_actors = [Actor.options(**filler_config['actor_resource']).remote(thread_id=actor_id, base=base,
                                                                                  make_env=make_env_thunk(actor_id),
                                                                                  remote_counter=remote_counter,
                                                                                  obs_space=obs_space,
                                                                                  action_space=action_space,
                                                                                  **network_kwargs,
-                                                                                 **remote_config['actors'],
-                                                                                 **remote_config['alg_args'])
+                                                                                 **filler_config['actors'],
+                                                                                 **filler_config['alg_args'])
                          for actor_id in range(n_actors)]
-        remote_evaluate = Actor.options(**remote_config['actor_resource']).remote(thread_id='Evaluate', base=base,
+        remote_evaluate = Actor.options(**filler_config['actor_resource']).remote(thread_id='Evaluate', base=base,
                                                                                   make_env=make_env_thunk(-1),
                                                                                   remote_counter=remote_counter,
                                                                                   obs_space=obs_space,
                                                                                   action_space=action_space,
                                                                                   **network_kwargs,
-                                                                                  **remote_config['actors'],
-                                                                                  **remote_config['alg_args'])
+                                                                                  **filler_config['actors'],
+                                                                                  **filler_config['alg_args'])
     else:
         remote_actors = [Actor.remote(thread_id=actor_id, base=base, make_env=make_env_thunk(actor_id),
                                       remote_counter=remote_counter, obs_space=obs_space, action_space=action_space,
-                                      **network_kwargs, **remote_config['actors'], **remote_config['alg_args'])
+                                      **network_kwargs, **filler_config['actors'], **filler_config['alg_args'])
                          for actor_id in range(n_actors)]
         remote_evaluate = Actor.remote(thread_id='Evaluate', base=base, make_env=make_env_thunk(-1),
                                        remote_counter=remote_counter, obs_space=obs_space, action_space=action_space,
-                                       **network_kwargs, **remote_config['actors'], **remote_config['alg_args'])
+                                       **network_kwargs, **filler_config['actors'], **filler_config['alg_args'])
     return remote_learner, remote_actors, main_buffer, remote_counter, remote_evaluate
 
 
@@ -172,8 +174,7 @@ if __name__ == '__main__':
     parser.add_argument('--wandb', action='store_true', help='Use wandb')
     args = parser.parse_args()
     with open(args.config_path, "r") as config_file:
-        config = defaultdict(dict)
-        config.update(yaml.load(config_file, Loader=yaml.FullLoader))
+        config = yaml.load(config_file, Loader=yaml.FullLoader)
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = str(config['gpu'])
     os.environ["QT_DEBUG_PLUGINS"] = "0"

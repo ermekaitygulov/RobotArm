@@ -1,6 +1,5 @@
 import os
 from argparse import ArgumentParser
-from collections import defaultdict
 
 import gym
 import ray
@@ -24,8 +23,7 @@ if __name__ == '__main__':
     parser.add_argument('--wandb', action='store_true', help='Use wandb')
     args = parser.parse_args()
     with open(args.config_path, "r") as config_file:
-        config = defaultdict(dict)
-        config.update(yaml.load(config_file, Loader=yaml.FullLoader))
+        config = yaml.load(config_file, Loader=yaml.FullLoader)
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = str(config['gpu'])
     os.environ["QT_DEBUG_PLUGINS"] = "0"
@@ -64,4 +62,3 @@ if __name__ == '__main__':
     learner, actors, _, counter, evaluate = make_remote_base(config)
     learner.set_weights.remote(online_weights, target_weights)
     apex(learner, actors, agent.replay_buff, counter, evaluate, args.wandb, **config['train'])
-
