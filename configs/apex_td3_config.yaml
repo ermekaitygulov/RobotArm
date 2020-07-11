@@ -5,8 +5,8 @@ alg_args:
   learning_rate: 0.0001
   actor_lr: 0.0001
   log_freq: 1000
-  noise_sigma: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.4]
-  noise_clip: [0.056, 0.056, 0.056, 0.056, 0.056, 0.056, 0.5]
+  noise_sigma: 0.015
+  noise_clip: 0.056
   delay: 2
 env:
   discretize: False
@@ -26,8 +26,14 @@ neural_network:
     reg: 0.0000001
 actor_resource:
   num_gpus: 0
+learner:
+  pretrain_weights:
+    online_actor_path: 'train/Online_actor.ckpt'
+    online_critic_path: 'train/twin_critic.ckpt'
+    target_actor_path: 'train/Target_actor.ckpt'
+    target_critic_path: 'train/twin_critic_1.ckpt'
 train:
-  num_actors: 24
+  num_actors: 16
   rollout_size: 70
   max_eps: 24000
   replay_start_size: 10000
