@@ -37,7 +37,6 @@ class DQfDBuffer(PrioritizedReplayBuffer):
             if idx > self._demo_border:
                 self._it_sum[idx] = (priority + self._eps) ** self._alpha
                 self._it_min[idx] = (priority + self._eps) ** self._alpha
-
                 self._max_priority = max(self._max_priority, priority)
             else:
                 self._it_sum[idx] = (priority + self._demo_eps) ** self._alpha

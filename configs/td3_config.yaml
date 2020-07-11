@@ -29,5 +29,5 @@ pretrain_weights:
   target_actor_path: 'weights/td3/Target_actor.ckpt'
   target_critic_path: 'weights/td3/twin_critic_1.ckpt'
 train:
-  log_dir: "train/"
   episodes: 3
+log_dir: "train/"

@@ -75,12 +75,8 @@ if __name__ == '__main__':
     tf.config.optimizer.set_jit(True)
     config_gpu()
     env = make_env(**config['env'])
-    env_dict, dtype_dict = get_dtype_dict(env)
-    if 'cpp' in config['buffer'].keys() and config['buffer'].pop('cpp'):
-        dtype_dict['indexes'] = 'uint64'
-        replay_buffer = cppPER(env_dict=env_dict, **config['buffer'])
-    else:
-        replay_buffer = PrioritizedReplayBuffer(env_dict=env_dict, **config['buffer'])
+    env_dict, dtype_dict = get_dtype_dict(env.observation_space, env.action_space)
+    replay_buffer = DQfDBuffer(env_dict=env_dict, **config['buffer'])
     if isinstance(env.observation_space, gym.spaces.Dict):
         state_keys = env.observation_space.spaces.keys()
         replay_buffer = DictWrapper(replay_buffer, state_prefix=('', 'next_', 'n_'),
@@ -100,7 +96,7 @@ if __name__ == '__main__':
         agent.load(**config['pretrain_weights'])
 
     train_config = config['train']
-    summary_writer = tf.summary.create_file_writer(train_config.pop('log_dir'))
+    summary_writer = tf.summary.create_file_writer(config.pop('log_dir'))
     with summary_writer.as_default():
         agent.train(env, **train_config)
     env.reset()

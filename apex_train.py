@@ -56,7 +56,7 @@ def make_remote_base(remote_config, n_actors):
     test_env = make_env_thunk(-2)()
     obs_space = test_env.observation_space
     action_space = test_env.action_space
-    env_dict, dtype_dict = get_dtype_dict(test_env)
+    env_dict, dtype_dict = get_dtype_dict(test_env.observation_space, test_env.action_space)
     test_env.close()
 
     remote_counter = Counter.remote()

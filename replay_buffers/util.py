@@ -35,10 +35,10 @@ class DictWrapper:
         return getattr(self.replay_buffer, name)
 
 
-def get_dtype_dict(env):
-    action_shape = env.action_space.shape
+def get_dtype_dict(observation_space, action_space):
+    action_shape = action_space.shape
     action_shape = action_shape if len(action_shape) > 0 else 1
-    action_dtype = env.action_space.dtype
+    action_dtype = action_space.dtype
     action_dtype = 'int32' if np.issubdtype(action_dtype, int) else action_dtype
     action_dtype = 'float32' if np.issubdtype(action_dtype, float) else action_dtype
     env_dict = {'action': {'shape': action_shape,
@@ -51,15 +51,15 @@ def get_dtype_dict(env):
                 }
     dtype_dict = {key: value['dtype'] for key, value in env_dict.items()}
     for prefix in ('', 'next_', 'n_'):
-        if isinstance(env.observation_space, gym.spaces.Dict):
+        if isinstance(observation_space, gym.spaces.Dict):
             dtype_dict[prefix+'state'] = dict()
-            for name, space in env.observation_space.spaces.items():
+            for name, space in observation_space.spaces.items():
                 env_dict[prefix + name] = {'shape': space.shape,
                                            'dtype': space.dtype}
                 dtype_dict[prefix+'state'][name] = space.dtype
         else:
-            env_dict[prefix + 'state'] = {'shape': env.observation_space.shape,
-                                          'dtype': env.observation_space.dtype}
-            dtype_dict[prefix + 'state'] = env.observation_space.dtype
+            env_dict[prefix + 'state'] = {'shape': observation_space.shape,
+                                          'dtype': observation_space.dtype}
+            dtype_dict[prefix + 'state'] = observation_space.dtype
     dtype_dict.update(weights='float32', indexes='int32')
     return env_dict, dtype_dict

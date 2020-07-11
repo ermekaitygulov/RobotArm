@@ -14,5 +14,5 @@ neural_network:
 agent:
   update_target_nn_mod: 1000
 train:
-  log_dir: "train/"
   episodes: 1
+log_dir: "train/"

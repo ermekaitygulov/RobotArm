@@ -3,9 +3,9 @@ import tensorflow as tf
 from common.tf_util import take_vector_elements, huber_loss
 
 
-class DQfD(DoubleDuelingDQN):
+class DQfromDemonstrations(DoubleDuelingDQN):
     def __init__(self, margin, *args, **kwargs):
-        super(DQfD, self).__init__(*args, **kwargs)
+        super(DQfromDemonstrations, self).__init__(*args, **kwargs)
         self.margin_value = margin
 
     @tf.function
@@ -61,8 +61,11 @@ class DQfD(DoubleDuelingDQN):
         j_e = tf.reduce_mean(j_e * weights * demo)
         return j_e
 
+    def pretrain(self, steps):
+        self.update(steps)
+
     def perceive(self, **kwargs):
-        super(DQfD, self).perceive(demo=0., **kwargs)
+        super(DQfromDemonstrations, self).perceive(demo=0., **kwargs)
 
     def add_demo(self, data_loader, *args, **kwargs):
         for s, a, r, n_s, d in data_loader.sarsd_iter(*args, **kwargs):

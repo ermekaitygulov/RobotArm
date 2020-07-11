@@ -81,7 +81,7 @@ class Actor:
         return getattr(self.base, name)
 
     def _init_buff(self, size):
-        env_dict, _ = get_dtype_dict(self.env)
+        env_dict, _ = get_dtype_dict(self.env.observation_space, self.env.action_space)
         env_dict['q_value'] = {"dtype": "float32"}
         buffer = ReplayBuffer(size=size, env_dict=env_dict)
         if isinstance(self.env.observation_space, gym.spaces.Dict):
