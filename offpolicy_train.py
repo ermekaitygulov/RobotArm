@@ -76,7 +76,11 @@ if __name__ == '__main__':
     config_gpu()
     env = make_env(**config['env'])
     env_dict, dtype_dict = get_dtype_dict(env.observation_space, env.action_space)
-    replay_buffer = DQfDBuffer(env_dict=env_dict, **config['buffer'])
+    if 'cpp' in config['buffer'].keys() and config['buffer'].pop('cpp'):
+        dtype_dict['indexes'] = 'uint64'
+        replay_buffer = cppPER(env_dict=env_dict, **config['buffer'])
+    else:
+        replay_buffer = PrioritizedReplayBuffer(env_dict=env_dict, **config['buffer'])
     if isinstance(env.observation_space, gym.spaces.Dict):
         state_keys = env.observation_space.spaces.keys()
         replay_buffer = DictWrapper(replay_buffer, state_prefix=('', 'next_', 'n_'),
