@@ -101,7 +101,7 @@ def make_mlp(units, activation='tanh', reg=1e-6, noisy=False):
 
 def make_cnn(filters, kernels, strides, activation='tanh', reg=1e-6):
     _reg = l2(reg)
-    cnn = Sequential([Conv2D(f, k, s, activation=activation, kernel_regularizer=reg)
+    cnn = Sequential([Conv2D(f, k, s, activation=activation, kernel_regularizer=_reg)
                       for f, k, s in zip(filters, kernels, strides)], name='CNN')
     cnn.add(Flatten())
     return cnn

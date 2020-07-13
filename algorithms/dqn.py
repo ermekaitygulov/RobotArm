@@ -17,7 +17,10 @@ class DoubleDuelingDQN(TDPolicy):
         self._schedule_dict[self.target_update] = update_target_nn_mod
 
     def choose_act(self, state, action_sampler=None):
-        inputs = {key: np.array(value)[None] for key, value in state.items()}
+        if isinstance(state, dict):
+            inputs = {key: np.array(value)[None] for key, value in state.items()}
+        else:
+            inputs = np.array(state)[None]
         q_value = self.online_model(inputs, training=False)[0]
         action = np.argmax(q_value)
         if action_sampler:

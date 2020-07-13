@@ -105,7 +105,10 @@ class TwinDelayedDDPG(DeepDPG):
         self.actor_optimizer.apply_gradients(zip(gradients, actor_variables))
 
     def choose_act(self, state, action_sampler=None):
-        inputs = {key: np.array(value)[None] for key, value in state.items()}
+        if isinstance(state, dict):
+            inputs = {key: np.array(value)[None] for key, value in state.items()}
+        else:
+            inputs = np.array(state)[None]
         action = self.online_actor(inputs, training=False)[0]
         if action_sampler:
             action = action_sampler(action)

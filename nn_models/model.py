@@ -110,11 +110,11 @@ def make_critic(name, obs_space, action_space, reg=1e-6, noisy_head=False):
         else:
             feat['state'] = tf.keras.Input(shape=obs_space.shape)
     action = tf.keras.Input(shape=action_space.shape)
-    feat_base = concatenate(list(feat.values()))
-
     bases.append(action)
-    bases.append(layer(400, 'relu', use_bias=True,
-                       kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(feat_base))
+    if len(feat) > 0:
+        feat_base = concatenate(list(feat.values()))
+        bases.append(layer(400, 'relu', use_bias=True,
+                           kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(feat_base))
     if len(img) > 0:
         img_base = concatenate(list(img.values()))
         normalized = img_base/255
