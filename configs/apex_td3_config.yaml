@@ -14,7 +14,7 @@ env:
   env_kwargs:
     obs_space_keys: ["cube", "arm"]
   exploration_kwargs:
-    sigma_epsilon: [0.023, 0.1]
+    sigma_epsilon: [0.01, 0.1]
 buffer:
   size: 100000
   cpp: True
