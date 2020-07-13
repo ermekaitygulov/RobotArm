@@ -323,6 +323,8 @@ class CorrelatedExploration(gym.Wrapper):
             return self._exploration(inner_exploration)
         except TypeError:  # usually sample_action does not take any arg
             return self._exploration(action)
+        except AttributeError:
+            return self._exploration(action)
 
 
 class UncorrelatedExploration(CorrelatedExploration):
