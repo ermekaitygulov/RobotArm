@@ -1,6 +1,6 @@
 gpu: 0
 base: TwinDelayedDDPG
-num_actors: 16
+num_actors: 8
 alg_args:
   polyak: 0.001
   learning_rate: 0.0001
@@ -14,7 +14,7 @@ env:
   env_kwargs:
     obs_space_keys: ["cube", "arm"]
   exploration_kwargs:
-    sigma_epsilon: [0.01, 0.1]
+    sigma_epsilon: [0.00, 0.1]
 buffer:
   size: 100000
   cpp: True
@@ -25,8 +25,9 @@ neural_network:
   build_actor:
     name: "Actor_uni"
     reg: 0.0000001
+    noisy_head: True
 actor_resource:
-  num_gpus: 0
+  num_gpus: 0.125
 train:
   rollout_size: 70
   max_eps: 48000
