@@ -27,7 +27,7 @@ neural_network:
     reg: 0.0000001
     noisy_head: True
 actor_resource:
-  num_gpus: 0.125
+  num_gpus: 0.05
 train:
   rollout_size: 70
   max_eps: 48000
