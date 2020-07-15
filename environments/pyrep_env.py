@@ -56,10 +56,10 @@ class RozumEnv(gym.Env):
         high = np.array([bound[0] + bound[1] for bound in angle_bounds] + [1., 1., 1., 1., 1.])
         self._available_obs_spaces['arm'] = gym.spaces.Box(low=low, high=high, dtype=np.float32)
         self._render_dict['arm'] = self.get_arm_state
-        self._available_obs_spaces['cube'] = gym.spaces.Box(shape=(7,),
-                                                            low=0, high=100,
+        self._available_obs_spaces['cube'] = gym.spaces.Box(shape=(6,),
+                                                            low=-np.inf, high=np.inf,
                                                             dtype=np.float32)
-        self._render_dict['cube'] = self.cube.get_pose
+        self._render_dict['cube'] = self.get_cube_state
         try:
             if len(self.obs_space_keys) > 1:
                 self.observation_space = gym.spaces.Dict({key: self._available_obs_spaces[key]
@@ -99,6 +99,11 @@ class RozumEnv(gym.Env):
         arm += self.gripper.get_open_amount()
         arm += self.rozum_tip.get_position().tolist()
         return arm
+
+    def get_cube_state(self):
+        box = self.cube.get_pose().tolist()
+        box += self.cube.get_orientation().tolist()
+        return box
 
     def sample_action(self):
         return self.action_space.sample()
