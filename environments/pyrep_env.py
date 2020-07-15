@@ -101,7 +101,7 @@ class RozumEnv(gym.Env):
         return arm
 
     def get_cube_state(self):
-        box = self.cube.get_pose().tolist()
+        box = self.cube.get_position().tolist()
         box += self.cube.get_orientation().tolist()
         return box
 
