@@ -111,7 +111,6 @@ class RozumEnv(gym.Env):
     def step(self, action: list):
         done = False
         info = dict()
-        print(action)
         joint_action, ee_action = action[:-1], action[-1]
         current_ee = (1.0 if np.mean(self.gripper.get_open_amount()) > 0.9
                       else 0.0)
