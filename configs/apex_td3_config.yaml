@@ -6,8 +6,8 @@ alg_args:
   learning_rate: 0.0001
   actor_lr: 0.0001
   log_freq: 1000
-  noise_sigma: 0.005
-  noise_clip: 0.01
+  noise_sigma: [0.005, 0.005, 0.005, 0.005, 0.005, 0.005, 0.4]
+  noise_clip: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.5]
   delay: 2
 env:
   discretize: False
