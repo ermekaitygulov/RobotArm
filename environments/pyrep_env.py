@@ -38,8 +38,8 @@ class RozumEnv(gym.Env):
 
         # Action and Observation spaces
         self.angles_scale = np.array([np.pi for _ in range(self.rozum.num_joints)])
-        low = np.array([-5/180 for _ in range(self.rozum.num_joints)] + [0., ])
-        high = np.array([5/180 for _ in range(self.rozum.num_joints)] + [1., ])
+        low = np.array([-20/180 for _ in range(self.rozum.num_joints)] + [0., ])
+        high = np.array([20/180 for _ in range(self.rozum.num_joints)] + [1., ])
         self.action_space = gym.spaces.Box(low=low,
                                            high=high)
         angle_bounds = self.rozum.get_joint_intervals()[1]

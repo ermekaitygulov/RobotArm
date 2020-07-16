@@ -271,18 +271,22 @@ class PopPov(gym.Wrapper):
 
 
 class RozumLogWrapper(gym.Wrapper):
-    def __init__(self, env, window, name='agent'):
+    def __init__(self, env, window, name='agent', log_distance=False, log_actions=False):
         super(RozumLogWrapper, self).__init__(env)
         self.accuracy = deque(maxlen=window)
         self.name = name
         self.episodes_done = 0
-        self.eps_distances = list()
+        self.eps_distances = [log_distance, list()]
+        self.taken_actions = [log_actions, list()]
 
     def step(self, action):
         observation, reward, done, info = self.env.step(action)
         if 'grasped' in info.keys():
             self.accuracy.append(info['grasped'])
-        self.eps_distances.append(info['distance'])
+        if self.eps_distances[0]:
+            self.eps_distances[1].append(info['distance'])
+        if self.taken_actions[0]:
+            self.taken_actions[1].append(action)
         if done:
             self.episodes_done += 1
         return observation, reward, done, info
@@ -294,9 +298,15 @@ class RozumLogWrapper(gym.Wrapper):
             mean = sum(self.accuracy)/len(self.accuracy)
             tf.summary.scalar('accuracy', mean, step=self.episodes_done)
             print('{}_accuracy: {}'.format(self.name, mean))
-        if len(self.eps_distances) > 0:
-            tf.summary.histogram('distance', self.eps_distances, step=self.episodes_done)
-            self.eps_distances = list()
+        if len(self.eps_distances[1]) > 0:
+            tf.summary.histogram('distance', self.eps_distances[1], step=self.episodes_done)
+            self.eps_distances[1] = list()
+        if len(self.taken_actions[1]) > 0:
+            dimensions_num = len(self.taken_actions[1][0])
+            for i in range(dimensions_num):
+                actions = [a[i] for a in self.taken_actions[1]]
+                tf.summary.histogram('{}_action'.format(i), actions, step=self.episodes_done)
+            self.taken_actions[1] = list()
         return observation
 
 

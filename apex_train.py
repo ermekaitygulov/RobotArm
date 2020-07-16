@@ -23,9 +23,9 @@ def make_env(thread_id, n_actors=None, exploration_kwargs=None, env_kwargs=None,
     expl_values = apex_ranging(exploration_kwargs, thread_id, n_actors) if exploration_kwargs else {}
     environment = RozumEnv(**env_kwargs)
     if thread_id >= 0:
-        environment = RozumLogWrapper(environment, 10, '{}_thread'.format(thread_id))
+        environment = RozumLogWrapper(environment, 100, '{}_thread'.format(thread_id))
     if thread_id == -1:
-        environment = RozumLogWrapper(environment, 10, 'Evaluate_thread')
+        environment = RozumLogWrapper(environment, 100, 'Evaluate_thread', log_actions=True)
     if frame_stack > 1:
         environment = stack_env(environment, frame_stack)
     if discretize:
