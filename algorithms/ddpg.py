@@ -22,13 +22,21 @@ class DeepDPG(TDPolicy):
         update_target_variables(self.target_actor.weights, self.online_actor.weights)
         self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
         self.polyak = polyak
+        self.action_space = action_space
+
+    @tf.function
+    def scale_output(self, x):
+        x = tf.keras.activations.tanh(x)
+        x = x * (self.action_space.high - self.action_space.low) / 2\
+            + (self.action_space.high + self.action_space.low) / 2
+        return x
 
     def choose_act(self, state, action_sampler=None):
         if isinstance(state, dict):
             inputs = {key: np.array(value)[None] for key, value in state.items()}
         else:
             inputs = np.array(state)[None]
-        action = self.online_actor(inputs, training=False)[0]
+        action = self.scale_output(self.online_actor(inputs, training=False))[0]
         if action_sampler:
             action = action_sampler(action)
         q_value = self.online_critic({'state': inputs, 'action': action[None]}, training=False)[0]
@@ -52,7 +60,7 @@ class DeepDPG(TDPolicy):
         actor_variables = self.online_actor.trainable_variables
         with tf.GradientTape() as tape:
             tape.watch(actor_variables)
-            action = self.online_actor(state, training=True)
+            action = self.scale_output(self.online_actor(state, training=True))
             q_value = -tf.reduce_mean(weights * self.online_critic({'state': state, 'action': action}, training=True))
             self.update_metrics('actor_loss', q_value)
             l2 = tf.add_n(self.online_actor.losses)
@@ -105,7 +113,7 @@ class DeepDPG(TDPolicy):
     @tf.function
     def compute_target(self, next_state, done, reward, actual_n, gamma):
         print("Compute_target tracing")
-        action = self.target_actor(next_state, training=True)
+        action = self.scale_output(self.target_actor(next_state, training=True))
         target = self.target_critic({'state': next_state, 'action': action}, training=True)
         target = tf.squeeze(target)
         target = tf.where(done, tf.zeros_like(target), target)

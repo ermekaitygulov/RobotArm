@@ -73,7 +73,7 @@ class TwinDelayedDDPG(DeepDPG):
     @tf.function
     def compute_target(self, next_state, done, reward, actual_n, gamma):
         print("Compute_target tracing")
-        action = self.target_actor(next_state, training=True)
+        action = self.scale_output(self.target_actor(next_state, training=True))
         noise = tf.random.normal(action.shape) * self.noise_sigma
         noise = tf.clip_by_value(noise, -self.noise_clip, self.noise_clip)
         action = action + noise
@@ -91,7 +91,7 @@ class TwinDelayedDDPG(DeepDPG):
         print("Actor update tracing")
         actor_variables = self.online_actor.trainable_variables
         with tf.GradientTape() as tape:
-            action = self.online_actor(state, training=True)
+            action = self.scale_output(self.online_actor(state, training=True))
             q_value1, _ = self.online_critic({'state': state, 'action': action}, training=True)
             q_value = -tf.reduce_mean(weights * q_value1)
             self.update_metrics('actor_loss', q_value)
@@ -109,7 +109,7 @@ class TwinDelayedDDPG(DeepDPG):
             inputs = {key: np.array(value)[None] for key, value in state.items()}
         else:
             inputs = np.array(state)[None]
-        action = self.online_actor(inputs, training=False)[0]
+        action = self.scale_output(self.online_actor(inputs, training=False))[0]
         if action_sampler:
             action = action_sampler(action)
         q_value, _ = self.online_critic({'state': inputs, 'action': action[None]}, training=False)
