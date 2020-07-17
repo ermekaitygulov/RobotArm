@@ -16,6 +16,7 @@ import gym
 def make_env(env_id, exploration_kwargs=None, frame_stack=4, discretize=True):
     exploration_kwargs = exploration_kwargs if exploration_kwargs else {}
     environment = gym.make(env_id)
+    environment = ActionDistributionLogger(environment)
     if frame_stack > 1:
         environment = stack_env(environment, frame_stack)
     if discretize:

@@ -310,6 +310,32 @@ class RozumLogWrapper(gym.Wrapper):
         return observation
 
 
+class ActionDistributionLogger(gym.Wrapper):
+    def __init__(self, env):
+        super(ActionDistributionLogger, self).__init__(env)
+        self.taken_actions = list()
+        self.episodes_done = 0
+
+    def step(self, action):
+        observation, reward, done, info = self.env.step(action)
+        self.taken_actions.append(action)
+        if done:
+            self.episodes_done += 1
+        return observation, reward, done, info
+
+    def reset(self, **kwargs):
+        import tensorflow as tf
+        observation = self.env.reset(**kwargs)
+        if len(self.taken_actions) > 0:
+            dimensions_num = len(self.taken_actions[0])
+            for i in range(dimensions_num):
+                actions = [a[i] for a in self.taken_actions]
+                tf.summary.histogram('{}_action'.format(i), actions, step=self.episodes_done)
+            self.taken_actions = list()
+        return observation
+
+
+
 class CorrelatedExploration(gym.Wrapper):
     def __init__(self, env, mu, sigma, theta=.15, dt=1e-2):
         super(CorrelatedExploration, self).__init__(env)

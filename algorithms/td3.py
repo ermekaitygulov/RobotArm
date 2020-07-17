@@ -8,7 +8,7 @@ from nn_models.building_blocks import make_twin
 class TwinDelayedDDPG(DeepDPG):
     def __init__(self, build_critic, build_actor, obs_space, action_space,
                  polyak=0.001, actor_lr=1e-4, delay=2, noise_sigma=0.05, noise_clip=0.1,
-                 *args, **kwargs):
+                 action_reg=1., *args, **kwargs):
         self.noise_sigma = np.array(noise_sigma)
         self.noise_clip = np.array(noise_clip)
         build_twin_critic = make_twin(build_critic)
@@ -17,6 +17,7 @@ class TwinDelayedDDPG(DeepDPG):
         self.delay = delay
         self.action_min = action_space.low
         self.action_max = action_space.high
+        self.action_reg=action_reg
 
     @tf.function
     def nn_update(self, state, action, next_state, done, reward,
@@ -91,13 +92,17 @@ class TwinDelayedDDPG(DeepDPG):
         print("Actor update tracing")
         actor_variables = self.online_actor.trainable_variables
         with tf.GradientTape() as tape:
-            action = self.scale_output(self.online_actor(state, training=True))
+            pre_activation = self.online_actor(state, training=True)
+            action = self.scale_output(pre_activation)
             q_value1, _ = self.online_critic({'state': state, 'action': action}, training=True)
             q_value = -tf.reduce_mean(weights * q_value1)
             self.update_metrics('actor_loss', q_value)
             l2 = tf.add_n(self.online_actor.losses)
             self.update_metrics('actor_l2', l2)
-            loss = q_value + l2
+            square_preactivation = tf.reduce_mean(tf.square(pre_activation), axis=-1) * weights
+            square_preactivation = self.action_reg * tf.reduce_mean(square_preactivation)
+            self.update_metrics('pre_activation^2', square_preactivation)
+            loss = q_value + l2 + square_preactivation
         gradients = tape.gradient(loss, actor_variables)
         for i, g in enumerate(gradients):
             self.update_metrics('Actor_Gradient_norm', tf.norm(g))

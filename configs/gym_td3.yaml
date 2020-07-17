@@ -2,7 +2,7 @@ base: TwinDelayedDDPG
 gpu: 0
 env:
   discretize: False
-  env_id: 'CarRacing-v0'
+  env_id: 'LunarLanderContinuous-v2'
   exploration_kwargs:
     sigma: 0.1
 buffer:
@@ -21,6 +21,7 @@ agent:
   gamma: 0.99
   learning_rate: 0.0001
   n_step: 10
+  action_reg: 0.
 train:
   episodes: 200
 log_dir: "train/"
