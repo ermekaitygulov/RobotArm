@@ -21,7 +21,6 @@ agent:
   gamma: 0.99
   learning_rate: 0.0001
   n_step: 10
-  action_reg: 0.
 train:
   episodes: 200
 log_dir: "train/"
