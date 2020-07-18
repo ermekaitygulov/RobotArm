@@ -121,6 +121,7 @@ class RozumEnv(gym.Env):
             ee_action = 0.0
         if current_ee != ee_action:
             gripper_done = False
+            self.rozum.set_joint_target_positions(self.rozum.get_joint_positions())
             while not gripper_done:
                 gripper_done = self.gripper.actuate(ee_action, velocity=0.2)
                 self.sim_step()
