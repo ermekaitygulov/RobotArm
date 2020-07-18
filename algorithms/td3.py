@@ -17,7 +17,7 @@ class TwinDelayedDDPG(DeepDPG):
         self.delay = delay
         self.action_min = action_space.low
         self.action_max = action_space.high
-        self.action_reg=action_reg
+        self.action_reg = np.expand_dims(np.array(action_reg), axis=0)
 
     @tf.function
     def nn_update(self, state, action, next_state, done, reward,
@@ -99,8 +99,9 @@ class TwinDelayedDDPG(DeepDPG):
             self.update_metrics('actor_loss', q_value)
             l2 = tf.add_n(self.online_actor.losses)
             self.update_metrics('actor_l2', l2)
-            square_preactivation = tf.reduce_mean(tf.square(pre_activation), axis=-1) * weights
-            square_preactivation = self.action_reg * tf.reduce_mean(square_preactivation)
+            square_preactivation = tf.square(pre_activation) * self.action_reg
+            square_preactivation = tf.reduce_mean(square_preactivation, axis=-1) * weights
+            square_preactivation = tf.reduce_mean(square_preactivation)
             self.update_metrics('pre_activation^2', square_preactivation)
             loss = q_value + l2 + square_preactivation
         gradients = tape.gradient(loss, actor_variables)
