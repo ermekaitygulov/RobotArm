@@ -9,7 +9,7 @@ alg_args:
   noise_sigma: 0.001
   noise_clip: 0.01
   delay: 2
-  action_reg: [1., 1., 1., 1., 1., 1., 0.]
+  action_reg: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.]
 env:
   discretize: False
   env_kwargs:
