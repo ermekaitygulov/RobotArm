@@ -137,10 +137,11 @@ class RozumEnv(gym.Env):
                 self.sim_step()
                 self.current_step += 1
         x, y, z = self.rozum_tip.get_position()
+        _, _, arm_z = self.rozum.joints[-1].get_position()
         tx, ty, tz = self.cube.get_position()
         current_distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
-        pose_filter = z > tz
-        reward = tolerance(current_distance, (0.0, 0.01), 0.1)/10 * pose_filter
+        pose_filter = arm_z > (tz + 0.05)
+        reward = tolerance(current_distance, (0.0, 0.01), 0.25)/10 * pose_filter
         state = self.render()
         info['distance'] = current_distance
         if grasped:
