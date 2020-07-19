@@ -14,6 +14,7 @@ env:
   discretize: False
   env_kwargs:
     obs_space_keys: ["cube", "arm"]
+    pose_sigma: 5
   exploration_kwargs:
     sigma_epsilon: [0.01, 0.1]
 buffer:
