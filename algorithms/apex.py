@@ -57,7 +57,6 @@ class Learner:
         for dim in range(data.shape[-1]):
             self.tf.summary.histogram('{}/{}_{}'.format(key, dim, key), data[:, dim], step=self.q_optimizer.iterations)
 
-
     @ray.method(num_return_vals=2)
     def get_weights(self):
         for model in self.online_models:
