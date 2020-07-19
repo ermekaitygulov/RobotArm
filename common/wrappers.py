@@ -335,7 +335,6 @@ class ActionDistributionLogger(gym.Wrapper):
         return observation
 
 
-
 class CorrelatedExploration(gym.Wrapper):
     def __init__(self, env, mu, sigma, theta=.15, dt=1e-2):
         super(CorrelatedExploration, self).__init__(env)

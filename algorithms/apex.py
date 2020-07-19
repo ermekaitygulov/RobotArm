@@ -35,6 +35,8 @@ class Learner:
         with self.summary_writer.as_default():
             loss_list = list()
             indexes = ds.pop('indexes')
+            self.histogram(ds['state'], 'cube', -6)
+            self.histogram(ds['state'], 'arm', -17, -11, lambda x: x / np.pi * 180)
             ds = self.tf.data.Dataset.from_tensor_slices(ds)
             ds = ds.batch(batch_size)
             ds = ds.cache()
@@ -47,6 +49,14 @@ class Learner:
                 loss_list.append(priorities)
                 start_time = timeit.default_timer()
         return indexes, np.concatenate(loss_list)
+
+    def histogram(self, minibatch, key, left=None, right=None, operation=None):
+        data = minibatch[key][:, left:right]
+        if operation:
+            data = operation(data)
+        for dim in range(data.shape[-1]):
+            self.tf.summary.histogram('{}/{}_{}'.format(key, dim, key), data[:, dim], step=self.q_optimizer.iterations)
+
 
     @ray.method(num_return_vals=2)
     def get_weights(self):

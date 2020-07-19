@@ -25,7 +25,7 @@ def make_env(thread_id, n_actors=None, exploration_kwargs=None, env_kwargs=None,
     if thread_id >= 0:
         environment = RozumLogWrapper(environment, 100, '{}_thread'.format(thread_id))
     if thread_id == -1:
-        environment = RozumLogWrapper(environment, 100, 'Evaluate_thread', log_actions=True)
+        environment = RozumLogWrapper(environment, 100, 'Evaluate_thread')
     if frame_stack > 1:
         environment = stack_env(environment, frame_stack)
     if discretize:
