@@ -31,6 +31,8 @@ class RozumEnv(gym.Env):
         self.rozum.set_control_loop_enabled(True)
         self.gripper = BaxterGripper()
         self.gripper.set_control_loop_enabled(True)
+        self._initial_robot_state = (self.rozum.get_configuration_tree(),
+                                     self.gripper.get_configuration_tree())
         self.cube = Shape("Cube")
         self.graspable_objects = [self.cube, ]
         self.camera = VisionSensor("render")
@@ -77,7 +79,8 @@ class RozumEnv(gym.Env):
         self.reward_range = None
         self.current_step = 0
         self.step_limit = 200
-        self.init_angles = self.rozum.get_joint_positions()
+        self._start_arm_joint_pos = self.rozum.get_joint_positions()
+        self._start_gripper_joint_pos = self.gripper.get_joint_positions()
         self.init_cube_pose = self.cube.get_pose()
         self.pose_sigma = pose_sigma
 
@@ -157,15 +160,25 @@ class RozumEnv(gym.Env):
         return state, reward, done, info
 
     def reset(self):
-        self._pyrep.stop()
-        self._pyrep.start()
+        self.gripper.release()
+        arm, gripper = self._initial_robot_state
+        self._pyrep.set_configuration_tree(arm)
+        self._pyrep.set_configuration_tree(gripper)
+        self.rozum.set_joint_positions(self._start_arm_joint_pos)
+        self.rozum.set_joint_target_velocities(
+            [0] * len(self.rozum.joints))
+        self.gripper.set_joint_positions(
+            self._start_gripper_joint_pos)
+        self.gripper.set_joint_target_velocities(
+            [0] * len(self.gripper.joints))
+
         # Initialize scene
         pose = self.init_cube_pose.copy()
         pose[0] += np.random.uniform(0.0, 0.2)  # max distance ~ 0.76
         pose[1] += np.random.uniform(-0.15, 0.15)
         self.cube.set_pose(pose)
-        random_action = np.random.normal(0., self.pose_sigma, len(self.init_angles)) / 180 * np.pi
-        position = [angle + action for angle, action in zip(self.init_angles, random_action)]
+        random_action = np.random.normal(0., self.pose_sigma, len(self._start_arm_joint_pos)) / 180 * np.pi
+        position = [angle + action for angle, action in zip(self._start_arm_joint_pos, random_action)]
         self.rozum.set_joint_target_positions(position)
         for _ in range(4):
             self._pyrep.step()
