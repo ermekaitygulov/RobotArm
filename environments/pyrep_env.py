@@ -119,12 +119,12 @@ class RozumEnv(gym.Env):
         distance_mod = 3
         scale = 100  # m -> cm
 
-        previous_n = int(self._get_distance() * scale) // distance_mod
+        previous_n = int(self._get_distance(self.rozum_tip, self.cube) * scale) // distance_mod
         grasped = self._robot_step(ee_action, joint_action)
         _, _, arm_z = self.rozum.joints[-1].get_position()
         tx, ty, tz = self.cube.get_position()
         pose_filter = arm_z > (tz + 0.05)
-        current_distance = self._get_distance()
+        current_distance = self._get_distance(self.rozum_tip, self.cube)
         current_n = int(current_distance * scale) // distance_mod
         reward = (previous_n - current_n) * pose_filter
         state = self.render()
@@ -136,12 +136,15 @@ class RozumEnv(gym.Env):
         elif self.current_step >= self.step_limit:
             done = True
             info['grasped'] = 0
+        if self._get_distance(self.rozum.joints[0], self.cube) > 0.76:
+            done = True
+            reward = -1
         self.rewards.append(reward)
         return state, reward, done, info
 
-    def _get_distance(self):
-        x, y, z = self.rozum_tip.get_position()
-        tx, ty, tz = self.cube.get_position()
+    def _get_distance(self, first_object, second_object):
+        x, y, z = first_object.get_position()
+        tx, ty, tz = second_object.get_position()
         distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
         return distance
 
