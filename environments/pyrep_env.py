@@ -8,7 +8,6 @@ from pyrep.robots.end_effectors.baxter_gripper import BaxterGripper
 from pyrep.objects.vision_sensor import VisionSensor
 from pyrep.objects import Shape
 import numpy as np
-from common.rewards import tolerance
 
 
 class Rozum(Arm):
@@ -142,7 +141,8 @@ class RozumEnv(gym.Env):
         self.rewards.append(reward)
         return state, reward, done, info
 
-    def _get_distance(self, first_object, second_object):
+    @staticmethod
+    def _get_distance(first_object, second_object):
         x, y, z = first_object.get_position()
         tx, ty, tz = second_object.get_position()
         distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
