@@ -198,7 +198,7 @@ class SaveVideoWrapper(gym.Wrapper):
         :return: current observation
         """
         if self.current_episode > 0:
-            name = str(self.current_episode).zfill(4) + "r" + str(sum(map(int, self.rewards))).zfill(4) + ".mp4"
+            name = str(self.current_episode).zfill(4) + "r" + str(int(sum(self.rewards))).zfill(4) + ".mp4"
             full_path = os.path.join(self.path, name)
             upscaled_video = [self.upscale_image(image, self.resize) for image in self.recording]
             self.save_video(full_path, video=upscaled_video)

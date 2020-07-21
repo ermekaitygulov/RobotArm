@@ -116,9 +116,38 @@ class RozumEnv(gym.Env):
         done = False
         info = dict()
         joint_action, ee_action = action[:-1], action[-1]
+        grasped = self._robot_step(ee_action, joint_action)
+        distance_mod = 3
+        scale = 100  # m -> cm
+        previous_n = int(self._get_distance() * scale) // distance_mod
+        _, _, arm_z = self.rozum.joints[-1].get_position()
+        tx, ty, tz = self.cube.get_position()
+        pose_filter = arm_z > (tz + 0.05)
+        current_distance = self._get_distance()
+        current_n = int(current_distance * scale) // distance_mod
+        reward = (current_n - previous_n) * pose_filter
+        state = self.render()
+        info['distance'] = current_distance
+        if grasped:
+            reward += 10
+            done = True
+            info['grasped'] = 1
+        elif self.current_step >= self.step_limit:
+            done = True
+            info['grasped'] = 0
+        self.rewards.append(reward)
+        return state, reward, done, info
+
+    def _get_distance(self):
+        x, y, z = self.rozum_tip.get_position()
+        tx, ty, tz = self.cube.get_position()
+        distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
+        return distance
+
+    def _robot_step(self, ee_action, joint_action):
+        grasped = False
         current_ee = (1.0 if np.mean(self.gripper.get_open_amount()) > 0.9
                       else 0.0)
-        grasped = False
         if ee_action > 0.5:
             ee_action = 1.0
         elif ee_action < 0.5:
@@ -141,23 +170,7 @@ class RozumEnv(gym.Env):
             for _ in range(4):
                 self.sim_step()
                 self.current_step += 1
-        x, y, z = self.rozum_tip.get_position()
-        _, _, arm_z = self.rozum.joints[-1].get_position()
-        tx, ty, tz = self.cube.get_position()
-        current_distance = np.sqrt((x - tx) ** 2 + (y - ty) ** 2 + (z - tz) ** 2)
-        pose_filter = arm_z > (tz + 0.05)
-        reward = tolerance(current_distance, (0.0, 0.01), 0.25)/10 * pose_filter
-        state = self.render()
-        info['distance'] = current_distance
-        if grasped:
-            reward += 10
-            done = True
-            info['grasped'] = 1
-        elif self.current_step >= self.step_limit:
-            done = True
-            info['grasped'] = 0
-        self.rewards.append(reward)
-        return state, reward, done, info
+        return grasped
 
     def reset(self):
         self.gripper.release()
