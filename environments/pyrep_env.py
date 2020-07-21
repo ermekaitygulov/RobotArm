@@ -116,10 +116,11 @@ class RozumEnv(gym.Env):
         done = False
         info = dict()
         joint_action, ee_action = action[:-1], action[-1]
-        grasped = self._robot_step(ee_action, joint_action)
         distance_mod = 3
         scale = 100  # m -> cm
+
         previous_n = int(self._get_distance() * scale) // distance_mod
+        grasped = self._robot_step(ee_action, joint_action)
         _, _, arm_z = self.rozum.joints[-1].get_position()
         tx, ty, tz = self.cube.get_position()
         pose_filter = arm_z > (tz + 0.05)
