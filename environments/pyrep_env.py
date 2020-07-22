@@ -125,7 +125,9 @@ class RozumEnv(gym.Env):
         pose_filter = arm_z > (tz + 0.05)
         current_distance = self._get_distance(self.rozum_tip, self.cube)
         current_n = int(current_distance * scale) // distance_mod
-        reward = (previous_n - current_n) * pose_filter
+        reward = previous_n - current_n
+        if reward > 0:
+            reward *= pose_filter
         state = self.render()
         info['distance'] = current_distance
         if grasped:
