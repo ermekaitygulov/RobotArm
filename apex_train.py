@@ -20,10 +20,7 @@ from collections import defaultdict
 
 def make_env(thread_id, n_actors=None, exploration_kwargs=None, env_kwargs=None, frame_stack=4, discretize=True):
     env_kwargs = env_kwargs if env_kwargs else {}
-    if discretize:
-        expl_values = apex_ranging(exploration_kwargs, thread_id, n_actors) if exploration_kwargs else {}
-    else:
-        expl_values = exploration_kwargs
+    expl_values = apex_ranging(exploration_kwargs, thread_id, n_actors) if exploration_kwargs else {}
     environment = RozumEnv(**env_kwargs)
     if thread_id >= 0:
         environment = RozumLogWrapper(environment, 100, '{}_thread'.format(thread_id))
