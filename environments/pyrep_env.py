@@ -135,7 +135,7 @@ class RozumEnv(gym.Env):
         elif self.current_step >= self.step_limit:
             done = True
             info['grasped'] = 0
-        if self._get_distance(self.rozum.joints[0], self.cube) > 0.76:
+        elif self._get_distance(self.rozum.joints[0], self.cube) > 0.76:
             done = True
             reward = -1
         self.rewards.append(reward)
