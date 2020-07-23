@@ -305,7 +305,7 @@ class RozumLogWrapper(gym.Wrapper):
             mean = sum(self.accuracy)/len(self.accuracy)
             self.tf.summary.scalar('accuracy', mean, step=self.episodes_done)
             if self.wandb:
-                self.wandb.log({'accuracy': mean})
+                self.wandb.log({'accuracy': mean, 'episode': self.episodes_done})
             print('{}_accuracy: {}'.format(self.name, mean))
         if len(self.eps_distances[1]) > 0:
             self.tf.summary.histogram('distance', self.eps_distances[1], step=self.episodes_done)
