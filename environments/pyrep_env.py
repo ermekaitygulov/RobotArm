@@ -155,7 +155,7 @@ class RozumEnv(gym.Env):
 
     def _robot_step(self, ee_action, joint_action):
         grasped = False
-        current_ee = (1.0 if np.mean(self.gripper.get_open_amount()) > 0.9
+        current_ee = (1.0 if np.mean(self.gripper.get_open_amount()) > 0.8
                       else 0.0)
         if ee_action > 0.5:
             ee_action = 1.0

@@ -9,13 +9,13 @@ alg_args:
 env:
   env_kwargs:
     obs_space_keys: ["cube", "arm"]
+    pose_sigma: 5
   exploration_kwargs:
     epsilon: 0.15
 buffer:
   size: 1000000
 neural_network:
-  build_model:
-    name: "DuelingDQN_arm_cube"
+  build_model: "DuelingDQN_arm_cube"
 actor_resource:
   num_gpus: 0
 train:
