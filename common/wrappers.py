@@ -271,13 +271,21 @@ class PopPov(gym.Wrapper):
 
 
 class RozumLogWrapper(gym.Wrapper):
-    def __init__(self, env, window, name='agent', log_distance=False, log_actions=False):
+    def __init__(self, env, window, name='agent', log_distance=False, log_actions=False, wandb_group_id=None):
         super(RozumLogWrapper, self).__init__(env)
+        import tensorflow as tf
+        import wandb
+        self.tf = tf
         self.accuracy = deque(maxlen=window)
         self.name = name
         self.episodes_done = 0
         self.eps_distances = [log_distance, list()]
         self.taken_actions = [log_actions, list()]
+        if wandb_group_id:
+            self.wandb = wandb
+            self.wandb.init(anonymous='allow', project="Rozum", group=wandb_group_id)
+        else:
+            self.wandb = None
 
     def step(self, action):
         observation, reward, done, info = self.env.step(action)
@@ -292,20 +300,21 @@ class RozumLogWrapper(gym.Wrapper):
         return observation, reward, done, info
 
     def reset(self, **kwargs):
-        import tensorflow as tf
         observation = self.env.reset(**kwargs)
         if len(self.accuracy) == self.accuracy.maxlen:
             mean = sum(self.accuracy)/len(self.accuracy)
-            tf.summary.scalar('accuracy', mean, step=self.episodes_done)
+            self.tf.summary.scalar('accuracy', mean, step=self.episodes_done)
+            if self.wandb:
+                self.wandb.log({'accuracy': mean})
             print('{}_accuracy: {}'.format(self.name, mean))
         if len(self.eps_distances[1]) > 0:
-            tf.summary.histogram('distance', self.eps_distances[1], step=self.episodes_done)
+            self.tf.summary.histogram('distance', self.eps_distances[1], step=self.episodes_done)
             self.eps_distances[1] = list()
         if len(self.taken_actions[1]) > 0:
             dimensions_num = len(self.taken_actions[1][0])
             for i in range(dimensions_num):
                 actions = [a[i] for a in self.taken_actions[1]]
-                tf.summary.histogram('{}_action'.format(i), actions, step=self.episodes_done)
+                self.tf.summary.histogram('{}_action'.format(i), actions, step=self.episodes_done)
             self.taken_actions[1] = list()
         return observation
 

@@ -18,14 +18,15 @@ import wandb
 from collections import defaultdict
 
 
-def make_env(thread_id, n_actors=None, exploration_kwargs=None, env_kwargs=None, frame_stack=4, discretize=True):
+def make_env(thread_id, n_actors=None, exploration_kwargs=None, env_kwargs=None, frame_stack=4, discretize=True,
+             wandb_group_id=None):
     env_kwargs = env_kwargs if env_kwargs else {}
     expl_values = apex_ranging(exploration_kwargs, thread_id, n_actors) if exploration_kwargs else {}
     environment = RozumEnv(**env_kwargs)
     if thread_id >= 0:
         environment = RozumLogWrapper(environment, 100, '{}_thread'.format(thread_id))
     if thread_id == -1:
-        environment = RozumLogWrapper(environment, 100, 'Evaluate_thread')
+        environment = RozumLogWrapper(environment, 100, 'Evaluate_thread', wandb_group_id=wandb_group_id)
     if frame_stack > 1:
         environment = stack_env(environment, frame_stack)
     if discretize:
@@ -182,8 +183,10 @@ if __name__ == '__main__':
     os.environ["QT_DEBUG_PLUGINS"] = "0"
     ray.init(webui_host='0.0.0.0', num_gpus=1)
     if args.wandb:
-        wandb = wandb.init(anonymous='allow', project="Rozum")
+        group_id = config['base'] + '_' + str(wandb.util.generate_id())
+        wandb = wandb.init(anonymous='allow', project="Rozum", group=group_id)
         wandb.config.update(config)
+        config['env']['wandb_group_id'] = group_id
 
     learner, actors, replay_buffer, counter, evaluate = make_remote_base(config)
     apex(learner, actors, replay_buffer, counter, evaluate, args.wandb, **config['train'])
