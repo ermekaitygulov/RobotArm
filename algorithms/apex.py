@@ -1,3 +1,4 @@
+import os
 from collections import deque
 
 import gym
@@ -59,10 +60,6 @@ class Learner:
 
     @ray.method(num_return_vals=2)
     def get_weights(self):
-        for model in self.online_models:
-            model.save_weights('train/{}.ckpt'.format(model.name))
-        for model in self.target_models:
-            model.save_weights('train/{}.ckpt'.format(model.name))
         return self.get_online(), self.get_target()
 
 
@@ -83,6 +80,7 @@ class Actor:
         self.local_ep = 0
         self.avg_reward = deque([], maxlen=avg_window)
         self.summary_writer = self.tf.summary.create_file_writer('train/{}_actor/'.format(thread_id))
+        self._max_reward = -np.inf
 
     def __getattr__(self, name):
         if name.startswith('_'):
@@ -147,7 +145,7 @@ class Actor:
         ntd = batch['q_value'] - n_target
         return np.abs(ntd)
 
-    def test(self, *weights):
+    def test(self, save_dir, *weights):
         if weights:
             self.set_weights(*weights)
         with self.summary_writer.as_default():
@@ -161,9 +159,12 @@ class Actor:
                     self.tf.summary.flush()
                     self.avg_reward.append(score)
                     avg = sum(self.avg_reward)/len(self.avg_reward)
+                    if avg > self._max_reward:
+                        self._max_reward = avg
+                        self.save(out_dir=os.path.join(save_dir, 'max'))
                     stop_time = timeit.default_timer()
-                    print("Evaluate episode: {}  score: {:.3f}  {}_avg: {:.3f}"
-                          .format(self.local_ep, score, self.thread_id, avg))
+                    print("Evaluate episode: {}  score: {:.3f}  avg: {:.3f}  max_avg: {:.3f}"
+                          .format(self.local_ep, score, avg, self._max_reward))
                     print("RunTime: {:.3f}".format(stop_time - start_time))
                     self.local_ep += 1
         return score, self.local_ep

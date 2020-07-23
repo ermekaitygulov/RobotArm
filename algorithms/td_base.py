@@ -1,3 +1,4 @@
+import os
 import timeit
 from collections import deque
 import numpy as np
@@ -150,7 +151,12 @@ class TDPolicy:
 
     # Save Load
     def save(self, out_dir=None):
-        raise NotImplementedError
+        for model in self.online_models:
+            path = os.path.join(out_dir, '{}.ckpt'.format(model.name))
+            model.save_weights(path)
+        for model in self.target_models:
+            path = os.path.join(out_dir, '{}.ckpt'.format(model.name))
+            model.save_weights(path)
 
     def load(self, path=None):
         raise NotImplementedError

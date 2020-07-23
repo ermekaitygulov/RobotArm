@@ -6,7 +6,7 @@ alg_args:
   learning_rate: 0.0001
   actor_lr: 0.0001
   log_freq: 1000
-  noise_sigma: 0.001
+  noise_sigma: 0.005
   noise_clip: 0.01
   delay: 2
   action_reg: [1., 1., 1., 1., 1., 1., 0.]
@@ -31,7 +31,7 @@ actor_resource:
   num_gpus: 0
 train:
   rollout_size: 70
-  max_eps: 100000
+  max_eps: 50000
   replay_start_size: 10000
   batch_size: 256
   sync_nn_mod: 100

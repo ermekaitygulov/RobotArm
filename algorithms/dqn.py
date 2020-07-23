@@ -81,9 +81,8 @@ class DoubleDuelingDQN(TDPolicy):
     def target_update(self):
         self.target_model.set_weights(self.online_model.get_weights())
 
-    def save(self, out_dir=None):
-        name = self.online_model.name + '.ckpt'
-        self.online_model.save_weights(os.path.join(out_dir, name))
-
-    def load(self, path=None):
-        self.online_model.load_weights(path)
+    def load(self, online_path=None, target_path=None):
+        if online_path:
+            self.online_model.load_weights(online_path)
+        if target_path:
+            self.target_model.load_weights(target_path)

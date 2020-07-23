@@ -121,7 +121,8 @@ def make_remote_base(apex_config):
 
 def apex(remote_learner, remote_actors, main_buffer, remote_counter, remote_evaluate,
          log_wandb=False, max_eps=1000, replay_start_size=1000, batch_size=128,
-         sync_nn_mod=100, number_of_batchs=16, beta=0.4, rollout_size=70):
+         sync_nn_mod=100, number_of_batchs=16, beta=0.4, rollout_size=70,
+         save_nn_mod=100, save_dir='train'):
     # Start tasks
     online_weights, target_weights = remote_learner.get_weights.remote()
     start_learner = False
@@ -143,6 +144,8 @@ def apex(remote_learner, remote_actors, main_buffer, remote_counter, remote_eval
             start_time = timeit.default_timer()
             if optimization_step % sync_nn_mod == 0:
                 online_weights, target_weights = first.get_weights.remote()
+            if optimization_step % save_nn_mod == 0:
+                first.save.remote(save_dir)
             rollouts[first.update_from_ds.remote(ds, start_time, batch_size)] = first
             indexes, priorities = ray.get(first_id)
             indexes = indexes.copy()
@@ -153,7 +156,7 @@ def apex(remote_learner, remote_actors, main_buffer, remote_counter, remote_eval
             score, eps_number = ray.get(first_id)
             if log_wandb:
                 wandb.log({'Score': score, 'episode': eps_number})
-            rollouts[remote_evaluate.test.remote(online_weights, target_weights)] = remote_evaluate
+            rollouts[remote_evaluate.test.remote(save_dir, online_weights, target_weights)] = remote_evaluate
         else:
             rollouts[first.rollout.remote(rollout_size, online_weights, target_weights)] = first
             data, priorities = ray.get(first_id)

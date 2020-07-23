@@ -121,12 +121,6 @@ class DeepDPG(TDPolicy):
         target = target + reward
         return target
 
-    def save(self, out_dir=None):
-        name = self.online_critic.name + '.ckpt'
-        self.online_critic.save_weights(os.path.join(out_dir, name))
-        name = self.online_actor.name + '.ckpt'
-        self.online_actor.save_weights(os.path.join(out_dir, name))
-
     def load(self, online_actor_path=None, online_critic_path=None,
              target_actor_path=None, target_critic_path=None):
         if online_actor_path:
