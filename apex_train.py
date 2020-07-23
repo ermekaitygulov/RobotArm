@@ -21,8 +21,6 @@ from collections import defaultdict
 def make_env(thread_id, n_actors=None, exploration_kwargs=None, env_kwargs=None, frame_stack=4, discretize=True):
     env_kwargs = env_kwargs if env_kwargs else {}
     expl_values = apex_ranging(exploration_kwargs, thread_id, n_actors) if exploration_kwargs else {}
-    if thread_id == -1:
-        env_kwargs['video_path'] = 'train/'
     environment = RozumEnv(**env_kwargs)
     if thread_id >= 0:
         environment = RozumLogWrapper(environment, 100, '{}_thread'.format(thread_id))
@@ -129,7 +127,7 @@ def apex(remote_learner, remote_actors, main_buffer, remote_counter, remote_eval
     rollouts = {}
     for a in remote_actors:
         rollouts[a.rollout.remote(rollout_size, online_weights, target_weights)] = a
-    rollouts[remote_evaluate.test.remote(online_weights, target_weights)] = remote_evaluate
+    rollouts[remote_evaluate.test.remote(save_dir, online_weights, target_weights)] = remote_evaluate
     episodes_done = ray.get(remote_counter.get_value.remote())
     optimization_step = 0
     priority_dict, ds = None, None
@@ -143,9 +141,8 @@ def apex(remote_learner, remote_actors, main_buffer, remote_counter, remote_eval
             optimization_step += 1
             start_time = timeit.default_timer()
             if optimization_step % sync_nn_mod == 0:
-                online_weights, target_weights = first.get_weights.remote()
-            if optimization_step % save_nn_mod == 0:
-                first.save.remote(save_dir)
+                save = (optimization_step % save_nn_mod == 0) * save_dir
+                online_weights, target_weights = first.get_weights.remote(save)
             rollouts[first.update_from_ds.remote(ds, start_time, batch_size)] = first
             indexes, priorities = ray.get(first_id)
             indexes = indexes.copy()

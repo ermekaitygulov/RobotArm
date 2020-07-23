@@ -59,7 +59,9 @@ class Learner:
             self.tf.summary.histogram('{}/{}_{}'.format(key, dim, key), data[:, dim], step=self.q_optimizer.iterations)
 
     @ray.method(num_return_vals=2)
-    def get_weights(self):
+    def get_weights(self, save_dir=None):
+        if save_dir:
+            self.save(save_dir)
         return self.get_online(), self.get_target()
 
 
