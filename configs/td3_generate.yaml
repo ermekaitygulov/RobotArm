@@ -10,6 +10,12 @@ neural_network:
   build_actor: "Actor_uni"
 actor_resource:
   num_gpus: 0
+actors:
+  pretrain_weights:
+    online_actor_path: 'train/Online_actor.ckpt'
+    online_critic_path: 'train/twin_critic.ckpt'
+    target_actor_path: 'train/Target_actor.ckpt'
+    target_critic_path: 'train/twin_critic_1.ckpt'
 generate:
   max_eps: 1000
   num_actors: 32
