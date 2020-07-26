@@ -34,6 +34,7 @@ if __name__ == '__main__':
     config_gpu()
     data_loader = DataLoader(**config['data_loader'])
     env_dict, dtype_dict = get_dtype_dict(data_loader.observation_space, data_loader.action_space)
+    env_dict.update(demo='float32'), dtype_dict.update(demo='float32')
     replay_buffer = DQfDBuffer(env_dict=env_dict, **config['buffer'])
     if isinstance(data_loader.observation_space, gym.spaces.Dict):
         state_keys = data_loader.observation_space.spaces.keys()
