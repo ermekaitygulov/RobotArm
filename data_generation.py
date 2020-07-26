@@ -23,7 +23,7 @@ def make_env(thread_id, n_actors, env_kwargs=None, frame_stack=4, discretize=Tru
     else:
         environment = make_continuous_env(environment, 0., (0., 0.))
     environment = DataSave(environment, save_path, n_actors, thread_id)
-    environment = PopPov(environment)
+    environment = PopPov(environment, True)
     return environment
 
 

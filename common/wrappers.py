@@ -253,16 +253,22 @@ class SaveVideoWrapper(gym.Wrapper):
 
 
 class PopPov(gym.Wrapper):
-    def __init__(self, env):
+    def __init__(self, env, copy=False):
         super(PopPov, self).__init__(env)
         self.observation_space = gym.spaces.Dict({key: value for key, value
                                                   in self.env.observation_space.spaces.items()
                                                   if key != 'pov'})
+        self.copy = copy
 
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
-        obs.pop('pov')
-        return obs, reward, done, info
+        if self.copy:
+            new_obs = obs.copy()
+            new_obs.pop('pov')
+            return new_obs, reward, done, info
+        else:
+            obs.pop('pov')
+            return obs, reward, done, info
 
     def reset(self):
         obs = self.env.reset()
