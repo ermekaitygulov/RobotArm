@@ -272,8 +272,13 @@ class PopPov(gym.Wrapper):
 
     def reset(self):
         obs = self.env.reset()
-        obs.pop('pov')
-        return obs
+        if self.copy:
+            new_obs = obs.copy()
+            new_obs.pop('pov')
+            return new_obs
+        else:
+            obs.pop('pov')
+            return obs
 
 
 class RozumLogWrapper(gym.Wrapper):
