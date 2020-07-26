@@ -147,7 +147,7 @@ class Actor:
         ntd = batch['q_value'] - n_target
         return np.abs(ntd)
 
-    def test(self, save_dir, *weights):
+    def test(self, save_dir=None, *weights):
         if weights:
             self.set_weights(*weights)
         with self.summary_writer.as_default():
@@ -163,7 +163,8 @@ class Actor:
                     avg = sum(self.avg_reward)/len(self.avg_reward)
                     if avg > self._max_reward:
                         self._max_reward = avg
-                        self.save(out_dir=os.path.join(save_dir, 'max'))
+                        if save_dir:
+                            self.save(out_dir=os.path.join(save_dir, 'max'))
                     stop_time = timeit.default_timer()
                     print("Evaluate episode: {}  score: {:.3f}  avg: {:.3f}  max_avg: {:.3f}"
                           .format(self.local_ep, score, avg, self._max_reward))
