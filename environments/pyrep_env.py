@@ -1,12 +1,15 @@
 import os
+from random import random, sample
 
 import cv2
 import gym
 from pyrep import PyRep
+from pyrep.const import PrimitiveShape
 from pyrep.robots.arms.arm import Arm
 from pyrep.robots.end_effectors.baxter_gripper import BaxterGripper
 from pyrep.objects.vision_sensor import VisionSensor
 from pyrep.objects import Shape
+from pyrep.backend import sim
 import numpy as np
 
 
@@ -20,7 +23,7 @@ class RozumEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self, obs_space_keys=('pov', 'arm'), scene_file='rozum_pyrep.ttt',
-                 headless=True, video_path=None, pose_sigma=20):
+                 headless=True, video_path=None, pose_sigma=20, randomize=False, sparse=False):
         self.obs_space_keys = (obs_space_keys,) if isinstance(obs_space_keys, str) else obs_space_keys
         # PyRep
         self._pyrep = PyRep()
@@ -82,6 +85,8 @@ class RozumEnv(gym.Env):
         self._start_gripper_joint_pos = self.gripper.get_joint_positions()
         self.init_cube_pose = self.cube.get_pose()
         self.pose_sigma = pose_sigma
+        self.sparse = sparse
+        self.randomize = randomize
 
         # Video
         self.recording = list()
@@ -125,9 +130,11 @@ class RozumEnv(gym.Env):
         pose_filter = arm_z > (tz + 0.05)
         current_distance = self._get_distance(self.rozum_tip, self.cube)
         current_n = int(current_distance * scale) // distance_mod
-        reward = previous_n - current_n
-        if reward > 0:
-            reward *= pose_filter
+        reward = 0
+        if not self.sparse:
+            reward += previous_n - current_n
+            if reward > 0:
+                reward *= pose_filter
         state = self.render()
         info['distance'] = current_distance
         if grasped:
@@ -195,6 +202,8 @@ class RozumEnv(gym.Env):
             [0] * len(self.gripper.joints))
 
         # Initialize scene
+        if self.randomize:
+            self.randomize_object()
         pose = self.init_cube_pose.copy()
         pose[0] += np.random.uniform(0.0, 0.2)  # max distance ~ 0.76
         pose[1] += np.random.uniform(-0.15, 0.15)
@@ -249,3 +258,27 @@ class RozumEnv(gym.Env):
             out.write(image)
         out.release()
         cv2.destroyAllWindows()
+
+    def randomize_object(self):
+        handle = self.cube.get_handle()
+        sim.simRemoveObject(handle)
+        sizes = [max(random() * 0.1, 0.02), 0.05]
+        objects = list()
+        position = [0, 0, 0]
+        mass = 0.1
+        # Create cube with random size
+        s = sizes[0]
+        objects.append(Shape.create(type=PrimitiveShape.CUBOID,
+                                    size=[s, s, s], position=position,
+                                    mass=mass))
+        index = sample(range(len(position) - 1), 1)[0]
+        sign = sample([1, -1], 1)[0]
+        position[index] += sum(sizes) * 0.5 * sign
+        s = sizes[-1]
+        # Create cube with fix size
+        objects.append(Shape.create(type=PrimitiveShape.CUBOID,
+                                    size=[s, s, s], position=position,
+                                    mass=mass))
+        handles = [o.get_handle() for o in objects]
+        handle = sim.simGroupShapes(handles)
+        self.cube = Shape(handle)
