@@ -49,7 +49,7 @@ if __name__ == '__main__':
     base = getattr(algorithms, config['base'])
     agent = base(obs_space=data_loader.observation_space, action_space=data_loader.action_space,
                  replay_buff=replay_buffer, dtype_dict=dtype_dict,
-                 **config['agent'], **network_kwargs)
+                 **config['alg_args'], **network_kwargs)
     if 'pretrain_weights' in config:
         agent.load(**config['pretrain_weights'])
     agent.add_demo(data_loader)
