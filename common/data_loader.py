@@ -27,10 +27,10 @@ class DataLoader:
                 observations = data['observation']
                 if self.obs_keys:
                     if len(self.obs_keys) == 1:
-                        observations = observations[self.obs_keys[0]]
+                        observations = [o[self.obs_keys[0]] for o in observations]
                     else:
-                        observations = {key: data for key, data in observations.items()
-                                        if key in self.obs_keys}
+                        observations = [{key: data for key, data in o.items()
+                                        if key in self.obs_keys} for o in observations]
                 for transition in zip(observations[:-1], data['action'], data['reward'],
                                       observations[1:], data['done']):
                     yield transition
