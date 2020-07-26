@@ -41,3 +41,4 @@ train:
   number_of_batchs: 16
 pretrain:
   steps: 100000
+  log_dir: 'train/'
