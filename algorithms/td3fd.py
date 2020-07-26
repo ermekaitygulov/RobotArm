@@ -52,7 +52,7 @@ class TwinDelayedDDPGfD(TwinDelayedDDPG):
     @staticmethod
     def behaviour_clone(action, action_expert, q_value, q_value_expert,
                         demo, weights):
-        mse = tf.square(action - action_expert) * weights * demo
+        mse = tf.reduce_mean(tf.square(action - action_expert), axis=-1) * weights * demo
         mse = tf.where(q_value_expert < q_value, mse, 0.)
         mse = tf.reduce_mean(mse)
         return mse
