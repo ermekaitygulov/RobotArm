@@ -7,7 +7,7 @@ class DataLoader:
     def __init__(self, path, obs_keys=('pov',)):
         self.path = path
         file = [f for f in os.listdir(self.path) if f.endswith(".pkl")][0]
-        sample_data = self.load_obj(file)
+        sample_data = self.load_obj(os.path.join(self.path, file))
         self.action_space = sample_data['acs_space']
         if isinstance(sample_data['obs_space'], Dict):
             if len(obs_keys) == 1:
