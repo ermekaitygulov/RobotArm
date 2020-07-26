@@ -282,3 +282,4 @@ class RozumEnv(gym.Env):
         handles = [o.get_handle() for o in objects]
         handle = sim.simGroupShapes(handles)
         self.cube = Shape(handle)
+        self.graspable_objects = [self.cube, ]
