@@ -4,11 +4,12 @@ env:
   discretize: False
   env_kwargs:
     obs_space_keys: ["pov", "cube", "arm"]
+    randomize: True
 neural_network:
   build_critic: "Critic_uni"
   build_actor: "Actor_uni"
 actor_resource:
   num_gpus: 0
 generate:
-  max_eps: 10
-  num_actors: 2
+  max_eps: 1000
+  num_actors: 32
