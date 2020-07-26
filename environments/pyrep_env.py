@@ -23,7 +23,8 @@ class RozumEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self, obs_space_keys=('pov', 'arm'), scene_file='rozum_pyrep.ttt',
-                 headless=True, video_path=None, pose_sigma=20, randomize=False, sparse=False):
+                 headless=True, video_path=None, pose_sigma=20, randomize=False, sparse=False,
+                 camera_resolution=(256, 256)):
         self.obs_space_keys = (obs_space_keys,) if isinstance(obs_space_keys, str) else obs_space_keys
         # PyRep
         self._pyrep = PyRep()
@@ -38,6 +39,7 @@ class RozumEnv(gym.Env):
         self.cube = Shape("Cube")
         self.graspable_objects = [self.cube, ]
         self.camera = VisionSensor("render")
+        self.camera.set_resolution(camera_resolution)
         self.rozum_tip = self.rozum.get_tip()
 
         # Action and Observation spaces

@@ -5,6 +5,7 @@ env:
   env_kwargs:
     obs_space_keys: ["pov", "cube", "arm"]
     randomize: True
+    camera_resolution: [128, 128]
 neural_network:
   build_critic: "Critic_uni"
   build_actor: "Actor_uni"
@@ -18,4 +19,4 @@ actors:
     target_critic_path: 'train/twin_critic_1.ckpt'
 generate:
   max_eps: 1000
-  num_actors: 32
+  num_actors: 16
