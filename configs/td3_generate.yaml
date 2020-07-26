@@ -3,14 +3,10 @@ base: TwinDelayedDDPG
 env:
   discretize: False
   env_kwargs:
-    obs_space_keys: ["cube", "arm"]
+    obs_space_keys: ["pov", "cube", "arm"]
 neural_network:
-  build_critic:
-    name: "Critic_uni"
-    reg: 0.0000001
-  build_actor:
-    name: "Actor_uni"
-    reg: 0.0000001
+  build_critic: "Critic_uni"
+  build_actor: "Actor_uni"
 actor_resource:
   num_gpus: 0
 generate:
