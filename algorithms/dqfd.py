@@ -61,9 +61,6 @@ class DQfromDemonstrations(DoubleDuelingDQN):
         j_e = tf.reduce_mean(j_e * weights * demo)
         return j_e
 
-    def pretrain(self, steps):
-        self.update(steps)
-
     def perceive(self, **kwargs):
         super(DQfromDemonstrations, self).perceive(demo=0., **kwargs)
 

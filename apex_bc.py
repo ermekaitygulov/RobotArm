@@ -56,7 +56,7 @@ if __name__ == '__main__':
     pretrain_config = config['pretrain']
     summary_writer = tf.summary.create_file_writer(config.pop('log_dir'))
     with summary_writer.as_default():
-        agent.pretrain(**pretrain_config)
+        agent.update(**pretrain_config)
     online_weights, target_weights = agent.get_online(), agent.get_target()
     ray.init(webui_host='0.0.0.0', num_gpus=1)
     learner, actors, _, counter, evaluate = make_remote_base(config)
