@@ -62,9 +62,12 @@ class TwinDelayedDDPGfD(TwinDelayedDDPG):
                                               next_state=next_state, done=done, **kwargs)
 
     def add_demo(self, data_loader, *args, **kwargs):
+        add_data = 0
         for s, a, r, n_s, d in data_loader.sarsd_iter(*args, **kwargs):
             transition = dict(state=s, action=a, reward=r,
                               next_state=n_s, done=d)
             to_add = self.n_step(transition)
             for n_transition in to_add:
                 self.replay_buff.add_demo(demo=1., **n_transition)
+                add_data += 1
+        print("*" * 5, "{} data added".format(add_data), "*" * 5)

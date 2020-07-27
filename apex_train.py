@@ -46,7 +46,7 @@ def apex_ranging(exploration_kwargs, actor_id, n_actors):
                 for expl_name, expl_value in exploration_kwargs.items()}
 
 
-def make_remote_base(apex_config):
+def make_remote_base(apex_config, env_dict=None, dtype_dict=None, obs_space=None, action_space=None):
     filler_config = defaultdict(dict)
     filler_config.update(apex_config)
     base = getattr(algorithms, apex_config['base'])
@@ -57,11 +57,13 @@ def make_remote_base(apex_config):
             return make_env(index, n_actors, **filler_config['env'])
         return thunk
 
-    test_env = make_env_thunk(-2)()
-    obs_space = test_env.observation_space
-    action_space = test_env.action_space
-    env_dict, dtype_dict = get_dtype_dict(test_env.observation_space, test_env.action_space)
-    test_env.close()
+    if obs_space is None or action_space is None:
+        test_env = make_env_thunk(-2)()
+        obs_space = test_env.observation_space
+        action_space = test_env.action_space
+        test_env.close()
+    if env_dict is None or dtype_dict is None:
+        env_dict, dtype_dict = get_dtype_dict(obs_space, action_space)
 
     remote_counter = Counter.remote()
     network_kwargs = dict()
@@ -75,8 +77,8 @@ def make_remote_base(apex_config):
         main_buffer = cppPER(env_dict=env_dict, **filler_config['buffer'])
     else:
         main_buffer = PrioritizedReplayBuffer(env_dict=env_dict, **filler_config['buffer'])
-    if isinstance(test_env.observation_space, gym.spaces.Dict):
-        state_keys = test_env.observation_space.spaces.keys()
+    if isinstance(obs_space, gym.spaces.Dict):
+        state_keys = obs_space.spaces.keys()
         main_buffer = DictWrapper(main_buffer, state_prefix=('', 'next_', 'n_'),
                                   state_keys=state_keys)
     if 'learner_resource' in filler_config:
@@ -95,6 +97,7 @@ def make_remote_base(apex_config):
                                                                                  remote_counter=remote_counter,
                                                                                  obs_space=obs_space,
                                                                                  action_space=action_space,
+                                                                                 env_dict=env_dict,
                                                                                  **network_kwargs,
                                                                                  **filler_config['actors'],
                                                                                  **filler_config['alg_args'])

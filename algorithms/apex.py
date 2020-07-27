@@ -36,8 +36,6 @@ class Learner:
         with self.summary_writer.as_default():
             loss_list = list()
             indexes = ds.pop('indexes')
-            self.histogram(ds['state'], 'cube', -6)
-            self.histogram(ds['state'], 'arm', -17, -11, lambda x: x / np.pi * 180)
             ds = self.tf.data.Dataset.from_tensor_slices(ds)
             ds = ds.batch(batch_size)
             ds = ds.cache()
@@ -71,12 +69,13 @@ class Learner:
 @ray.remote(num_gpus=0.1, num_cpus=2)
 class Actor:
     def __init__(self, base=DoubleDuelingDQN, thread_id=0, make_env=None, remote_counter=None,
-                 avg_window=10, pretrain_weights=None, **agent_kwargs):
+                 avg_window=10, pretrain_weights=None, env_dict=None, **agent_kwargs):
         import tensorflow as tf
         config_gpu()
         self.tf = tf
         self.thread_id = thread_id
         self.env = make_env()
+        self.env_dict = env_dict
         self.base = base(replay_buff=self._init_buff(1), **agent_kwargs)
         if pretrain_weights:
             self.load(**pretrain_weights)
@@ -93,7 +92,10 @@ class Actor:
         return getattr(self.base, name)
 
     def _init_buff(self, size):
-        env_dict, _ = get_dtype_dict(self.env.observation_space, self.env.action_space)
+        if self.env_dict is None:
+            env_dict, _ = get_dtype_dict(self.env.observation_space, self.env.action_space)
+        else:
+            env_dict = self.env_dict
         env_dict['q_value'] = {"dtype": "float32"}
         buffer = ReplayBuffer(size=size, env_dict=env_dict)
         if isinstance(self.env.observation_space, gym.spaces.Dict):

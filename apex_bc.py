@@ -55,12 +55,15 @@ if __name__ == '__main__':
         agent.load(**config['pretrain_weights'])
     agent.add_demo(data_loader)
     pretrain_config = config['pretrain']
-    summary_writer = tf.summary.create_file_writer(pretrain_config.pop('log_dir'))
+    summary_writer = tf.summary.create_file_writer(pretrain_config['log_dir'])
     with summary_writer.as_default():
-        agent.update(**pretrain_config)
-        agent.save()
+        agent.update(pretrain_config['steps'])
+        if 'save_path' in pretrain_config:
+            agent.save(pretrain_config['save_path'])
     online_weights, target_weights = agent.get_online(), agent.get_target()
     ray.init(webui_host='0.0.0.0', num_gpus=1)
-    learner, actors, _, counter, evaluate = make_remote_base(config)
+    learner, actors, _, counter, evaluate = make_remote_base(config, env_dict, dtype_dict,
+                                                             data_loader.observation_space,
+                                                             data_loader.action_space)
     learner.set_weights.remote(online_weights, target_weights)
     apex(learner, actors, agent.replay_buff, counter, evaluate, args.wandb, **config['train'])

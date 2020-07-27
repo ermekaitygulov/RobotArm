@@ -41,4 +41,5 @@ train:
   number_of_batchs: 16
 pretrain:
   steps: 100000
+  save_path: 'train/pretrain_weights/'
   log_dir: 'train/'
