@@ -1,0 +1,36 @@
+gpu: 0
+base: DQfromDemonstrations
+num_actors: 8
+alg_args:
+  update_target_nn_mod: 2500
+  gamma: 0.99
+  learning_rate: 0.0001
+  log_freq: 1000
+env:
+  discretize: False
+  env_kwargs:
+    obs_space_keys: ["pov", ]
+    pose_sigma: 5
+    camera_resolution: [128, 128]
+  exploration_kwargs:
+    epsilon: 0.15
+buffer:
+  size: 120000
+neural_network:
+  build_critic: "DuelingDQN_uni"
+data_loader:
+  path: "demonstrations/"
+  obs_keys: ["pov", ]
+actor_resource:
+  num_gpus: 0
+train:
+  rollout_size: 70
+  max_eps: 50000
+  replay_start_size: 10000
+  batch_size: 128
+  sync_nn_mod: 100
+  number_of_batchs: 16
+pretrain:
+  steps: 100000
+  save_path: 'train/pretrain_weights/'
+  log_dir: 'train/'

@@ -3,6 +3,7 @@ gpu: 1
 env:
   env_kwargs:
     obs_space_keys: ["cube", "arm"]
+    video_path: 'weights/dqn/'
   exploration_kwargs:
     epsilon: 0.
 buffer:
@@ -10,9 +11,11 @@ buffer:
 neural_network:
   build_model:
     name: "DuelingDQN_arm_cube"
-    noisy_head: True
+pretrain_weights:
+    online_path: 'weights/dqn/Online.ckpt'
+    target_path: 'weights/dqn/Target.ckpt'
+train:
+  episodes: 3
+log_dir: "train/"
 agent:
   update_target_nn_mod: 1000
-train:
-  episodes: 1
-log_dir: "train/"
