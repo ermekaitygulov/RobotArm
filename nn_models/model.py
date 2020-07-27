@@ -52,7 +52,7 @@ def make_model(name, obs_space, action_space, reg=1e-6):
 
 
 @register("DuelingDQN_uni")
-def make_model(name, obs_space, action_space, reg):
+def make_model(name, obs_space, action_space, reg=1e-6):
     img = dict()
     feat = dict()
     bases = list()
@@ -82,7 +82,7 @@ def make_model(name, obs_space, action_space, reg):
 
 
 @register("DuelingDQN_arm_cube")
-def make_model(name, obs_space, action_space, reg=1e-6, noisy_head=False):
+def make_model(name, obs_space, action_space, reg=1e-7, noisy_head=False):
     cube = tf.keras.Input(shape=obs_space['cube'].shape)
     arm = tf.keras.Input(shape=obs_space['arm'].shape)
     features = concatenate([arm, cube])
