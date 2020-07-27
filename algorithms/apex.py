@@ -64,6 +64,9 @@ class Learner:
             self.save(save_dir)
         return self.get_online(), self.get_target()
 
+    def set_weights(self, *weights):
+        self.base.set_weights(*weights)
+
 
 @ray.remote(num_gpus=0.1, num_cpus=2)
 class Actor:
