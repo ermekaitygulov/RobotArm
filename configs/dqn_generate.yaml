@@ -1,0 +1,18 @@
+gpu: 0
+base: DoubleDuelingDQN
+env:
+  discretize: True
+  env_kwargs:
+    obs_space_keys: ["pov", "cube", "arm"]
+    randomize: True
+    camera_resolution: [128, 128]
+neural_network: "DuelingDQN_arm_cube"
+actor_resource:
+  num_gpus: 0
+actors:
+  pretrain_weights:
+    online_path: 'train/Online_actor.ckpt'
+    target_path: 'train/Target_actor.ckpt'
+generate:
+  max_eps: 1000
+  num_actors: 8
