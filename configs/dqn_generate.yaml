@@ -12,8 +12,8 @@ actor_resource:
   num_gpus: 0
 actors:
   pretrain_weights:
-    online_path: 'train/Online_actor.ckpt'
-    target_path: 'train/Target_actor.ckpt'
+    online_path: 'train/Online.ckpt'
+    target_path: 'train/Target.ckpt'
 generate:
   max_eps: 1000
   num_actors: 8

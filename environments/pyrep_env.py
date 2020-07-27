@@ -39,7 +39,7 @@ class RozumEnv(gym.Env):
         self.cube = Shape("Cube")
         self.graspable_objects = [self.cube, ]
         self.camera = VisionSensor("render")
-        self.camera.set_resolution(camera_resolution)
+        self.camera.set_resolution(list(camera_resolution))
         self.rozum_tip = self.rozum.get_tip()
 
         # Action and Observation spaces
