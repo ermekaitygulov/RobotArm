@@ -17,7 +17,7 @@ env:
 buffer:
   size: 120000
 neural_network:
-  build_critic: "DuelingDQN_uni"
+  build_model: "DuelingDQN_uni"
 data_loader:
   path: "demonstrations/"
   obs_keys: ["pov", ]
