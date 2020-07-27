@@ -4,7 +4,7 @@ from common.tf_util import take_vector_elements, huber_loss
 
 
 class DQfromDemonstrations(DoubleDuelingDQN):
-    def __init__(self, margin, *args, **kwargs):
+    def __init__(self, margin=0.8, *args, **kwargs):
         super(DQfromDemonstrations, self).__init__(*args, **kwargs)
         self.margin_value = margin
 
