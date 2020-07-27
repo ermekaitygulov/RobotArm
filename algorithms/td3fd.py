@@ -57,8 +57,9 @@ class TwinDelayedDDPGfD(TwinDelayedDDPG):
         mse = tf.reduce_mean(mse)
         return mse
 
-    def perceive(self, **kwargs):
-        super(TwinDelayedDDPG, self).perceive(demo=0., **kwargs)
+    def perceive(self, state, action, reward, next_state, done, **kwargs):
+        super(TwinDelayedDDPG, self).perceive(demo=0., state=state, action=action, reward=reward,
+                                              next_state=next_state, done=done, **kwargs)
 
     def add_demo(self, data_loader, *args, **kwargs):
         for s, a, r, n_s, d in data_loader.sarsd_iter(*args, **kwargs):
