@@ -13,8 +13,9 @@ alg_args:
 env:
   discretize: False
   env_kwargs:
-    obs_space_keys: ["cube", "arm"]
+    obs_space_keys: ["pov",]
     pose_sigma: 5
+    camera_resolution: [64, 64]
   exploration_kwargs:
     sigma_epsilon: [0.01, 0.2]
 buffer:

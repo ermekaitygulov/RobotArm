@@ -13,7 +13,7 @@ import tensorflow as tf
 from common.data_loader import DataLoader
 from common.tf_util import config_gpu
 from nn_models.model import get_network_builder
-from replay_buffers.bc_buffer import DQfDBuffer
+from cpprb import DQfDBuffer
 from replay_buffers.util import get_dtype_dict, DictWrapper
 
 if __name__ == '__main__':
