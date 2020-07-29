@@ -36,12 +36,12 @@ actor_resource:
   num_gpus: 0
 train:
   rollout_size: 70
-  max_eps: 100
+  max_eps: 50000
   replay_start_size: 10000
   batch_size: 128
   sync_nn_mod: 100
   number_of_batchs: 16
 pretrain:
-  steps: 50
+  steps: 50000
   save_path: 'train/pretrain_weights/'
   log_dir: 'train/'
