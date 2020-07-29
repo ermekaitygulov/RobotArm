@@ -23,6 +23,13 @@ class DictWrapper:
                 kwargs[prefix + key] = value
         self.replay_buffer.add(**kwargs)
 
+    def add_demo(self, **kwargs):
+        for prefix in self.state_prefix:
+            state = kwargs.pop(prefix+'state')
+            for key, value in state.items():
+                kwargs[prefix + key] = value
+        self.replay_buffer.add_demo(**kwargs)
+
     def get_all_transitions(self):
         batch = self.replay_buffer.get_all_transitions()
         for prefix in self.state_prefix:

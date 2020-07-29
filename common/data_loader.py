@@ -13,7 +13,7 @@ class DataLoader:
             if len(obs_keys) == 1:
                 self.observation_space = sample_data['obs_space'][obs_keys[0]]
             else:
-                self.observation_space = Dict({key: space for key, space in sample_data['obs_space'].items()
+                self.observation_space = Dict({key: space for key, space in sample_data['obs_space'].spaces.items()
                                                if key in obs_keys})
             self.obs_keys = obs_keys
         else:

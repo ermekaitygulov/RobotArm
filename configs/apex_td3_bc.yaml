@@ -16,6 +16,7 @@ env:
     obs_space_keys: ["pov", ]
     pose_sigma: 5
     camera_resolution: [128, 128]
+    randomize: True
   exploration_kwargs:
     sigma_epsilon: [0.01, 0.2]
 buffer:

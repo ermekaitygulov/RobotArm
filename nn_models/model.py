@@ -73,8 +73,8 @@ def make_model(name, obs_space, action_space, reg=1e-6):
     if len(img) > 0:
         img_base = concatenate(list(img.values()))
         normalized = img_base/255
-        bases.append(make_cnn([32, 32, 32], [3, 3, 3],
-                              [2, 2, 2], 'tanh', reg)(normalized))
+        bases.append(make_cnn([32, 32, 32, 32], [11, 6, 4, 4],
+                              [2, 2, 2, 2], 'tanh', reg)(normalized))
     base = concatenate(bases)
     head = DuelingModel([512], action_space.n, reg)(base)
     model = tf.keras.Model(inputs={**img, **feat}, outputs=head, name=name)
@@ -118,8 +118,8 @@ def make_critic(name, obs_space, action_space, reg=1e-6, noisy_head=False):
     if len(img) > 0:
         img_base = concatenate(list(img.values()))
         normalized = img_base/255
-        bases.append(make_cnn([32, 32, 32, 32], [3, 3, 3, 3], [2, 2, 2, 2],
-                              'tanh', reg)(normalized))
+        bases.append(make_cnn([8, 16, 32, 32], [11, 6, 4, 4],
+                              [2, 2, 2, 2], 'relu', reg)(normalized))
     base = concatenate(bases)
     base = layer(300, 'relu', use_bias=True,  kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     base = layer(300, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
@@ -152,7 +152,7 @@ def make_model(name, obs_space, action_space, reg=1e-6, noisy_head=False):
     if len(img) > 0:
         img_base = concatenate(list(img.values()))
         normalized = img_base/255
-        bases.append(make_cnn([32, 32, 32, 32], [3, 3, 3, 3],
+        bases.append(make_cnn([8, 16, 32, 32], [11, 6, 4, 4],
                               [2, 2, 2, 2], 'relu', reg)(normalized))
     base = concatenate(bases)
     base = layer(300, 'relu', use_bias=True,  kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
