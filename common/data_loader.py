@@ -4,7 +4,7 @@ from gym.spaces.dict import Dict
 
 
 class DataLoader:
-    def __init__(self, path, obs_keys=('pov',)):
+    def __init__(self, path, obs_keys=('pov',), number_of_transitions=None):
         self.path = path
         file = [f for f in os.listdir(self.path) if f.endswith(".pkl")][0]
         sample_data = self.load_obj(os.path.join(self.path, file))
@@ -19,8 +19,10 @@ class DataLoader:
         else:
             self.observation_space = sample_data['obs_space']
             self.obs_keys = None
+        self.number_of_transitions = number_of_transitions
 
     def sarsd_iter(self):
+        transitions_add = 0
         for file in os.listdir(self.path):
             if file.endswith(".pkl"):
                 data = self.load_obj(os.path.join(self.path, file))
@@ -33,7 +35,12 @@ class DataLoader:
                                         if key in self.obs_keys} for o in observations]
                 for transition in zip(observations[:-1], data['action'], data['reward'],
                                       observations[1:], data['done']):
+                    transitions_add += 1
                     yield transition
+                    if self.number_of_transitions and transitions_add > self.number_of_transitions:
+                        break
+                if self.number_of_transitions and transitions_add > self.number_of_transitions:
+                    break
 
 
     @staticmethod
