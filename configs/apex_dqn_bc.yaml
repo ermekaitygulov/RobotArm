@@ -9,7 +9,7 @@ alg_args:
 env:
   discretize: True
   env_kwargs:
-    obs_space_keys: ["pov", ]
+    obs_space_keys: ["pov", "arm"]
     pose_sigma: 5
     camera_resolution: [128, 128]
     randomize: True
@@ -21,7 +21,7 @@ neural_network:
   build_model: "DuelingDQN_uni"
 data_loader:
   path: "demonstrations/"
-  obs_keys: ["pov", ]
+  obs_keys: ["pov", "arm"]
   number_of_transitions: 10000
 actor_resource:
   num_gpus: 0

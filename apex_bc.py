@@ -27,6 +27,7 @@ if __name__ == '__main__':
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = str(config['gpu'])
     os.environ["QT_DEBUG_PLUGINS"] = "0"
+    ray.init(webui_host='0.0.0.0', num_gpus=1)
     if args.wandb:
         group_id = config['base'] + '_' + str(wandb.util.generate_id())
         wandb = wandb.init(anonymous='allow', project="Rozum", group=group_id)
@@ -63,7 +64,6 @@ if __name__ == '__main__':
         if 'save_path' in pretrain_config:
             agent.save(pretrain_config['save_path'])
     online_weights, target_weights = agent.get_online(), agent.get_target()
-    ray.init(webui_host='0.0.0.0', num_gpus=1)
     learner, actors, _, counter, evaluate = make_remote_base(config, env_dict, dtype_dict,
                                                              data_loader.observation_space,
                                                              data_loader.action_space)
