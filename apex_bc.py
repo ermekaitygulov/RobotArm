@@ -28,8 +28,10 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = str(config['gpu'])
     os.environ["QT_DEBUG_PLUGINS"] = "0"
     if args.wandb:
-        wandb = wandb.init(anonymous='allow', project="Rozum")
+        group_id = config['base'] + '_' + str(wandb.util.generate_id())
+        wandb = wandb.init(anonymous='allow', project="Rozum", group=group_id)
         wandb.config.update(config)
+        config['env']['wandb_group_id'] = group_id
     tf.config.optimizer.set_jit(True)
     config_gpu()
     data_loader = DataLoader(**config['data_loader'])

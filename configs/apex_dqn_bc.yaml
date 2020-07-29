@@ -1,4 +1,4 @@
-gpu: 0
+gpu: 1
 base: DQfromDemonstrations
 num_actors: 8
 alg_args:
@@ -7,11 +7,12 @@ alg_args:
   learning_rate: 0.0001
   log_freq: 1000
 env:
-  discretize: False
+  discretize: True
   env_kwargs:
     obs_space_keys: ["pov", ]
     pose_sigma: 5
     camera_resolution: [128, 128]
+    randomize: True
   exploration_kwargs:
     epsilon: 0.15
 buffer:
@@ -21,6 +22,7 @@ neural_network:
 data_loader:
   path: "demonstrations/"
   obs_keys: ["pov", ]
+  number_of_transitions: 10000
 actor_resource:
   num_gpus: 0
 train:
@@ -31,6 +33,6 @@ train:
   sync_nn_mod: 100
   number_of_batchs: 16
 pretrain:
-  steps: 100000
+  steps: 50000
   save_path: 'train/pretrain_weights/'
   log_dir: 'train/'
