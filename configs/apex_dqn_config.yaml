@@ -1,4 +1,4 @@
-gpu: 0
+gpu: 1
 base: DoubleDuelingDQN
 num_actors: 8
 alg_args:
@@ -8,12 +8,14 @@ alg_args:
   log_freq: 1000
 env:
   env_kwargs:
-    obs_space_keys: ["cube", "arm"]
+    obs_space_keys: ["pov", "arm"]
     pose_sigma: 5
+    camera_resolution: [128, 128]
+    randomize: True
   exploration_kwargs:
     epsilon: 0.15
 buffer:
-  size: 1000000
+  size: 50000
 neural_network:
   build_model: "DuelingDQN_arm_cube"
 actor_resource:
@@ -22,6 +24,6 @@ train:
   rollout_size: 70
   max_eps: 24000
   replay_start_size: 10000
-  batch_size: 256
+  batch_size: 64
   sync_nn_mod: 100
   number_of_batchs: 16

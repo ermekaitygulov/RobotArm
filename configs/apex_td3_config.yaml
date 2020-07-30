@@ -13,13 +13,14 @@ alg_args:
 env:
   discretize: False
   env_kwargs:
-    obs_space_keys: ["pov",]
+    obs_space_keys: ["pov", "arm"]
     pose_sigma: 5
-    camera_resolution: [64, 64]
+    camera_resolution: [128, 128]
+    randomize: True
   exploration_kwargs:
     sigma_epsilon: [0.01, 0.2]
 buffer:
-  size: 100000
+  size: 50000
   cpp: True
 neural_network:
   build_critic:
@@ -34,6 +35,6 @@ train:
   rollout_size: 70
   max_eps: 50000
   replay_start_size: 10000
-  batch_size: 256
+  batch_size: 64
   sync_nn_mod: 100
   number_of_batchs: 16
