@@ -17,7 +17,7 @@ env:
 buffer:
   size: 50000
 neural_network:
-  build_model: "DuelingDQN_arm_cube"
+  build_model: "DuelingDQN_uni"
 actor_resource:
   num_gpus: 0
 train:
