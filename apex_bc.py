@@ -13,8 +13,9 @@ import tensorflow as tf
 from common.data_loader import DataLoader
 from common.tf_util import config_gpu
 from nn_models.model import get_network_builder
-from cpprb import DQfDBuffer
+from cpprb import *
 from replay_buffers.util import get_dtype_dict, DictWrapper
+from replay_buffers.bc_buffer import AggregatedBuff
 
 if __name__ == '__main__':
     parser = ArgumentParser()
@@ -29,7 +30,10 @@ if __name__ == '__main__':
     os.environ["QT_DEBUG_PLUGINS"] = "0"
     ray.init(webui_host='0.0.0.0', num_gpus=1)
     if args.wandb:
-        group_id = config['base'] + '_' + str(wandb.util.generate_id())
+        if 'wandb_name' not in config:
+            group_id = config['base'] + '_' + str(wandb.util.generate_id())
+        else:
+            group_id = config['wandb_name'] + '_' + str(wandb.util.generate_id())
         wandb = wandb.init(anonymous='allow', project="Rozum", group=group_id)
         wandb.config.update(config)
         config['env']['wandb_group_id'] = group_id
@@ -38,7 +42,11 @@ if __name__ == '__main__':
     data_loader = DataLoader(**config['data_loader'])
     env_dict, dtype_dict = get_dtype_dict(data_loader.observation_space, data_loader.action_space)
     env_dict.update(demo={'dtype': 'float32'}), dtype_dict.update(demo='float32')
-    replay_buffer = DQfDBuffer(env_dict=env_dict, **config['buffer'])
+    if 'forgetting' in config:
+        replay_buffer = PrioritizedReplayBuffer(env_dict=env_dict, **config['buffer'])
+        replay_buffer = AggregatedBuff(replay_buffer, **config['forgetting'])
+    else:
+        replay_buffer = DQfDBuffer(env_dict=env_dict, **config['buffer'])
     if isinstance(data_loader.observation_space, gym.spaces.Dict):
         state_keys = data_loader.observation_space.spaces.keys()
         replay_buffer = DictWrapper(replay_buffer, state_prefix=('', 'next_', 'n_'),

@@ -1,4 +1,6 @@
 from replay_buffers.stable_baselines import PrioritizedReplayBuffer
+from copy import deepcopy
+import numpy as np
 
 
 class DQfDBuffer(PrioritizedReplayBuffer):
@@ -41,3 +43,61 @@ class DQfDBuffer(PrioritizedReplayBuffer):
             else:
                 self._it_sum[idx] = (priority + self._demo_eps) ** self._alpha
                 self._it_min[idx] = (priority + self._demo_eps) ** self._alpha
+
+
+class AggregatedBuff:
+    def __init__(self, base, steps_to_decay=50):
+        self.demo_buff = deepcopy(base)
+        self.replay_buff = base
+        self.steps_to_decay = steps_to_decay
+
+    def add(self, **kwargs):
+        self.replay_buff.add(**kwargs)
+        if self.demo_buff and self.get_stored_size() > self.steps_to_decay:
+            try:
+                self.demo_buff.clear()
+            except AttributeError:
+                del self.demo_buff
+            self.demo_buff = None
+
+    def add_demo(self, **kwargs):
+        self.demo_buff.add(**kwargs)
+
+    @property
+    def proportion(self):
+        if self.steps_to_decay == 0 or self.demo_buff is None:
+            proportion = 1.
+        else:
+            proportion = min(1., self.get_stored_size() / self.steps_to_decay)
+        return proportion
+
+    def sample(self, n=32, beta=0.4):
+        agent_n = int(n*self.proportion)
+        demo_n = n - agent_n
+        if demo_n > 0 and agent_n > 0:
+            demo_samples = self.demo_buff.sample(demo_n, beta)
+            replay_samples = self.replay_buff.sample(agent_n, beta)
+            demo_samples['indexes'] += 1
+            demo_samples['indexes'] *= -1
+            samples = {key: np.concatenate((replay_samples[key], demo_samples[key]))
+                       for key in replay_samples.keys()}
+        elif agent_n == 0:
+            samples = self.demo_buff.sample(demo_n, beta)
+            samples['indexes'] += 1
+            samples['indexes'] *= -1
+        else:
+            samples = self.replay_buff.sample(agent_n, beta)
+        samples = {key: np.squeeze(value) for key, value in samples.items()}
+        return samples
+
+    def update_priorities(self, indexes, priorities):
+        if self.demo_buff:
+            demo_indexes = indexes < 0
+            self.demo_buff.update_priorities(indexes[demo_indexes] * (-1) - 1, priorities[demo_indexes])
+        replay_indexes = indexes >= 0
+        self.replay_buff.update_priorities(indexes[replay_indexes], priorities[replay_indexes])
+
+    def __getattr__(self, name):
+        if name.startswith('_'):
+            raise AttributeError("attempted to get missing private attribute '{}'".format(name))
+        return getattr(self.replay_buff, name)
