@@ -113,13 +113,14 @@ def make_critic(name, obs_space, action_space, reg=1e-6, noisy_head=False):
     feat['action'] = action
     if len(feat) > 0:
         feat_base = concatenate(list(feat.values()))
-        bases.append(layer(400, 'relu', use_bias=True,
-                           kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(feat_base))
+        h_layer = layer(400, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(feat_base)
+        h_layer = layer(300, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(h_layer)
+        bases.append(h_layer)
     if len(img) > 0:
         img_base = concatenate(list(img.values()))
         normalized = img_base/255
         bases.append(make_cnn([8, 16, 32, 32], [11, 6, 4, 4],
-                              [2, 2, 2, 2], 'relu', reg)(normalized))
+                              [2, 2, 2, 2], 'tanh', reg)(normalized))
     base = concatenate(bases)
     base = layer(300, 'relu', use_bias=True,  kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     base = layer(300, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
@@ -147,13 +148,14 @@ def make_model(name, obs_space, action_space, reg=1e-6, noisy_head=False):
             feat['state'] = tf.keras.Input(shape=obs_space.shape)
     if len(feat) > 0:
         feat_base = concatenate(list(feat.values()))
-        bases.append(layer(400, 'relu', use_bias=True,
-                     kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(feat_base))
+        h_layer = layer(400, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(feat_base)
+        h_layer = layer(300, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(h_layer)
+        bases.append(h_layer)
     if len(img) > 0:
         img_base = concatenate(list(img.values()))
         normalized = img_base/255
         bases.append(make_cnn([8, 16, 32, 32], [11, 6, 4, 4],
-                              [2, 2, 2, 2], 'relu', reg)(normalized))
+                              [2, 2, 2, 2], 'tanh', reg)(normalized))
     base = concatenate(bases)
     base = layer(300, 'relu', use_bias=True,  kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     base = layer(300, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
