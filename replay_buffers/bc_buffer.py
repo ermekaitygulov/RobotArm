@@ -46,9 +46,9 @@ class DQfDBuffer(PrioritizedReplayBuffer):
 
 
 class AggregatedBuff:
-    def __init__(self, base, steps_to_decay=50):
-        self.demo_buff = deepcopy(base)
-        self.replay_buff = base
+    def __init__(self, base, steps_to_decay=50, **base_kwargs):
+        self.demo_buff = base(**base_kwargs)
+        self.replay_buff = base(**base_kwargs)
         self.steps_to_decay = steps_to_decay
 
     def add(self, **kwargs):
@@ -78,13 +78,13 @@ class AggregatedBuff:
             demo_samples = self.demo_buff.sample(demo_n, beta)
             replay_samples = self.replay_buff.sample(agent_n, beta)
             demo_samples['indexes'] += 1
-            demo_samples['indexes'] *= -1
+            demo_samples['indexes'] = demo_samples['indexes'] * -1
             samples = {key: np.concatenate((replay_samples[key], demo_samples[key]))
                        for key in replay_samples.keys()}
         elif agent_n == 0:
             samples = self.demo_buff.sample(demo_n, beta)
             samples['indexes'] += 1
-            samples['indexes'] *= -1
+            samples['indexes'] = samples['indexes'] * -1
         else:
             samples = self.replay_buff.sample(agent_n, beta)
         samples = {key: np.squeeze(value) for key, value in samples.items()}
