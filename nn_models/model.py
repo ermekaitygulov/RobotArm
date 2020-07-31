@@ -1,9 +1,9 @@
+import gym
+from common.tf_util import concatenate
+from nn_models.building_blocks import *
 import tensorflow as tf
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.layers import Dense
-import gym
-from common.tf_util import concatenate
-from nn_models.building_blocks import DuelingModel, NoisyDense, make_mlp, make_cnn
 
 mapping = {}
 
@@ -113,17 +113,17 @@ def make_critic(name, obs_space, action_space, reg=1e-6, noisy_head=False):
     feat['action'] = action
     if len(feat) > 0:
         feat_base = concatenate(list(feat.values()))
-        h_layer = layer(400, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(feat_base)
-        h_layer = layer(300, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(h_layer)
+        h_layer = layer(64, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(feat_base)
+        h_layer = layer(64, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(h_layer)
         bases.append(h_layer)
     if len(img) > 0:
         img_base = concatenate(list(img.values()))
         normalized = img_base/255
-        bases.append(make_cnn([8, 16, 32, 32], [11, 6, 4, 4],
-                              [2, 2, 2, 2], 'tanh', reg)(normalized))
+        impala_cnn = make_impala_cnn(reg=reg)
+        bases.append(impala_cnn(normalized))
     base = concatenate(bases)
-    base = layer(300, 'relu', use_bias=True,  kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
-    base = layer(300, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
+    base = layer(256, 'relu', use_bias=True,  kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
+    base = layer(256, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     head = layer(1, use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     model = tf.keras.Model(inputs={**img, **feat}, outputs=head, name=name)
     return model
@@ -148,17 +148,17 @@ def make_model(name, obs_space, action_space, reg=1e-6, noisy_head=False):
             feat['state'] = tf.keras.Input(shape=obs_space.shape)
     if len(feat) > 0:
         feat_base = concatenate(list(feat.values()))
-        h_layer = layer(400, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(feat_base)
-        h_layer = layer(300, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(h_layer)
+        h_layer = layer(64, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(feat_base)
+        h_layer = layer(64, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(h_layer)
         bases.append(h_layer)
     if len(img) > 0:
         img_base = concatenate(list(img.values()))
         normalized = img_base/255
-        bases.append(make_cnn([8, 16, 32, 32], [11, 6, 4, 4],
-                              [2, 2, 2, 2], 'tanh', reg)(normalized))
+        impala_cnn = make_impala_cnn(reg=reg)
+        bases.append(impala_cnn(normalized))
     base = concatenate(bases)
-    base = layer(300, 'relu', use_bias=True,  kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
-    base = layer(300, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
+    base = layer(256, 'relu', use_bias=True,  kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
+    base = layer(256, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     head = layer(action_space.shape[0], use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     model = tf.keras.Model(inputs={**img, **feat}, outputs=head, name=name)
     return model

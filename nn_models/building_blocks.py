@@ -16,7 +16,6 @@ class DuelingModel(tf.keras.Model):
         self.a_head1 = layer(action_dim, kernel_regularizer=reg, bias_regularizer=reg)
         self.v_head1 = layer(1, kernel_regularizer=reg, bias_regularizer=reg)
 
-    @tf.function
     def call(self, inputs):
         print('Building model')
         features = self.h_layers(inputs)
@@ -53,7 +52,6 @@ class NoisyDense(Dense):
             self.bias_sigma = None
         super(NoisyDense, self).build(input_shape)
 
-    @tf.function
     def call(self, inputs):
         if inputs.shape[0]:
             kernel_input = self.f(tf.random.normal(shape=(inputs.shape[0], self.input_dim, 1)))
@@ -82,8 +80,32 @@ class TwinCritic(tf.keras.Model):
         self.twin1 = build_function(name + '_1', obs_space, action_space)
         self.twin2 = build_function(name + '_2', obs_space, action_space)
 
-    def call(self, inputs, **kwargs):
-        return self.twin1(inputs), self.twin2(inputs)
+    def call(self, inputs, training=False):
+        return self.twin1(inputs, training=training), self.twin2(inputs, training=training)
+
+
+class ResnetIdentityBlock(tf.keras.Model):
+    def __init__(self, filters, kernel, reg):
+        super(ResnetIdentityBlock, self).__init__(name='')
+
+        self.conv2a = tf.keras.layers.Conv2D(filters, kernel, padding='same',
+                                             kernel_regularizer=reg, bias_regularizer=reg)
+        self.bn2a = tf.keras.layers.BatchNormalization()
+
+        self.conv2b = tf.keras.layers.Conv2D(filters, kernel, padding='same',
+                                             kernel_regularizer=reg, bias_regularizer=reg)
+        self.bn2b = tf.keras.layers.BatchNormalization()
+
+    def call(self, inputs, training=False):
+        x = self.conv2a(inputs)
+        x = self.bn2a(x, training=training)
+        x = tf.nn.relu(x)
+
+        x = self.conv2b(x)
+        x = self.bn2b(x, training=training)
+
+        x += inputs
+        return tf.nn.relu(x)
 
 
 def make_twin(build_critic):
@@ -103,5 +125,15 @@ def make_cnn(filters, kernels, strides, activation='tanh', reg=1e-6):
     _reg = l2(reg)
     cnn = Sequential([Conv2D(f, k, s, activation=activation, kernel_regularizer=_reg)
                       for f, k, s in zip(filters, kernels, strides)], name='CNN')
+    cnn.add(Flatten())
+    return cnn
+
+
+def make_impala_cnn(filters=(16, 32, 32), reg=1e-6):
+    _reg = l2(reg)
+    cnn = Sequential(name='CNN')
+    for f in filters:
+        cnn.add(Conv2D(f, 3, 2, activation='relu', kernel_regularizer=l2(reg), bias_regularizer=l2(reg)))
+        cnn.add(ResnetIdentityBlock(f, 3, l2(reg)))
     cnn.add(Flatten())
     return cnn

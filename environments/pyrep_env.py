@@ -149,9 +149,11 @@ class RozumEnv(gym.Env):
         elif self._get_distance(self.rozum.joints[0], self.cube) > 0.76:
             done = True
             reward = -1
+            info['grasped'] = 0
         elif tz < 0.5:
             done = True
             reward = -1
+            info['grasped'] = 0
         self.rewards.append(reward)
         return state, reward, done, info
 

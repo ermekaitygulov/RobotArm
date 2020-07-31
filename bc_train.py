@@ -9,7 +9,7 @@ import tensorflow as tf
 
 from common.tf_util import config_gpu
 from replay_buffers.util import get_dtype_dict, DictWrapper
-from replay_buffers.bc_buffer import DQfDBuffer
+from cpprb import DQfDBuffer
 import os
 from common.data_loader import DataLoader
 
@@ -27,6 +27,7 @@ if __name__ == '__main__':
     config_gpu()
     data_loader = DataLoader(**config['data_loader'])
     env_dict, dtype_dict = get_dtype_dict(data_loader.observation_space, data_loader.action_space)
+    env_dict.update(demo={'dtype': 'float32'}), dtype_dict.update(demo='float32')
     replay_buffer = DQfDBuffer(env_dict=env_dict, **config['buffer'])
     if isinstance(data_loader.observation_space, gym.spaces.Dict):
         state_keys = data_loader.observation_space.spaces.keys()
@@ -50,7 +51,9 @@ if __name__ == '__main__':
     pretrain_config = config['pretrain']
     summary_writer = tf.summary.create_file_writer(config.pop('log_dir'))
     with summary_writer.as_default():
-        agent.pretrain(**pretrain_config)
+        agent.update(pretrain_config['steps'])
+        if 'save_path' in pretrain_config:
+            agent.save(pretrain_config['save_path'])
         env = make_env(**config['env'])
         agent.train(env, **train_config)
         env.reset()

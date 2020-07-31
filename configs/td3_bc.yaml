@@ -1,0 +1,37 @@
+base: TwinDelayedDDPGfD
+gpu: 0
+env:
+  discretize: False
+  env_kwargs:
+    obs_space_keys: ["pov", "arm"]
+    video_path: 'train/'
+    camera_resolution: [128, 128]
+    randomize: True
+  exploration_kwargs:
+    sigma_epsilon: [0.0, 0.1]
+buffer:
+  size: 10000
+data_loader:
+  path: "data/continuous"
+  obs_keys: ["pov", "arm"]
+  number_of_transitions: 10000
+neural_network:
+  build_critic: "Critic_uni"
+  build_actor: "Actor_uni"
+agent:
+  train_freq: 100
+  train_quantity: 100
+  log_freq: 50
+  polyak: 0.005
+  batch_size: 32
+  replay_start_size: 1000
+  gamma: 0.99
+  learning_rate: 0.0001
+  n_step: 10
+pretrain:
+  steps: 10000
+  save_path: 'train/pretrain_weights/'
+  log_dir: 'train/'
+train:
+  episodes: 3
+log_dir: "train/"

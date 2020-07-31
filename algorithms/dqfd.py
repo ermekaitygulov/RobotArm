@@ -74,4 +74,5 @@ class DQfromDemonstrations(DoubleDuelingDQN):
             for n_transition in to_add:
                 self.replay_buff.add_demo(demo=1., **n_transition)
                 add_data += 1
+        self.n_deque.clear()
         print("*" * 5, "{} data added".format(add_data), "*" * 5)
