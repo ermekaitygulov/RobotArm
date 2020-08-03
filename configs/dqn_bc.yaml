@@ -1,0 +1,32 @@
+base: DQfromDemonstrations
+gpu: 0
+env:
+  discretize: True
+  env_kwargs:
+    obs_space_keys: ["pov", "arm"]
+    video_path: 'train/'
+    pose_sigma: 5
+    camera_resolution: [128, 128]
+    randomize: True
+  exploration_kwargs:
+    epsilon: 0.15
+buffer:
+  size: 50000
+data_loader:
+  path: "data/discrete"
+  obs_keys: ["pov", "arm"]
+  number_of_transitions: 20000
+  reward_threshold: 10
+neural_network:
+  build_model: "DuelingDQN_uni"
+agent:
+  update_target_nn_mod: 1000
+pretrain:
+  steps: 100000
+  save_path: 'train/pretrain_weights/'
+test:
+  episodes: 100
+log_dir: 'train/more_pretrain/'
+#pretrain_weights:
+#  online_path: 'train/pretrain_weights/Online.ckpt'
+#  target_path: 'train/pretrain_weights/Target.ckpt'

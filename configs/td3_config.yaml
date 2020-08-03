@@ -3,16 +3,17 @@ gpu: 0
 env:
   discretize: False
   env_kwargs:
-    obs_space_keys: ["cube", "arm"]
+    obs_space_keys: ["pov", "arm"]
     video_path: 'weights/td3/'
+    camera_resolution: [128, 128]
+    randomize: True
   exploration_kwargs:
     sigma_epsilon: [0.0, 0.1]
 buffer:
   size: 100000
 neural_network:
   build_critic: "Critic_uni"
-  build_actor:
-    name: "Actor_uni"
+  build_actor: "Actor_uni"
 agent:
   train_freq: 100
   train_quantity: 100

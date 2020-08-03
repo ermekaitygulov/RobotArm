@@ -47,14 +47,19 @@ if __name__ == '__main__':
     if 'pretrain_weights' in config:
         agent.load(**config['pretrain_weights'])
     agent.add_demo(data_loader)
-    train_config = config['train']
-    pretrain_config = config['pretrain']
     summary_writer = tf.summary.create_file_writer(config.pop('log_dir'))
     with summary_writer.as_default():
-        agent.update(pretrain_config['steps'])
-        if 'save_path' in pretrain_config:
-            agent.save(pretrain_config['save_path'])
+        if 'pretrain' in config:
+            pretrain_config = config['pretrain']
+            agent.update(pretrain_config['steps'])
+            if 'save_path' in pretrain_config:
+                agent.save(pretrain_config['save_path'])
         env = make_env(**config['env'])
-        agent.train(env, **train_config)
+        if 'train' in config:
+            train_config = config['train']
+            agent.train(env, **train_config)
+        if 'test' in config:
+            test_config = config['test']
+            agent.test(env, **test_config)
         env.reset()
         env.close()

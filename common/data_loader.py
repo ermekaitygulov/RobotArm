@@ -1,10 +1,11 @@
 import pickle
 import os
+import numpy as np
 from gym.spaces.dict import Dict
 
 
 class DataLoader:
-    def __init__(self, path, obs_keys=('pov',), number_of_transitions=None):
+    def __init__(self, path, obs_keys=('pov',), number_of_transitions=None, reward_threshold=None):
         self.path = path
         file = [f for f in os.listdir(self.path) if f.endswith(".pkl")][0]
         sample_data = self.load_obj(os.path.join(self.path, file))
@@ -20,6 +21,7 @@ class DataLoader:
             self.observation_space = sample_data['obs_space']
             self.obs_keys = None
         self.number_of_transitions = number_of_transitions
+        self.reward_threshold = reward_threshold if reward_threshold else -np.inf
 
     def sarsd_iter(self):
         transitions_add = 0
@@ -33,6 +35,8 @@ class DataLoader:
                     else:
                         observations = [{key: data for key, data in o.items()
                                         if key in self.obs_keys} for o in observations]
+                if sum(data['reward']) < self.reward_threshold:
+                    continue
                 for transition in zip(observations[:-1], data['action'], data['reward'],
                                       observations[1:], data['done']):
                     transitions_add += 1

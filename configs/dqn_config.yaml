@@ -2,15 +2,17 @@ base: DoubleDuelingDQN
 gpu: 1
 env:
   env_kwargs:
-    obs_space_keys: ["cube", "arm"]
+    obs_space_keys: ["pov", "arm"]
     video_path: 'weights/dqn/'
+    camera_resolution: [128, 128]
+    randomize: True
   exploration_kwargs:
     epsilon: 0.
 buffer:
   size: 100000
 neural_network:
   build_model:
-    name: "DuelingDQN_arm_cube"
+    name: "DuelingDQN_uni"
 pretrain_weights:
     online_path: 'weights/dqn/Online.ckpt'
     target_path: 'weights/dqn/Target.ckpt'

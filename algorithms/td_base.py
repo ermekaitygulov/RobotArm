@@ -67,6 +67,28 @@ class TDPolicy:
                 self.update(self.train_quantity)
         return score, counter
 
+    def test(self, env, episodes=100):
+        score_list = list()
+        for e in range(episodes):
+            start_time = timeit.default_timer()
+            done = False
+            score = 0
+            state = env.reset()
+            while not done:
+                action, q = self.choose_act(state, )
+                state, reward, done, _ = env.step(action)
+                score += reward
+                if done:
+                    tf.summary.scalar('Score', score, step=e)
+                    tf.summary.flush()
+                    score_list.append(score)
+                    avg = sum(score_list)/len(score_list)
+                    stop_time = timeit.default_timer()
+                    print("Evaluate episode: {}  score: {:.3f}  avg: {:.3f}"
+                          .format(e, score, avg))
+                    print("RunTime: {:.3f}".format(stop_time - start_time))
+        return score_list
+
     def perceive(self, state, action, reward, next_state, done, **kwargs):
         transition = dict(state=state, action=action, reward=reward,
                           next_state=next_state, done=done, **kwargs)

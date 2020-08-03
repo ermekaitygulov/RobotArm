@@ -16,8 +16,7 @@ class DuelingModel(tf.keras.Model):
         self.a_head1 = layer(action_dim, kernel_regularizer=reg, bias_regularizer=reg)
         self.v_head1 = layer(1, kernel_regularizer=reg, bias_regularizer=reg)
 
-    def call(self, inputs):
-        print('Building model')
+    def call(self, inputs, training=False):
         features = self.h_layers(inputs)
         advantage, value = self.a_head(features), self.v_head(features)
         advantage, value = self.a_head1(advantage), self.v_head1(value)
@@ -52,7 +51,7 @@ class NoisyDense(Dense):
             self.bias_sigma = None
         super(NoisyDense, self).build(input_shape)
 
-    def call(self, inputs):
+    def call(self, inputs, training=False):
         if inputs.shape[0]:
             kernel_input = self.f(tf.random.normal(shape=(inputs.shape[0], self.input_dim, 1)))
             kernel_output = self.f(tf.random.normal(shape=(inputs.shape[0], 1, self.units)))
