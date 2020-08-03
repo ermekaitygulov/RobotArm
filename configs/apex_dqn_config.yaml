@@ -15,7 +15,7 @@ env:
   exploration_kwargs:
     epsilon: 0.15
 buffer:
-  size: 50000
+  size: 100000
 neural_network:
   build_model: "DuelingDQN_uni"
 actor_resource:
