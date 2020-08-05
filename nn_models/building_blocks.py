@@ -16,7 +16,7 @@ class DuelingModel(tf.keras.Model):
         self.a_head1 = layer(action_dim, kernel_regularizer=reg, bias_regularizer=reg)
         self.v_head1 = layer(1, kernel_regularizer=reg, bias_regularizer=reg)
 
-    def call(self, inputs, training=False):
+    def call(self, inputs, training=None, mask=None):
         features = self.h_layers(inputs)
         advantage, value = self.a_head(features), self.v_head(features)
         advantage, value = self.a_head1(advantage), self.v_head1(value)
@@ -30,6 +30,9 @@ class NoisyDense(Dense):
     def __init__(self, units, *args, **kwargs):
         self.output_dim = units
         self.f = lambda x: tf.multiply(tf.sign(x), tf.pow(tf.abs(x), 0.5))
+        self.input_dim = None
+        self.kernel_sigma = None
+        self.bias_sigma = None
         super(NoisyDense, self).__init__(units, *args, **kwargs)
 
     def build(self, input_shape):
@@ -73,14 +76,27 @@ class NoisyDense(Dense):
         return output
 
 
+class HistogramLayer(tf.keras.layers.Layer):
+    def __init__(self, name):
+        super(HistogramLayer, self).__init__()
+        self.step = 0
+        self.hist_name = name
+
+    def call(self,  inputs, training=None, mask=None):
+        tf.summary.histogram('output_hist/{}'.format(self.hist_name), inputs, self.step)
+        self.step += 1
+        return inputs
+
+
 class TwinCritic(tf.keras.Model):
     def __init__(self, build_function, name, obs_space, action_space):
         super(TwinCritic, self).__init__()
         self.twin1 = build_function(name + '_1', obs_space, action_space)
         self.twin2 = build_function(name + '_2', obs_space, action_space)
 
-    def call(self, inputs, training=False):
-        return self.twin1(inputs, training=training), self.twin2(inputs, training=training)
+    def call(self,  inputs, training=None, mask=None):
+        return self.twin1(inputs, training=training, mask=mask),\
+               self.twin2(inputs, training=training, mask=mask)
 
 
 class ResnetIdentityBlock(tf.keras.Model):
@@ -95,7 +111,7 @@ class ResnetIdentityBlock(tf.keras.Model):
                                              kernel_regularizer=reg, bias_regularizer=reg)
         self.bn2b = tf.keras.layers.BatchNormalization()
 
-    def call(self, inputs, training=False):
+    def call(self,  inputs, training=None, mask=None):
         x = self.conv2a(inputs)
         x = self.bn2a(x, training=training)
         x = tf.nn.relu(x)
