@@ -17,7 +17,7 @@ env:
   exploration_kwargs:
     epsilon: 0.15
 buffer:
-  size: 50000
+  size: 100000
 forgetting:
   steps_to_decay: 20000
 neural_network:
@@ -25,7 +25,8 @@ neural_network:
 data_loader:
   path: "demonstrations/"
   obs_keys: ["pov", "arm"]
-  number_of_transitions: 10000
+  number_of_transitions: 50000
+  reward_threshold: 10
 actor_resource:
   num_gpus: 0
 train:
