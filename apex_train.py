@@ -186,7 +186,10 @@ if __name__ == '__main__':
     os.environ["QT_DEBUG_PLUGINS"] = "0"
     ray.init(webui_host='0.0.0.0', num_gpus=1)
     if args.wandb:
-        group_id = config['base'] + '_' + str(wandb.util.generate_id())
+        if 'wandb_name' not in config:
+            group_id = config['base'] + '_' + str(wandb.util.generate_id())
+        else:
+            group_id = config['wandb_name'] + '_' + str(wandb.util.generate_id())
         wandb = wandb.init(anonymous='allow', project="Rozum", group=group_id)
         wandb.config.update(config)
         config['env']['wandb_group_id'] = group_id

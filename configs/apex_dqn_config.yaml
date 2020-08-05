@@ -1,5 +1,6 @@
 gpu: 1
 base: DoubleDuelingDQN
+wandb_name: BatchNorm
 num_actors: 8
 alg_args:
   update_target_nn_mod: 2500
