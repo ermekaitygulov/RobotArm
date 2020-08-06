@@ -26,6 +26,6 @@ train:
   rollout_size: 70
   max_eps: 100000
   replay_start_size: 10000
-  batch_size: 64
+  batch_size: 128
   sync_nn_mod: 100
   number_of_batchs: 16
