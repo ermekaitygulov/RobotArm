@@ -129,26 +129,28 @@ def make_twin(build_critic):
     return thunk
 
 
-def make_mlp(units, activation='tanh', reg=1e-6, noisy=False):
+def make_mlp(units, activation='relu', reg=1e-6, noisy=False):
     _reg = l2(reg)
     layer = NoisyDense if noisy else Dense
-    return Sequential([layer(unit, activation, use_bias=True, kernel_regularizer=_reg,
+    return Sequential([layer(unit, activation, kernel_regularizer=_reg,
                              bias_regularizer=_reg) for unit in units])
 
 
-def make_cnn(filters, kernels, strides, activation='tanh', reg=1e-6):
+def make_cnn(filters, kernels, strides, activation='tanh', reg=1e-6, flat=False):
     _reg = l2(reg)
     cnn = Sequential([Conv2D(f, k, s, activation=activation, kernel_regularizer=_reg)
-                      for f, k, s in zip(filters, kernels, strides)], name='CNN')
-    cnn.add(Flatten())
+                      for f, k, s in zip(filters, kernels, strides)])
+    if flat:
+        cnn.add(Flatten())
     return cnn
 
 
-def make_impala_cnn(filters=(16, 32, 32), reg=1e-6):
+def make_impala_cnn(filters=(16, 32, 32), reg=1e-6, flat=False):
     _reg = l2(reg)
-    cnn = Sequential(name='CNN')
+    cnn = Sequential()
     for f in filters:
         cnn.add(Conv2D(f, 3, 2, activation='relu', kernel_regularizer=l2(reg), bias_regularizer=l2(reg)))
         cnn.add(ResnetIdentityBlock(f, 3, l2(reg)))
-    cnn.add(Flatten())
+    if flat:
+        cnn.add(Flatten())
     return cnn
