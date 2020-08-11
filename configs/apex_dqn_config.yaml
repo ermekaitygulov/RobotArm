@@ -9,10 +9,11 @@ alg_args:
   log_freq: 1000
 env:
   env_kwargs:
-    obs_space_keys: ["pov", "arm"]
+    obs_space_keys: ["pov", "arm", "time"]
     pose_sigma: 5
     camera_resolution: [128, 128]
     randomize: True
+    step_limit: 400
   exploration_kwargs:
     epsilon: 0.15
 buffer:

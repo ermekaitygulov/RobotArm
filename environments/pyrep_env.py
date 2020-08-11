@@ -24,7 +24,7 @@ class RozumEnv(gym.Env):
 
     def __init__(self, obs_space_keys=('pov', 'arm'), scene_file='rozum_pyrep.ttt',
                  headless=True, video_path=None, pose_sigma=20, randomize=False, sparse=False,
-                 camera_resolution=(256, 256)):
+                 camera_resolution=(256, 256), step_limit=200):
         self.obs_space_keys = (obs_space_keys,) if isinstance(obs_space_keys, str) else obs_space_keys
         # PyRep
         self._pyrep = PyRep()
@@ -66,6 +66,9 @@ class RozumEnv(gym.Env):
                                                             low=-np.inf, high=np.inf,
                                                             dtype=np.float32)
         self._render_dict['cube'] = self.get_cube_state
+
+        self._available_obs_spaces['time'] = gym.spaces.Box(low=np.zeros(1), high=np.ones(1), dtype=np.uint8)
+        self._render_dict['time'] = lambda: self.current_step/self.step_limit
         try:
             if len(self.obs_space_keys) > 1:
                 self.observation_space = gym.spaces.Dict({key: self._available_obs_spaces[key]
@@ -82,7 +85,7 @@ class RozumEnv(gym.Env):
         # Environment settings
         self.reward_range = None
         self.current_step = 0
-        self.step_limit = 200
+        self.step_limit = step_limit
         self._start_arm_joint_pos = self.rozum.get_joint_positions()
         self._start_gripper_joint_pos = self.gripper.get_joint_positions()
         self.init_cube_pose = self.cube.get_pose()
