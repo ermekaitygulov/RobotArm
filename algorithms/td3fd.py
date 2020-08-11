@@ -1,3 +1,5 @@
+import timeit
+
 from algorithms.td3 import TwinDelayedDDPG
 import tensorflow as tf
 
@@ -56,6 +58,48 @@ class TwinDelayedDDPGfD(TwinDelayedDDPG):
         mse = tf.where(q_value_expert < q_value, mse, 0.)
         mse = tf.reduce_mean(mse)
         return mse
+
+    @tf.function
+    def bc_update(self, state, action_expert):
+        print("Actor update tracing")
+        actor_variables = self.online_actor.trainable_variables
+        with tf.GradientTape() as tape:
+            pre_activation = self.online_actor(state, training=True)
+            action = self.scale_output(pre_activation)
+            # Behaviour cloning
+            mse = tf.reduce_mean(tf.square(action - action_expert), axis=-1)
+            mse = tf.reduce_mean(mse)
+            self.update_metrics('bc_loss', mse)
+            # L2 regularization
+            l2 = tf.add_n(self.online_actor.losses)
+            self.update_metrics('actor_l2', l2)
+            # Final loss
+            loss = l2 + mse
+        gradients = tape.gradient(loss, actor_variables)
+        for i, g in enumerate(gradients):
+            self.update_metrics('Actor_Gradient_norm', tf.norm(g))
+            gradients[i] = tf.clip_by_norm(g, 10)
+        self.actor_optimizer.apply_gradients(zip(gradients, actor_variables))
+
+    def pretrain(self, steps):
+        start_time = timeit.default_timer()
+        log_freq = self._schedule_dict[self.update_log]
+        for batch in self.sampler(steps):
+            self.bc_update(batch['state'], batch['action'])
+            stop_time = timeit.default_timer()
+            self.run_time_deque.append(stop_time - start_time)
+            if tf.equal(self.q_optimizer.iterations % log_freq, 0):
+                self.update_bc_log()
+            start_time = timeit.default_timer()
+
+    def update_bc_log(self):
+        update_frequency = len(self.run_time_deque) / sum(self.run_time_deque)
+        print("LearnerEpoch({:.2f}it/sec): ".format(update_frequency), self.actor_optimizer.iterations.numpy())
+        for key, metric in self.avg_metrics.items():
+            tf.summary.scalar(key, metric.result(), step=self.actor_optimizer.iterations)
+            print('  {}:     {:.5f}'.format(key, metric.result()))
+            metric.reset_states()
+        tf.summary.flush()
 
     def perceive(self, state, action, reward, next_state, done, **kwargs):
         super(TwinDelayedDDPG, self).perceive(demo=0., state=state, action=action, reward=reward,

@@ -51,7 +51,7 @@ if __name__ == '__main__':
     with summary_writer.as_default():
         if 'pretrain' in config:
             pretrain_config = config['pretrain']
-            agent.update(pretrain_config['steps'])
+            agent.pretrain(pretrain_config['steps'])
             if 'save_path' in pretrain_config:
                 agent.save(pretrain_config['save_path'])
         env = make_env(**config['env'])

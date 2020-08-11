@@ -68,7 +68,7 @@ if __name__ == '__main__':
     pretrain_config = config['pretrain']
     summary_writer = tf.summary.create_file_writer(pretrain_config['log_dir'])
     with summary_writer.as_default():
-        agent.update(pretrain_config['steps'])
+        agent.pretrain(pretrain_config['steps'])
         if 'save_path' in pretrain_config:
             agent.save(pretrain_config['save_path'])
     online_weights, target_weights = agent.get_online(), agent.get_target()

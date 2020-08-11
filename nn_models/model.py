@@ -51,27 +51,12 @@ def make_model(name, obs_space, action_space, reg=1e-6):
     return model
 
 
-@register("DuelingDQN_uni")
-def make_model(name, obs_space, action_space, reg=1e-6):
-    img = dict()
-    feat = dict()
+def make_uni_base(img, feat, reg):
     bases = list()
-    if isinstance(obs_space, gym.spaces.Dict):
-        for key, value in obs_space.spaces.items():
-            if len(value.shape) > 1:
-                img[key] = tf.keras.Input(shape=value.shape)
-            else:
-                feat[key] = tf.keras.Input(shape=value.shape)
-    else:
-        if len(obs_space.shape) > 1:
-            img['state'] = tf.keras.Input(shape=obs_space.shape)
-        else:
-            feat['state'] = tf.keras.Input(shape=obs_space.shape)
     if len(img) > 0:
         img_base = concatenate(list(img.values()))
         normalized = img_base/255
-        cnn = make_cnn(filters=(16, 16, 32, 32), kernels=(3, 3, 3, 3), strides=(2, 1, 2, 1), activation='relu',
-                       reg=reg, flat=False)(normalized)
+        cnn = make_impala_cnn((16, 32), reg, flat=False, use_bn=False)(normalized)
         cnn_shape = cnn.shape[1:-1]
         bases.append(cnn)
     else:
@@ -85,7 +70,26 @@ def make_model(name, obs_space, action_space, reg=1e-6):
             bases.append(mlp)
     base = concatenate(bases)
     if len(img) > 0:
-        base = make_cnn(filters=(64, 64), kernels=(3, 3), strides=(2, 1), activation='relu', reg=reg, flat=True)(base)
+        base = make_impala_cnn((32,), reg=reg, flat=True, use_bn=False)(base)
+    return base
+
+
+@register("DuelingDQN_uni")
+def make_model(name, obs_space, action_space, reg=1e-6):
+    img = dict()
+    feat = dict()
+    if isinstance(obs_space, gym.spaces.Dict):
+        for key, value in obs_space.spaces.items():
+            if len(value.shape) > 1:
+                img[key] = tf.keras.Input(shape=value.shape)
+            else:
+                feat[key] = tf.keras.Input(shape=value.shape)
+    else:
+        if len(obs_space.shape) > 1:
+            img['state'] = tf.keras.Input(shape=obs_space.shape)
+        else:
+            feat['state'] = tf.keras.Input(shape=obs_space.shape)
+    base = make_uni_base(img, feat, reg)
     head = DuelingModel([512], action_space.n, reg)(base)
     model = tf.keras.Model(inputs={**img, **feat}, outputs=head, name=name)
     return model
@@ -106,7 +110,6 @@ def make_model(name, obs_space, action_space, reg=1e-7, noisy_head=False):
 def make_critic(name, obs_space, action_space, reg=1e-6, noisy_head=False):
     img = dict()
     feat = dict()
-    bases = list()
     layer = NoisyDense if noisy_head else Dense
     if isinstance(obs_space, gym.spaces.Dict):
         for key, value in obs_space.spaces.items():
@@ -121,17 +124,7 @@ def make_critic(name, obs_space, action_space, reg=1e-6, noisy_head=False):
             feat['state'] = tf.keras.Input(shape=obs_space.shape)
     action = tf.keras.Input(shape=action_space.shape)
     feat['action'] = action
-    if len(feat) > 0:
-        feat_base = concatenate(list(feat.values()))
-        h_layer = layer(64, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(feat_base)
-        h_layer = layer(64, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(h_layer)
-        bases.append(h_layer)
-    if len(img) > 0:
-        img_base = concatenate(list(img.values()))
-        normalized = img_base/255
-        impala_cnn = make_impala_cnn(reg=reg)
-        bases.append(impala_cnn(normalized))
-    base = concatenate(bases)
+    base = make_uni_base(img, feat, reg)
     base = layer(256, 'relu', use_bias=True,  kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     base = layer(256, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     head = layer(1, use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
@@ -143,7 +136,6 @@ def make_critic(name, obs_space, action_space, reg=1e-6, noisy_head=False):
 def make_model(name, obs_space, action_space, reg=1e-6, noisy_head=False):
     img = dict()
     feat = dict()
-    bases = list()
     layer = NoisyDense if noisy_head else Dense
     if isinstance(obs_space, gym.spaces.Dict):
         for key, value in obs_space.spaces.items():
@@ -156,17 +148,7 @@ def make_model(name, obs_space, action_space, reg=1e-6, noisy_head=False):
             img['state'] = tf.keras.Input(shape=obs_space.shape)
         else:
             feat['state'] = tf.keras.Input(shape=obs_space.shape)
-    if len(feat) > 0:
-        feat_base = concatenate(list(feat.values()))
-        h_layer = layer(64, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(feat_base)
-        h_layer = layer(64, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(h_layer)
-        bases.append(h_layer)
-    if len(img) > 0:
-        img_base = concatenate(list(img.values()))
-        normalized = img_base/255
-        impala_cnn = make_impala_cnn(reg=reg)
-        bases.append(impala_cnn(normalized))
-    base = concatenate(bases)
+    base = make_uni_base(img, feat, reg)
     base = layer(256, 'relu', use_bias=True,  kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     base = layer(256, 'relu', use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)
     head = layer(action_space.shape[0], use_bias=True, kernel_regularizer=l2(reg), bias_regularizer=l2(reg))(base)

@@ -100,7 +100,7 @@ class TwinCritic(tf.keras.Model):
 
 
 class ResnetIdentityBlock(tf.keras.Model):
-    def __init__(self, filters, kernel, reg):
+    def __init__(self, filters, kernel, reg, use_bn=False):
         super(ResnetIdentityBlock, self).__init__(name='')
 
         self.conv2a = tf.keras.layers.Conv2D(filters, kernel, padding='same',
@@ -110,14 +110,17 @@ class ResnetIdentityBlock(tf.keras.Model):
         self.conv2b = tf.keras.layers.Conv2D(filters, kernel, padding='same',
                                              kernel_regularizer=reg, bias_regularizer=reg)
         self.bn2b = tf.keras.layers.BatchNormalization()
+        self.use_bn = use_bn
 
     def call(self,  inputs, training=None, mask=None):
         x = self.conv2a(inputs)
-        x = self.bn2a(x, training=training)
+        if self.use_bn:
+            x = self.bn2a(x, training=training)
         x = tf.nn.relu(x)
 
         x = self.conv2b(x)
-        x = self.bn2b(x, training=training)
+        if self.use_bn:
+            x = self.bn2b(x, training=training)
 
         x += inputs
         return tf.nn.relu(x)
@@ -145,12 +148,12 @@ def make_cnn(filters, kernels, strides, activation='tanh', reg=1e-6, flat=False)
     return cnn
 
 
-def make_impala_cnn(filters=(16, 32, 32), reg=1e-6, flat=False):
+def make_impala_cnn(filters=(16, 32, 32), reg=1e-6, flat=False, use_bn=False):
     _reg = l2(reg)
     cnn = Sequential()
     for f in filters:
         cnn.add(Conv2D(f, 3, 2, activation='relu', kernel_regularizer=l2(reg), bias_regularizer=l2(reg)))
-        cnn.add(ResnetIdentityBlock(f, 3, l2(reg)))
+        cnn.add(ResnetIdentityBlock(f, 3, l2(reg), use_bn))
     if flat:
         cnn.add(Flatten())
     return cnn
