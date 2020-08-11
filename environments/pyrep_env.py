@@ -68,7 +68,7 @@ class RozumEnv(gym.Env):
         self._render_dict['cube'] = self.get_cube_state
 
         self._available_obs_spaces['time'] = gym.spaces.Box(low=np.zeros(1), high=np.ones(1), dtype=np.uint8)
-        self._render_dict['time'] = lambda: self.current_step/self.step_limit
+        self._render_dict['time'] = lambda: [self.current_step/self.step_limit, ]
         try:
             if len(self.obs_space_keys) > 1:
                 self.observation_space = gym.spaces.Dict({key: self._available_obs_spaces[key]
