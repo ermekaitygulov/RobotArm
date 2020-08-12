@@ -40,6 +40,8 @@ class RozumEnv(gym.Env):
         self.graspable_objects = [self.cube, ]
         self.camera = VisionSensor("render")
         self.camera.set_resolution(list(camera_resolution))
+        self.camera0 = VisionSensor("render0")
+        self.camera0.set_resolution(list(camera_resolution))
         self.rozum_tip = self.rozum.get_tip()
 
         # Action and Observation spaces
@@ -57,7 +59,12 @@ class RozumEnv(gym.Env):
         self._render_dict = dict()
         self._available_obs_spaces['pov'] = gym.spaces.Box(shape=self.camera.resolution + [3],
                                                            low=0, high=255, dtype=np.uint8)
-        self._render_dict['pov'] = self.get_image
+        self._render_dict['pov'] = lambda: self.get_image(self.camera)
+
+        self._available_obs_spaces['pov0'] = gym.spaces.Box(shape=self.camera0.resolution + [3],
+                                                            low=0, high=255, dtype=np.uint8)
+        self._render_dict['pov0'] = lambda: self.get_image(self.camera0)
+
         low = np.array([bound[0] for bound in angle_bounds] * 2 + [0., 0., -1., -1., -1.])
         high = np.array([bound[0] + bound[1] for bound in angle_bounds] * 2 + [1., 1., 1., 1., 1.])
         self._available_obs_spaces['arm'] = gym.spaces.Box(low=low, high=high, dtype=np.float32)
@@ -241,8 +248,9 @@ class RozumEnv(gym.Env):
             state = self._render_dict[self.obs_space_keys[0]]()
         return state
 
-    def get_image(self):
-        img = self.camera.capture_rgb()
+    @staticmethod
+    def get_image(sensor):
+        img = sensor.capture_rgb()
         img *= 255
         img = img.astype('uint8')
         return img
