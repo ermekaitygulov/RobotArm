@@ -16,6 +16,7 @@ env:
     step_limit: 400
   exploration_kwargs:
     epsilon: 0.15
+  frame_stack: 1
 buffer:
   size: 100000
   cpp: True
