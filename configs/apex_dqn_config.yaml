@@ -1,4 +1,4 @@
-gpu: 1
+gpu: 0
 base: DoubleDuelingDQN
 wandb_name: DoubleCamera
 num_actors: 4
