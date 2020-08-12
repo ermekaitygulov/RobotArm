@@ -11,12 +11,11 @@ env:
   env_kwargs:
     obs_space_keys: ["pov", "pov0", "arm", "time"]
     pose_sigma: 5
-    camera_resolution: [128, 128]
+    camera_resolution: [64, 64]
     randomize: True
     step_limit: 400
   exploration_kwargs:
     epsilon: 0.15
-  frame_stack: 1
 buffer:
   size: 100000
   cpp: True
