@@ -56,11 +56,12 @@ def make_uni_base(img, feat, reg):
     if len(img) > 0:
         for i in img.values():
             normalized = i/255
-            cnn = make_impala_cnn((16, 32, 32), reg, flat=True, use_bn=False)(normalized)
+            cnn = make_cnn(filters=(32, 32, 32, 32), kernels=(11, 6, 4, 4), strides=(2, 2, 2, 2), activation='tanh',
+                           reg=reg, flat=False)(normalized)
             bases.append(cnn)
     if len(feat) > 0:
         feat_base = concatenate(list(feat.values()))
-        mlp = make_mlp([64, 64], 'relu', reg)(feat_base)
+        mlp = make_mlp([400, 300], 'tanh', reg)(feat_base)
         bases.append(mlp)
     base = concatenate(bases)
     return base
