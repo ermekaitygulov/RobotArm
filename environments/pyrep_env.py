@@ -108,7 +108,7 @@ class RozumEnv(gym.Env):
         if video_path:
             def video_step():
                 self._pyrep.step()
-                self.recording.append(self.get_image()[..., ::-1])
+                self.recording.append(self.get_image(self.camera)[..., ::-1])
             self.sim_step = video_step
         else:
             self.sim_step = self._pyrep.step

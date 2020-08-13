@@ -56,7 +56,7 @@ def make_uni_base(img, feat, reg):
     if len(img) > 0:
         img_base = concatenate(list(img.values()))
         normalized = img_base/255
-        cnn = make_impala_cnn((16, 32), reg, flat=False, use_bn=False)(normalized)
+        cnn = make_impala_cnn((32, 64), reg, flat=False, use_bn=False)(normalized)
         cnn_shape = cnn.shape[1:-1]
         bases.append(cnn)
     else:
@@ -70,7 +70,7 @@ def make_uni_base(img, feat, reg):
             bases.append(mlp)
     base = concatenate(bases)
     if len(img) > 0:
-        base = make_impala_cnn((32,), reg=reg, flat=True, use_bn=False)(base)
+        base = make_impala_cnn((64,), reg=reg, flat=True, use_bn=False)(base)
     return base
 
 
@@ -90,7 +90,7 @@ def make_model(name, obs_space, action_space, reg=1e-6):
         else:
             feat['state'] = tf.keras.Input(shape=obs_space.shape)
     base = make_uni_base(img, feat, reg)
-    head = DuelingModel([512], action_space.n, reg)(base)
+    head = DuelingModel([1024, 512], action_space.n, reg)(base)
     model = tf.keras.Model(inputs={**img, **feat}, outputs=head, name=name)
     return model
 
