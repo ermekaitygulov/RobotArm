@@ -57,7 +57,7 @@ def make_uni_base(img, feat, reg):
         for i in img.values():
             normalized = i/255
             cnn = make_cnn(filters=(32, 32, 32, 32), kernels=(11, 6, 4, 4), strides=(2, 2, 2, 2), activation='tanh',
-                           reg=reg, flat=False)(normalized)
+                           reg=reg, flat=True)(normalized)
             bases.append(cnn)
     if len(feat) > 0:
         feat_base = concatenate(list(feat.values()))
