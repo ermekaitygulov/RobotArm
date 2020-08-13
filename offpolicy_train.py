@@ -13,13 +13,14 @@ from replay_buffers.stable_baselines import PrioritizedReplayBuffer
 import os
 
 
-def make_env(exploration_kwargs=None, env_kwargs=None, frame_stack=4, discretize=True):
+def make_env(exploration_kwargs=None, env_kwargs=None, frame_stack=4, stack_keys=None, discretize=True):
     env_kwargs = env_kwargs if env_kwargs else {}
     exploration_kwargs = exploration_kwargs if exploration_kwargs else {}
     environment = RozumEnv(**env_kwargs)
     environment = RozumLogWrapper(environment, 10)
     if frame_stack > 1:
-        environment = stack_env(environment, frame_stack)
+        stack_keys = stack_keys if stack_keys else list(environment.observation_space.spaces.keys())
+        environment = stack_env(environment, frame_stack, stack_keys)
     if discretize:
         environment = make_discrete_env(environment, **exploration_kwargs)
     else:
@@ -54,10 +55,11 @@ def make_discrete_env(environment, epsilon=0.1, final_epsilon=0.01, epsilon_deca
     return environment
 
 
-def stack_env(environment, k):
+def stack_env(environment, k, stack_keys):
     if isinstance(environment.observation_space, gym.spaces.Dict):
         for obs_key in environment.observation_space.spaces.keys():
-            environment = FrameStack(environment, k, obs_key)
+            if obs_key in stack_keys:
+                environment = FrameStack(environment, k, obs_key)
     else:
         environment = FrameStack(environment, k)
     return environment

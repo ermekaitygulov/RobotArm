@@ -18,8 +18,8 @@ import wandb
 from collections import defaultdict
 
 
-def make_env(thread_id, n_actors=None, exploration_kwargs=None, env_kwargs=None, frame_stack=4, discretize=True,
-             wandb_group_id=None):
+def make_env(thread_id, n_actors=None, exploration_kwargs=None, env_kwargs=None, frame_stack=4,  stack_keys=None,
+             discretize=True, wandb_group_id=None):
     env_kwargs = env_kwargs if env_kwargs else {}
     expl_values = apex_ranging(exploration_kwargs, thread_id, n_actors) if exploration_kwargs else {}
     environment = RozumEnv(**env_kwargs)
@@ -28,7 +28,8 @@ def make_env(thread_id, n_actors=None, exploration_kwargs=None, env_kwargs=None,
     if thread_id == -1:
         environment = RozumLogWrapper(environment, 100, 'Evaluate_thread', wandb_group_id=wandb_group_id)
     if frame_stack > 1:
-        environment = stack_env(environment, frame_stack)
+        stack_keys = stack_keys if stack_keys else list(environment.observation_space.spaces.keys())
+        environment = stack_env(environment, frame_stack, stack_keys)
     if discretize:
         environment = make_discrete_env(environment, **expl_values)
     else:

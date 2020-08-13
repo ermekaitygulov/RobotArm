@@ -16,7 +16,8 @@ env:
     step_limit: 400
   exploration_kwargs:
     epsilon: 0.15
-  frame_stack: 1
+  frame_stack: 4
+  stack_keys: ["arm", "time"]
 buffer:
   size: 100000
   cpp: True
