@@ -1,7 +1,7 @@
 gpu: 0
 base: DoubleDuelingDQN
 wandb_name: DoubleCamera
-num_actors: 4
+num_actors: 8
 alg_args:
   update_target_nn_mod: 2500
   gamma: 0.99
@@ -11,7 +11,7 @@ env:
   env_kwargs:
     obs_space_keys: ["pov", "pov0", "arm", "time"]
     pose_sigma: 5
-    camera_resolution: [64, 64]
+    camera_resolution: [128, 128]
     randomize: True
     step_limit: 400
   exploration_kwargs:
@@ -28,6 +28,6 @@ train:
   rollout_size: 70
   max_eps: 100000
   replay_start_size: 10000
-  batch_size: 128
+  batch_size: 64
   sync_nn_mod: 100
   number_of_batchs: 16
