@@ -54,23 +54,15 @@ def make_model(name, obs_space, action_space, reg=1e-6):
 def make_uni_base(img, feat, reg):
     bases = list()
     if len(img) > 0:
-        img_base = concatenate(list(img.values()))
-        normalized = img_base/255
-        cnn = make_impala_cnn((32, 64), reg, flat=False, use_bn=False)(normalized)
-        cnn_shape = cnn.shape[1:-1]
-        bases.append(cnn)
-    else:
-        cnn_shape = None
+        for i in img.values():
+            normalized = i/255
+            cnn = make_impala_cnn((16, 32, 32), reg, flat=True, use_bn=False)(normalized)
+            bases.append(cnn)
     if len(feat) > 0:
         feat_base = concatenate(list(feat.values()))
         mlp = make_mlp([64, 64], 'relu', reg)(feat_base)
-        if cnn_shape:
-            mlp = tf.keras.layers.Reshape((1, 1, 64))(mlp)
-            mlp = tf.keras.layers.UpSampling2D(cnn_shape)(mlp)
-            bases.append(mlp)
+        bases.append(mlp)
     base = concatenate(bases)
-    if len(img) > 0:
-        base = make_impala_cnn((64,), reg=reg, flat=True, use_bn=False)(base)
     return base
 
 
