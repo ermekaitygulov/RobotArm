@@ -285,7 +285,7 @@ class RozumEnv(gym.Env):
         s = sizes[0]
         objects.append(Shape.create(type=PrimitiveShape.CUBOID,
                                     size=[s, s, s], position=position,
-                                    mass=mass))
+                                    mass=mass, color=[random() for _ in range(3)]))
         index = sample(range(len(position) - 1), 1)[0]
         sign = sample([1, -1], 1)[0]
         position[index] += sum(sizes) * 0.5 * sign
@@ -293,7 +293,7 @@ class RozumEnv(gym.Env):
         # Create cube with fix size
         objects.append(Shape.create(type=PrimitiveShape.CUBOID,
                                     size=[s, s, s], position=position,
-                                    mass=mass))
+                                    mass=mass, color=[random() for _ in range(3)]))
         handles = [o.get_handle() for o in objects]
         handle = sim.simGroupShapes(handles)
         self.cube = Shape(handle)

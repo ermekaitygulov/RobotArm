@@ -60,8 +60,7 @@ def make_uni_base(img, feat, reg):
     if len(img) > 0:
         for i in img.values():
             normalized = i/255
-            cnn = make_cnn(filters=(16, 16, 32, 32), kernels=(3, 3, 3, 3), strides=(2, 1, 2, 1), activation='relu',
-                           reg=reg, flat=False)(normalized)
+            cnn = make_impala_cnn((16, 32), reg, flat=False, use_bn=False)(normalized)
             cnn_bases.append(cnn)
         if flat_base is not None:
             cnn_shape = cnn_bases[0].shape[1:-1]
@@ -70,8 +69,7 @@ def make_uni_base(img, feat, reg):
             flat_base = tf.keras.layers.UpSampling2D(cnn_shape)(flat_base)
             cnn_bases.append(flat_base)
         merge_bases = concatenate(cnn_bases)
-        flat_base = make_cnn(filters=(64, 64), kernels=(3, 3), strides=(2, 1,), activation='relu',
-                             reg=reg, flat=True)(merge_bases)
+        flat_base = make_impala_cnn((64,), reg, flat=True, use_bn=False)(merge_bases)
     return flat_base
 
 
@@ -91,7 +89,7 @@ def make_model(name, obs_space, action_space, reg=1e-6):
         else:
             feat['state'] = tf.keras.Input(shape=obs_space.shape)
     base = make_uni_base(img, feat, reg)
-    head = DuelingModel([1024, 512], action_space.n, reg)(base)
+    head = DuelingModel([512], action_space.n, reg)(base)
     model = tf.keras.Model(inputs={**img, **feat}, outputs=head, name=name)
     return model
 
