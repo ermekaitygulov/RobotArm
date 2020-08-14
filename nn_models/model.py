@@ -52,20 +52,27 @@ def make_model(name, obs_space, action_space, reg=1e-6):
 
 
 def make_uni_base(img, feat, reg):
-    bases = list()
+    flat_base = None
+    cnn_bases = list()
     if len(feat) > 0:
         feat_base = concatenate(list(feat.values()))
-        mlp = make_mlp([400, 300], 'relu', reg)(feat_base)
-        bases.append(mlp)
+        flat_base = make_mlp([64, 64], 'relu', reg)(feat_base)
     if len(img) > 0:
         for i in img.values():
             normalized = i/255
-            cnn = make_cnn(filters=(16, 16, 32, 32, 64, 64), kernels=(3, 3, 3, 3, 3, 3),
-                           strides=(2, 1, 2, 1, 2, 1), activation='relu',
-                           reg=reg, flat=True)(normalized)
-            bases.append(cnn)
-    base = concatenate(bases)
-    return base
+            cnn = make_cnn(filters=(16, 16, 32, 32), kernels=(3, 3, 3, 3), strides=(2, 1, 2, 1), activation='relu',
+                           reg=reg, flat=False)(normalized)
+            cnn_bases.append(cnn)
+        if flat_base is not None:
+            cnn_shape = cnn_bases[0].shape[1:-1]
+            assert all([c.shape[1:-1] == cnn_shape for c in cnn_bases]), [c.shape[1:-1] for c in cnn_bases]
+            flat_base = tf.keras.layers.Reshape((1, 1, 64))(flat_base)
+            flat_base = tf.keras.layers.UpSampling2D(cnn_shape)(flat_base)
+            cnn_bases.append(flat_base)
+        merge_bases = concatenate(cnn_bases)
+        flat_base = make_cnn(filters=(64, 64), kernels=(3, 3), strides=(2, 1,), activation='relu',
+                             reg=reg, flat=True)(merge_bases)
+    return flat_base
 
 
 @register("DuelingDQN_uni")
