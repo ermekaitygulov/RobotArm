@@ -49,13 +49,6 @@ class Learner:
                 start_time = timeit.default_timer()
         return indexes, np.concatenate(loss_list)
 
-    def histogram(self, minibatch, key, left=None, right=None, operation=None):
-        data = minibatch[key][:, left:right]
-        if operation:
-            data = operation(data)
-        for dim in range(data.shape[-1]):
-            self.tf.summary.histogram('{}/{}_{}'.format(key, dim, key), data[:, dim], step=self.q_optimizer.iterations)
-
     @ray.method(num_return_vals=2)
     def get_weights(self, save_dir=None):
         if save_dir:

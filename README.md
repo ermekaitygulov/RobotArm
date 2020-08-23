@@ -3,8 +3,19 @@
 * DDDQN
 * DDPG
 * TD3 (DDPG with twin critic, with delay updates, with noise in target. It is easier to use TD3 than tune DDPG)
-* DQfD 
-* APEX-DQN/DDPG/TD3 (asynchronus train) implementation with [Ray](https://docs.ray.io/en/latest/)
+* DQfD / DDPGfD 
+* APEX-DQN / DDPG / TD3 (asynchronus train) implementation with [Ray](https://docs.ray.io/en/latest/)
+
+
+**Usage scenarios:**
+* offpolicy_train.py - train model in RozumEnv with any algo which inherited from 
+ TDPolicy class
+* bc_train.py - train DQfD / DDPGfD, differs from offpolicy_train.py only with pretrain phase (**TODO:** refactor 
+inheritance of behaviour clone classes)
+* apex_train.py / apex_bc.py - distributed versions of offpolicy_train.py and bc_train.py. Run Learner, Actor and 
+Evaluate processes. Support resource defining for workers. 
+* data_generate.py - distributed data collecting
+
 
 
 **Implementation details:**
@@ -19,14 +30,9 @@
  supports dict observation spaces like:
  ```state = {'pov':{'shape':(64,64,3), 'dtype': 'uint8'}, 'angles': {'shape': (7), 'dtype':'float'}} ```
 * Vrep environment for Rozum robot uses [PyRep API](https://github.com/stepjam/PyRep)
- (instead of original VREP API). Rewards uses tolerance function from [DeepMind ControlSuite](https://github.com/deepmind/dm_control)
+ (instead of original VREP API)
 * Observation type option in environment ('pov'/('pov', 'angles')/'angles' and etc.)
 * **If dtype_dict is specified, samplings in algorithms will be wrapped with tf.data.Dataset.from_generator, improving updates frequency**
 * There are different make_model functions in algorithms/model.py. 
 They can be accessed with get_network_builder(name) function. There is ***_uni** functions that can work with different combinations 
  of obs_spaces in RozumEnv. Depending on space they build CNN/MLP blocks and concatenates them.
-
-**TODO**:
-* Unity environment for Rozum model
- to speed up training on server in headless mode
-* Demonstrations usage
